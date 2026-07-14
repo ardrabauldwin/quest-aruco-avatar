@@ -224,7 +224,7 @@ func _detection_loop() -> void:
 			continue
 		# No conversion: the C++ side handles 1ch (Quest Y-plane), 3ch (RGB), and 4ch (RGBA).
 		var t0 := Time.get_ticks_usec()
-		var image_downscale_factor=0.5 #1 is original image, 0.5 means half width and half height
+		var image_downscale_factor=0.25 #1 is original image, 0.5 means half width and half height
 		var fx=877.06583568*image_downscale_factor
 		var fy=878.33004836*image_downscale_factor
 		var cx=645.36226952*image_downscale_factor #approxiamte cx is fx/2

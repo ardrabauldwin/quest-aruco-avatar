@@ -4,7 +4,8 @@
 [ext_resource type="Script" uid="uid://df20bwxeyvlj4" path="res://xr_startup.gd" id="2_xr"]
 [ext_resource type="Script" uid="uid://b2jf8li2pd6la" path="res://avatar_rig.gd" id="3_avrig"]
 [ext_resource type="PackedScene" uid="uid://dfi0nl6pl0gu4" path="res://assets/avatar/mannequin.glb" id="4_mann"]
-[ext_resource type="Script" path="res://marker_gizmo.gd" id="5_giz"]
+[ext_resource type="Script" uid="uid://uertqtehobur" path="res://marker_gizmo.gd" id="5_giz"]
+[ext_resource type="Script" path="res://avatar_rig_6dof.gd" id="6_6dof"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_wiwsh"]
 
@@ -30,19 +31,29 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
 transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
 mesh = SubResource("BoxMesh_wiwsh")
 
-[node name="AvatarRig" type="Node3D" parent="." node_paths=PackedStringArray("head_marker", "chest_marker")]
-script = ExtResource("3_avrig")
+[node name="AvatarRig" type="Node3D" parent="." unique_id=98577932 node_paths=PackedStringArray("head_marker", "chest_marker", "head_mount", "chest_mount")]
+script = ExtResource("6_6dof")
 head_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch0")
 chest_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch1")
+head_mount = NodePath("mannequin/HeadMount")
+chest_mount = NodePath("mannequin/ChestMount")
+follow_speed = 60.0
 
-[node name="mannequin" parent="AvatarRig" instance=ExtResource("4_mann")]
+[node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
 
-[node name="FillLight" type="OmniLight3D" parent="AvatarRig"]
+[node name="HeadMount" type="Node3D" parent="AvatarRig/mannequin"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.029, 0.234, -0.295)
+
+[node name="ChestMount" type="Node3D" parent="AvatarRig/mannequin"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0.01, 0.22, 0.1)
+transform = Transform3D(1, -0.00010471976, 0, 0.00010471976, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="FillLight" type="OmniLight3D" parent="AvatarRig" unique_id=1966174494]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0.6)
 light_energy = 4.0
 omni_range = 8.0
 
-[node name="MarkerGizmos" type="Node3D" parent="." node_paths=PackedStringArray("markers")]
+[node name="MarkerGizmos" type="Node3D" parent="." unique_id=1835585909 node_paths=PackedStringArray("markers")]
 script = ExtResource("5_giz")
 markers = [NodePath("../XROrigin3D/XRCamera3D/aruco_patch0"), NodePath("../XROrigin3D/XRCamera3D/aruco_patch1")]
 

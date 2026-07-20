@@ -69,6 +69,10 @@ compile_commands.json
 *.log
 *.lock
 
+# Windows leftovers from replacing a locked DLL (~name.dll and ~name.dll~RF....TMP)
+~*
+*.TMP
+
 # VSCode
 .vscode/*
 !.vscode/extensions.json

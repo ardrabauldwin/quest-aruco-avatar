@@ -6,7 +6,7 @@ var marker_nodes: Dictionary = {}
 # Physical side length of the ArUco marker, in meters. Single source of truth: used as the
 # solvePnP marker size (sets the pose's metric scale) AND as the rendered cuboid's side length
 # (see _ready), so the two can never disagree.
-var aruco_patch_size := 0.1
+var aruco_patch_size := 0.10
 
 
 # Godot has a native CameraServer (Camera2) backend on Android since 4.5, so

@@ -39,6 +39,7 @@ func _ready() -> void:
 # material alpha so it works on the gl_compatibility / mobile renderer the Quest build uses.
 func _apply_look(node: Node) -> void:
 	for child in node.get_children():
+		print("child:", child)
 		if child is MeshInstance3D:
 			var mi := child as MeshInstance3D
 			if mi.mesh != null:

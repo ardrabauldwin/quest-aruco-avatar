@@ -32,26 +32,34 @@ extends Node3D
 
 
 func _ready() -> void:
-	_apply_look(self)
+	_apply_look()
 
 
 # Make every mesh under the avatar semi-transparent (and tinted), keeping its texture. Uses
 # material alpha so it works on the gl_compatibility / mobile renderer the Quest build uses.
-func _apply_look(node: Node) -> void:
-	for child in node.get_children():
-		print("child:", child)
-		if child is MeshInstance3D:
-			var mi := child as MeshInstance3D
-			if mi.mesh != null:
-				for i in mi.mesh.get_surface_count():
-					var mat := mi.get_active_material(i)
-					if mat is BaseMaterial3D:
-						var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
-						m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-						m.albedo_color = Color(avatar_tint.r, avatar_tint.g, avatar_tint.b,
-								clampf(1.0 - avatar_transparency, 0.05, 1.0))
-						mi.set_surface_override_material(i, m)
-		_apply_look(child)
+#
+# Matches on TYPE, not on name. The imported mannequin's mesh is called
+# "E3A720C0_17A2_4863_AAAA_A710D22D5C4F" -- an auto-generated GUID that can change whenever the
+# model is re-exported -- and it sits four levels down, under empty grouping nodes the Blender
+# glTF exporter leaves behind (export/Geom/content/...). Matching the name, or reaching in by
+# path, would silently stop working after any asset update; matching the type survives it.
+# find_children() also does the recursion for us, in engine code.
+func _apply_look() -> void:
+	var alpha := clampf(1.0 - avatar_transparency, 0.05, 1.0)
+
+	# owned = false: nodes inside an instanced scene (the .glb) are not owned by THIS scene, and
+	# the default (true) would skip them -- silently, leaving the avatar opaque.
+	for n in find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		# Returns 0 when the mesh slot is empty, so this doubles as the null-mesh guard.
+		for i in mi.get_surface_override_material_count():
+			var mat := mi.get_active_material(i)
+			# Skips unassigned slots (null) and ShaderMaterials, which have no transparency knob.
+			if mat is BaseMaterial3D:
+				var m := mat.duplicate() as BaseMaterial3D
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				m.albedo_color = Color(avatar_tint, alpha)
+				mi.set_surface_override_material(i, m)
 
 
 func _process(_delta: float) -> void:

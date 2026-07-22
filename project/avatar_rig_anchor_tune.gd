@@ -23,10 +23,10 @@ extends Node3D
 #   xr_controller_left    -> LeftHand
 #   xr_controller_right   -> RightHand
 #
-# CONTROLS                          keyboard
-#   left stick  left/right  -> x      A / D
-#   left stick  up/down     -> y      W / S
-#   right stick up/down     -> z      Q / E
+# CONTROLS  (Quest controllers only -- tuning is done in the headset, against the real manikin)
+#   left stick  left/right  -> x
+#   left stick  up/down     -> y
+#   right stick up/down     -> z
 
 @export var head_marker: Node3D          # aruco_patch0 (id 0)
 @export var chest_marker: Node3D         # aruco_patch1 (id 1)
@@ -38,8 +38,6 @@ extends Node3D
 @export var nudge_speed := 0.05
 @export var xr_controller_left: XRController3D
 @export var xr_controller_right: XRController3D
-# Optional Label3D to read the value in the headset. Empty = console only.
-@export var readout: Label3D
 
 @export_group("Look")
 # 0.0 = solid, 0.95 = nearly invisible. ~0.6 lets the real manikin show through clearly.
@@ -51,25 +49,34 @@ var _print_timer := 0.0
 
 
 func _ready() -> void:
-	_apply_look(self)
+	_apply_look()
 
 
 # Make every mesh under the avatar semi-transparent (and tinted), keeping its texture. Uses
 # material alpha so it works on the gl_compatibility / mobile renderer the Quest build uses.
-func _apply_look(node: Node) -> void:
-	for child in node.get_children():
-		if child is MeshInstance3D:
-			var mi := child as MeshInstance3D
-			if mi.mesh != null:
-				for i in mi.mesh.get_surface_count():
-					var mat := mi.get_active_material(i)
-					if mat is BaseMaterial3D:
-						var m := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
-						m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-						m.albedo_color = Color(avatar_tint.r, avatar_tint.g, avatar_tint.b,
-								clampf(1.0 - avatar_transparency, 0.05, 1.0))
-						mi.set_surface_override_material(i, m)
-		_apply_look(child)
+#
+# Matches on TYPE, not on name. The imported mannequin's mesh is called
+# "E3A720C0_17A2_4863_AAAA_A710D22D5C4F" -- an auto-generated GUID that can change whenever the
+# model is re-exported -- and it sits four levels down, under empty grouping nodes the Blender
+# glTF exporter leaves behind (export/Geom/content/...). Matching the name, or reaching in by
+# path, would silently stop working after any asset update; matching the type survives it.
+# find_children() also does the recursion for us, in engine code.
+func _apply_look() -> void:
+	var alpha := clampf(1.0 - avatar_transparency, 0.05, 1.0)
+
+	# owned = false: nodes inside an instanced scene (the .glb) are not owned by THIS scene, and
+	# the default (true) would skip them -- silently, leaving the avatar opaque.
+	for n in find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		# Returns 0 when the mesh slot is empty, so this doubles as the null-mesh guard.
+		for i in mi.get_surface_override_material_count():
+			var mat := mi.get_active_material(i)
+			# Skips unassigned slots (null) and ShaderMaterials, which have no transparency knob.
+			if mat is BaseMaterial3D:
+				var m := mat.duplicate() as BaseMaterial3D
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				m.albedo_color = Color(avatar_tint, alpha)
+				mi.set_surface_override_material(i, m)
 
 
 # This frame's nudge, in the ANCHOR's local space -- which is exactly the space the Inspector
@@ -84,38 +91,27 @@ func _read_input(delta: float) -> Vector3:
 	if xr_controller_right != null:
 		dir.z += -xr_controller_right.get_vector2("primary").y   # right stick up/down -> z
 
-	if Input.is_key_pressed(KEY_A): dir.x -= 1.0
-	if Input.is_key_pressed(KEY_D): dir.x += 1.0
-	if Input.is_key_pressed(KEY_W): dir.y += 1.0
-	if Input.is_key_pressed(KEY_S): dir.y -= 1.0
-	if Input.is_key_pressed(KEY_Q): dir.z -= 1.0
-	if Input.is_key_pressed(KEY_E): dir.z += 1.0
-
 	return dir * nudge_speed * delta
 
 
 func _process(delta: float) -> void:
+	# --- the anchor: straight onto the markers, nothing added ----------------------------
+	if head_marker != null and chest_marker != null:
+		var h := head_marker.global_transform
+		var c := chest_marker.global_transform
+		# slerp at 0.5 is the halfway rotation, and it takes the short way round -- so the two
+		# markers' quaternions cannot cancel each other out.
+		var q := h.basis.get_rotation_quaternion().slerp(c.basis.get_rotation_quaternion(), 0.5)
+		global_transform = Transform3D(Basis(q), (h.origin + c.origin) * 0.5)
+
 	# --- the bit you are tuning: move the mannequin inside the anchor --------------------
 	if target != null:
 		var nudge := _read_input(delta)
 		if nudge != Vector3.ZERO:
 			target.position += nudge
-		if readout != null:
-			readout.text = "mannequin Position\n(%+.3f, %+.3f, %+.3f)" % [
-					target.position.x, target.position.y, target.position.z]
-		# Printed once a second so it is recoverable with: adb logcat -s godot
+		# Printed once a second
 		_print_timer += delta
 		if _print_timer >= 1.0:
 			_print_timer = 0.0
 			print("TUNE  mannequin Position = (%.4f, %.4f, %.4f)" % [
 					target.position.x, target.position.y, target.position.z])
-
-	# --- the anchor: straight onto the markers, nothing added ----------------------------
-	if head_marker == null or chest_marker == null:
-		return
-	var h := head_marker.global_transform
-	var c := chest_marker.global_transform
-	# slerp at 0.5 is the halfway rotation, and it takes the short way round -- so the two
-	# markers' quaternions cannot cancel each other out.
-	var q := h.basis.get_rotation_quaternion().slerp(c.basis.get_rotation_quaternion(), 0.5)
-	global_transform = Transform3D(Basis(q), (h.origin + c.origin) * 0.5)

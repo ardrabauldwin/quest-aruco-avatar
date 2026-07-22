@@ -57,7 +57,7 @@ func _apply_look() -> void:
 			# Skips unassigned slots (null) and ShaderMaterials, which have no transparency knob.
 			if mat is BaseMaterial3D:
 				var m := mat.duplicate() as BaseMaterial3D
-				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA#on transparency
 				m.albedo_color = Color(avatar_tint, alpha)
 				mi.set_surface_override_material(i, m)
 

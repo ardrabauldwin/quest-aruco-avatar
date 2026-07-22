@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://crxyq5donm67c" path="res://main_3d.gd" id="1_wiwsh"]
 [ext_resource type="Script" uid="uid://df20bwxeyvlj4" path="res://xr_startup.gd" id="2_xr"]
-[ext_resource type="Script" uid="uid://n0xqdxf7dvmr" path="res://avatar_rig_anchor.gd" id="3_2wc1w"]
+[ext_resource type="Script" uid="uid://de3yev00dq3ws" path="res://avatar_rig_anchor_tune.gd" id="3_2wc1w"]
 [ext_resource type="PackedScene" uid="uid://dfi0nl6pl0gu4" path="res://assets/avatar/mannequin.glb" id="4_mann"]
 [ext_resource type="Script" uid="uid://uertqtehobur" path="res://marker_gizmo.gd" id="5_giz"]
 
@@ -52,10 +52,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
 transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
 mesh = SubResource("BoxMesh_wiwsh")
 
-[node name="AvatarRig" type="Node3D" parent="." unique_id=98577932 node_paths=PackedStringArray("head_marker", "chest_marker")]
+[node name="AvatarRig" type="Node3D" parent="." unique_id=98577932 node_paths=PackedStringArray("head_marker", "chest_marker", "target", "xr_controller_left", "xr_controller_right")]
 script = ExtResource("3_2wc1w")
 head_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch0")
 chest_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch1")
+target = NodePath("mannequin")
+xr_controller_left = NodePath("../XROrigin3D/LeftHand")
+xr_controller_right = NodePath("../XROrigin3D/RightHand")
 
 [node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
 transform = Transform3D(0.8, 0, 0, 0, -3.4969112e-08, 0.8, 0, -0.8, -3.4969112e-08, 0.003, -0.115, 0.175)

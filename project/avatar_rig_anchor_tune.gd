@@ -47,8 +47,21 @@ extends Node3D
 
 var _print_timer := 0.0
 
+# A marker node is only moved when main_3d.gd applies a fresh detection to it. So "its transform
+# changed" means "the camera just saw it" -- that is how we know a marker has been detected
+# without touching main_3d.gd.
+var _seen_head := false
+var _seen_chest := false
+var _last_h: Transform3D
+var _last_c: Transform3D
+
 
 func _ready() -> void:
+	# Remember the markers' start-of-scene poses, so the first real detection reads as a change.
+	if head_marker != null:
+		_last_h = head_marker.global_transform
+	if chest_marker != null:
+		_last_c = chest_marker.global_transform
 	_apply_look()
 
 
@@ -97,12 +110,23 @@ func _read_input(delta: float) -> Vector3:
 func _process(delta: float) -> void:
 	# --- the anchor: straight onto the markers, nothing added ----------------------------
 	if head_marker != null and chest_marker != null:
-		var h := head_marker.global_transform
-		var c := chest_marker.global_transform
-		# slerp at 0.5 is the halfway rotation, and it takes the short way round -- so the two
-		# markers' quaternions cannot cancel each other out.
-		var q := h.basis.get_rotation_quaternion().slerp(c.basis.get_rotation_quaternion(), 0.5)
-		global_transform = Transform3D(Basis(q), (h.origin + c.origin) * 0.5)
+		if head_marker.global_transform != _last_h:
+			_last_h = head_marker.global_transform
+			_seen_head = true
+		if chest_marker.global_transform != _last_c:
+			_last_c = chest_marker.global_transform
+			_seen_chest = true
+
+		# Stay hidden until BOTH markers have been detected at least once, so the avatar never
+		# appears at the markers' meaningless start-of-scene pose.
+		visible = _seen_head and _seen_chest
+
+		if visible:
+			# slerp at 0.5 is the halfway rotation, and it takes the short way round -- so the
+			# two markers' quaternions cannot cancel each other out.
+			var q := _last_h.basis.get_rotation_quaternion().slerp(
+					_last_c.basis.get_rotation_quaternion(), 0.5)
+			global_transform = Transform3D(Basis(q), (_last_h.origin + _last_c.origin) * 0.5)
 
 	# --- the bit you are tuning: move the mannequin inside the anchor --------------------
 	if target != null:

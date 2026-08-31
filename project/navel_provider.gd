@@ -4,9 +4,6 @@ extends RefCounted
 
 signal orientation_settled
 
-# Slowly adopts a permanent mannequin relocation after startup.
-var rest_heal_time_s := 600.0
-
 # Rest checkpoints: E0 at 20 detections, then E1/E2/... every 5 detections.
 var rest_initial_detections := 20
 var rest_checkpoint_step := 5
@@ -28,8 +25,7 @@ var _rest_next_checkpoint := 20
 var _rest_previous_estimate := Transform3D.IDENTITY
 var _rest_has_previous_estimate := false
 var _rest_stable_checks := 0
-var _last_pose_ms := 0
-var _rest_heal_last_detection_ms := -1
+var _rest_reanchor_last_detection_ms := -1
 
 
 ## Convert each visible marker to the common pose, then robustly fuse the estimates.
@@ -70,11 +66,10 @@ func _update_rest(measured_pose: Transform3D, detection_ms: int) -> void:
 	if _rest_collecting:
 		if _collect_rest_sample(measured_pose, detection_ms):
 			orientation_settled.emit()
-			_last_pose_ms = Time.get_ticks_msec()
 		return
 
-	# Once startup rest exists, its slow healing is driven explicitly by the stabilizer's validated
-	# measurement-only medoid. Never educate rest from this raw fused pose.
+	# Once startup rest exists, only the stabilizer's separately confirmed relocation may change it.
+	# Never educate rest from this raw fused pose.
 
 
 ## Returns true once the checkpoint rule confirms rest or reaches its robust fallback.
@@ -144,30 +139,30 @@ func _update_stability_count(estimate: Transform3D) -> void:
 		_rest_stable_checks = 0
 
 
-## Observe one measurement-only medoid per detection. Time always advances, but remembered rest
-## heals only while that medoid is stable; an unstable movement interval must not accumulate into
-## one large catch-up step when the target becomes stable again.
-func update_rest_from_measurement(
+## Adopt the stable measurement-only medoid after the stabilizer has independently confirmed a
+## genuine relocation. Position and rotation are updated independently, exactly once per result.
+func reanchor_rest_after_relocation(
 		measured_pose: Transform3D,
 		detection_ms: int,
-		measurement_is_stable: bool
-) -> void:
+		reanchor_position: bool,
+		reanchor_rotation: bool
+) -> bool:
 	if not _has_rest_pose or _rest_collecting:
-		return
-	if detection_ms < 0 or detection_ms == _rest_heal_last_detection_ms:
-		return
-	_rest_heal_last_detection_ms = detection_ms
-	var now := Time.get_ticks_msec()
-	if measurement_is_stable and _last_pose_ms > 0 and now > _last_pose_ms:
-		var elapsed_s := float(now - _last_pose_ms) / 1000.0
-		var amount := 1.0 - exp(-elapsed_s / maxf(rest_heal_time_s, 0.001))
-		var rest_rotation := _rest_pose.basis.get_rotation_quaternion().normalized()
-		var measured_rotation := measured_pose.basis.get_rotation_quaternion().normalized()
-		_rest_pose = Transform3D(
-			Basis(rest_rotation.slerp(measured_rotation, amount).normalized()),
-			_rest_pose.origin.lerp(measured_pose.origin, amount)
-		)
-	_last_pose_ms = now
+		return false
+	if detection_ms < 0 or detection_ms == _rest_reanchor_last_detection_ms:
+		return false
+	if not reanchor_position and not reanchor_rotation:
+		return false
+	_rest_reanchor_last_detection_ms = detection_ms
+
+	var next_position := measured_pose.origin if reanchor_position else _rest_pose.origin
+	var next_rotation := (
+		measured_pose.basis.get_rotation_quaternion().normalized()
+		if reanchor_rotation
+		else _rest_pose.basis.get_rotation_quaternion().normalized()
+	)
+	_rest_pose = Transform3D(Basis(next_rotation), next_position)
+	return true
 
 
 func _restart_rest_collection() -> void:
@@ -179,8 +174,7 @@ func _restart_rest_collection() -> void:
 	_rest_previous_estimate = Transform3D.IDENTITY
 	_rest_has_previous_estimate = false
 	_rest_stable_checks = 0
-	_last_pose_ms = 0
-	_rest_heal_last_detection_ms = -1
+	_rest_reanchor_last_detection_ms = -1
 
 
 func _robust_estimate(poses: Array[Transform3D]) -> Transform3D:

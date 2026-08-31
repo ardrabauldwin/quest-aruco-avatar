@@ -1,0 +1,283 @@
+class_name CommonPoseProvider
+extends RefCounted
+## Reconstructs one common 6DOF pose from any calibrated markers in the newest result.
+
+signal orientation_settled
+
+# Slowly adopts a permanent mannequin relocation after startup.
+var rest_heal_time_s := 600.0
+
+# Rest checkpoints: E0 at 20 detections, then E1/E2/... every 5 detections.
+var rest_initial_detections := 20
+var rest_checkpoint_step := 5
+var rest_required_stable_checks := 3
+var rest_max_detections := 50
+var rest_stable_position_m := 0.002
+var rest_stable_rotation_deg := 0.5
+
+var _offsets := {}
+var _common_pose := Transform3D.IDENTITY
+var _has_common_pose := false
+
+var _rest_pose := Transform3D.IDENTITY
+var _has_rest_pose := false
+var _rest_collecting := true
+var _rest_samples: Array[Transform3D] = []
+var _rest_last_detection_ms := -1
+var _rest_next_checkpoint := 20
+var _rest_previous_estimate := Transform3D.IDENTITY
+var _rest_has_previous_estimate := false
+var _rest_stable_checks := 0
+var _last_pose_ms := 0
+var _rest_heal_last_detection_ms := -1
+
+
+## Convert each visible marker to the common pose, then robustly fuse the estimates.
+func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
+	var estimates: Array[Transform3D] = []
+	for marker in markers:
+		if marker != null and _offsets.has(marker):
+			var marker_to_common: Transform3D = _offsets[marker]
+			estimates.append(marker.global_transform * marker_to_common)
+
+	if estimates.is_empty():
+		return _common_pose
+
+	_common_pose = _fuse(estimates)
+	_has_common_pose = true
+	_update_rest(_common_pose, detection_ms)
+	return _common_pose
+
+
+func is_ready() -> bool:
+	return _has_common_pose
+
+
+func rest_pose() -> Transform3D:
+	return _rest_pose
+
+
+func has_rest_pose() -> bool:
+	return _has_rest_pose
+
+
+## Forget only the session rest pose. Permanent marker offsets remain unchanged.
+func recalibrate_orientation() -> void:
+	_restart_rest_collection()
+
+
+func _update_rest(measured_pose: Transform3D, detection_ms: int) -> void:
+	if _rest_collecting:
+		if _collect_rest_sample(measured_pose, detection_ms):
+			orientation_settled.emit()
+			_last_pose_ms = Time.get_ticks_msec()
+		return
+
+	# Once startup rest exists, its slow healing is driven explicitly by the stabilizer's validated
+	# measurement-only medoid. Never educate rest from this raw fused pose.
+
+
+## Returns true once the checkpoint rule confirms rest or reaches its robust fallback.
+func _collect_rest_sample(pose: Transform3D, detection_ms: int) -> bool:
+	if not _is_new_detection(pose, detection_ms):
+		return false
+
+	_rest_samples.append(pose.orthonormalized())
+	var sample_count := _rest_samples.size()
+	var at_checkpoint := sample_count >= _rest_next_checkpoint
+	var reached_fallback := sample_count >= maxi(rest_max_detections, 1)
+	# Fallback is an exact sample budget. It must not wait for the next checkpoint when a future
+	# grid result chooses values such as initial=15, step=8, fallback=50.
+	if not at_checkpoint and not reached_fallback:
+		return false
+
+	var estimate := _robust_estimate(_rest_samples)
+	_rest_pose = estimate
+	if at_checkpoint:
+		_update_stability_count(estimate)
+		_rest_previous_estimate = estimate
+		_rest_has_previous_estimate = true
+		_rest_next_checkpoint += maxi(rest_checkpoint_step, 1)
+
+	var converged := _rest_stable_checks >= rest_required_stable_checks
+	if not converged and not reached_fallback:
+		return false
+
+	_has_rest_pose = true
+	_rest_collecting = false
+	_rest_samples.clear()
+	if reached_fallback and not converged:
+		push_warning(
+			"Common pose: rest estimates did not converge; using robust %d-detection fallback."
+			% rest_max_detections
+		)
+	return true
+
+
+## Accept exactly one rest sample per OpenCV result.
+func _is_new_detection(pose: Transform3D, detection_ms: int) -> bool:
+	if detection_ms >= 0:
+		if detection_ms == _rest_last_detection_ms:
+			return false
+		_rest_last_detection_ms = detection_ms
+		return true
+
+	return _rest_samples.is_empty() or not pose.is_equal_approx(_rest_samples[-1])
+
+
+func _update_stability_count(estimate: Transform3D) -> void:
+	if not _rest_has_previous_estimate:
+		return
+
+	var position_change := estimate.origin.distance_to(_rest_previous_estimate.origin)
+	var rotation_change_deg := rad_to_deg(
+		estimate.basis.get_rotation_quaternion().angle_to(
+			_rest_previous_estimate.basis.get_rotation_quaternion()
+		)
+	)
+	if (
+		position_change <= rest_stable_position_m
+		and rotation_change_deg <= rest_stable_rotation_deg
+	):
+		_rest_stable_checks += 1
+	else:
+		_rest_stable_checks = 0
+
+
+## Observe one measurement-only medoid per detection. Time always advances, but remembered rest
+## heals only while that medoid is stable; an unstable movement interval must not accumulate into
+## one large catch-up step when the target becomes stable again.
+func update_rest_from_measurement(
+		measured_pose: Transform3D,
+		detection_ms: int,
+		measurement_is_stable: bool
+) -> void:
+	if not _has_rest_pose or _rest_collecting:
+		return
+	if detection_ms < 0 or detection_ms == _rest_heal_last_detection_ms:
+		return
+	_rest_heal_last_detection_ms = detection_ms
+	var now := Time.get_ticks_msec()
+	if measurement_is_stable and _last_pose_ms > 0 and now > _last_pose_ms:
+		var elapsed_s := float(now - _last_pose_ms) / 1000.0
+		var amount := 1.0 - exp(-elapsed_s / maxf(rest_heal_time_s, 0.001))
+		var rest_rotation := _rest_pose.basis.get_rotation_quaternion().normalized()
+		var measured_rotation := measured_pose.basis.get_rotation_quaternion().normalized()
+		_rest_pose = Transform3D(
+			Basis(rest_rotation.slerp(measured_rotation, amount).normalized()),
+			_rest_pose.origin.lerp(measured_pose.origin, amount)
+		)
+	_last_pose_ms = now
+
+
+func _restart_rest_collection() -> void:
+	_has_rest_pose = false
+	_rest_collecting = true
+	_rest_samples.clear()
+	_rest_last_detection_ms = -1
+	_rest_next_checkpoint = maxi(rest_initial_detections, 1)
+	_rest_previous_estimate = Transform3D.IDENTITY
+	_rest_has_previous_estimate = false
+	_rest_stable_checks = 0
+	_last_pose_ms = 0
+	_rest_heal_last_detection_ms = -1
+
+
+func _robust_estimate(poses: Array[Transform3D]) -> Transform3D:
+	return Transform3D(Basis(_rotation_medoid(poses)), _median_position(poses))
+
+
+func _median_position(poses: Array[Transform3D]) -> Vector3:
+	var xs: Array[float] = []
+	var ys: Array[float] = []
+	var zs: Array[float] = []
+	for pose in poses:
+		xs.append(pose.origin.x)
+		ys.append(pose.origin.y)
+		zs.append(pose.origin.z)
+	xs.sort()
+	ys.sort()
+	zs.sort()
+	return Vector3(_median_value(xs), _median_value(ys), _median_value(zs))
+
+
+func _median_value(values: Array[float]) -> float:
+	var upper := floori(float(values.size()) / 2.0)
+	if values.size() % 2 == 1:
+		return values[upper]
+	return (values[upper - 1] + values[upper]) * 0.5
+
+
+## Choose the measured rotation with the smallest total angular distance to all others.
+func _rotation_medoid(poses: Array[Transform3D]) -> Quaternion:
+	var best := poses[0].basis.get_rotation_quaternion().normalized()
+	var best_score := INF
+	for candidate_pose in poses:
+		var candidate := candidate_pose.basis.get_rotation_quaternion().normalized()
+		var score := 0.0
+		for other_pose in poses:
+			score += candidate.angle_to(
+				other_pose.basis.get_rotation_quaternion().normalized()
+			)
+		if score < best_score:
+			best_score = score
+			best = candidate
+	return best
+
+
+## Fuse the common-pose estimates produced by same-frame markers.
+func _fuse(poses: Array[Transform3D]) -> Transform3D:
+	# With three markers, a coordinate median plus rotation medoid prevents one corrupted marker
+	# from dragging the complete pose. Two estimates cannot identify which one is wrong without an
+	# extra assumption, so retain the symmetric mean in that case.
+	if poses.size() >= 3:
+		return _robust_estimate(poses)
+
+	var position := Vector3.ZERO
+	var rotation := Quaternion(0, 0, 0, 0)
+	var first_rotation := poses[0].basis.get_rotation_quaternion()
+
+	for pose in poses:
+		position += pose.origin
+		var pose_rotation := pose.basis.get_rotation_quaternion()
+		if first_rotation.dot(pose_rotation) < 0.0:
+			pose_rotation = -pose_rotation
+		rotation += pose_rotation
+
+	return Transform3D(Basis(rotation.normalized()), position / poses.size())
+
+
+## Persist marker-local offsets only. World-space rest is relearned every XR session.
+func save_to(path: String) -> void:
+	var cfg := ConfigFile.new()
+	for marker in _offsets:
+		cfg.set_value("common", marker.name, _offsets[marker])
+	cfg.save(path)
+
+
+func load_from(path: String, markers: Array) -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(path) != OK:
+		return false
+
+	# Validate the complete file before replacing a previously loaded calibration. A partial user
+	# file must fail so the caller can fall back to the bundled complete calibration.
+	var loaded_offsets := {}
+	var required_markers := 0
+	for marker in markers:
+		if marker == null:
+			continue
+		required_markers += 1
+		if not cfg.has_section_key("common", marker.name):
+			return false
+		var value: Variant = cfg.get_value("common", marker.name)
+		if typeof(value) != TYPE_TRANSFORM3D:
+			return false
+		loaded_offsets[marker] = value
+
+	if required_markers == 0 or loaded_offsets.size() != required_markers:
+		return false
+
+	_offsets = loaded_offsets
+	_restart_rest_collection()
+	return true

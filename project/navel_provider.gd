@@ -68,7 +68,7 @@ func _update_rest(measured_pose: Transform3D, detection_ms: int) -> void:
 			orientation_settled.emit()
 		return
 
-	# Once startup rest exists, only the stabilizer's separately confirmed relocation may change it.
+	# Once startup rest exists, only the stabilizer's confirmed stable endpoint may change it.
 	# Never educate rest from this raw fused pose.
 
 
@@ -139,9 +139,9 @@ func _update_stability_count(estimate: Transform3D) -> void:
 		_rest_stable_checks = 0
 
 
-## Adopt the stable measurement-only medoid after the stabilizer has independently confirmed a
-## genuine relocation. Position and rotation are updated independently, exactly once per result.
-func reanchor_rest_after_relocation(
+## Adopt the stable measurement-only medoid after the complete target window becomes stationary.
+## Position and rotation are updated independently, exactly once per result.
+func reanchor_rest_from_stable_target(
 		measured_pose: Transform3D,
 		detection_ms: int,
 		reanchor_position: bool,

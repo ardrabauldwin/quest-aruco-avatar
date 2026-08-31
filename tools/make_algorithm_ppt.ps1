@@ -243,27 +243,27 @@ try {
     $cards = @(
         @("DEAD ZONE", "≤6 mm position\n≤0.5° rotation\n\nHold the corresponding output channel.", $C.Green),
         @("SMOOTHING", "τ = 0.8 s\n\n63% after 0.8 s\n86.5% after 1.6 s\n95% after 2.4 s", $C.Orange),
-        @("REST PRIOR", "τ = 8 s\n\nActive during normal tracking; only confirmed relocation suspends it.", $C.Purple)
+        @("REST PRIOR", "τ = 8 s\n\nRemains active but weak while the measurement leads movement.", $C.Purple)
     )
     for($i=0;$i -lt 3;$i++){
         $x=54+$i*302
         [void](Add-Box $s $cards[$i][0] $x 150 264 48 $cards[$i][2] $C.White 17 $true)
         [void](Add-Box $s $cards[$i][1] $x 210 264 190 $C.White $C.Ink 16 $false $C.Line)
     }
-    [void](Add-Text $s "The 6 mm / 0.5° display dead zones never switch off the prior. Relocation uses separate persistent-movement thresholds." 82 438 795 44 15 $C.Navy $true 2)
-    Add-Footer $s 8 "Filtering order: medoid → dead zones → smoothing → state-controlled rest pull"
+    [void](Add-Text $s "There is no 100 mm / 5° minimum relocation threshold. Any meaningful movement can become the new rest after its endpoint is stable." 82 438 795 44 15 $C.Navy $true 2)
+    Add-Footer $s 8 "Filtering order: medoid → dead zones → smoothing → weak rest pull"
 
-    # 9 — Relocation state machine
-    $s = New-Slide $presentation "Movement uses a separate relocation state machine"
+    # 9 — Stable endpoint
+    $s = New-Slide $presentation "Any movement can establish a new stable rest"
     [void](Add-Box $s "Measurement-only\n7-pose medoid" 70 180 210 82 $C.Cyan $C.White 18 $true)
     [void](Add-Arrow $s 280 221 405 221 $C.Muted 3)
-    [void](Add-Box $s "Large offset persists?\n100 mm / 5° provisional" 407 180 170 82 $C.Orange $C.White 15 $true)
+    [void](Add-Box $s "Complete recent window\nis stationary?" 407 180 170 82 $C.Orange $C.White 16 $true)
     [void](Add-Arrow $s 577 221 700 221 $C.Muted 3)
-    [void](Add-Box $s "Suspend moved channel\nuntil endpoint stable" 702 180 190 82 $C.Purple $C.White 16 $true)
-    [void](Add-Text $s "Stable endpoint → re-anchor rest → prior resumes" 235 302 490 30 21 $C.Navy $true 2)
-    [void](Add-Text $s "Position and rotation are independent. Candidate samples must persist, and settling uses separate 2 mm / 0.5° stability limits—not the display dead zone." 120 355 720 65 16 $C.Ink $false 2)
+    [void](Add-Box $s "Re-anchor moved\nrest channel" 702 180 190 82 $C.Purple $C.White 16 $true)
+    [void](Add-Text $s "Prior stays active → stable endpoint becomes new rest" 225 302 510 30 21 $C.Navy $true 2)
+    [void](Add-Text $s "Position and rotation are independent. Stability checks the range of the complete recent window, preventing slow continuous motion from being accepted as rest." 120 355 720 65 16 $C.Ink $false 2)
     [void](Add-Box $s "600-second healing has been removed from the new runtime." 210 440 540 44 (Rgb 255 242 225) $C.Dark 14 $true $C.Orange)
-    Add-Footer $s 9 "simple_pose_stabilizer.gd relocation state • navel_provider.gd re-anchor"
+    Add-Footer $s 9 "simple_pose_stabilizer.gd stable endpoint • navel_provider.gd re-anchor"
 
     # 10 — Loss and resume
     $s = New-Slide $presentation "Tracking loss and Quest-menu resume"
@@ -304,7 +304,7 @@ try {
     $tableRows=@(
         @("Startup convergence","2.0 mm × 0.50° included","2 mm / 0.5°","Provisional"),
         @("Display filter","window, dead zone, smoothing","7 / 6 mm / 0.8 s","Provisional"),
-        @("Prior / relocation","2–30 s; 20–150 mm; 2–15°","8 s; 100 mm; 5°","Provisional"),
+        @("Prior / endpoint","2–30 s; stable-window count","8 s / 7 targets","Provisional"),
         @("Fusion strategy","mean / robust / agreement mean","robust for 3","Not yet compared")
     )
     for($r=0;$r -lt $tableRows.Count;$r++){

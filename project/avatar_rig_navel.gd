@@ -31,14 +31,10 @@ const FILTER_POSITION_DEAD_ZONE_M := 0.006
 const FILTER_ROTATION_DEAD_ZONE_DEG := 0.5
 const FILTER_SMOOTHING_TIME_S := 0.8
 const FILTER_PRIOR_TIME_S := 8.0
-# These relocation values are independent of the display dead zones and remain provisional until
-# the labelled stationary + movement grid selects them.
-const RELOCATION_POSITION_THRESHOLD_M := 0.100
-const RELOCATION_ROTATION_THRESHOLD_DEG := 5.0
-const RELOCATION_CONFIRM_DETECTIONS := 7
-const RELOCATION_STABLE_POSITION_M := 0.002
-const RELOCATION_STABLE_ROTATION_DEG := 0.5
-const RELOCATION_STABLE_DETECTIONS := 7
+# Endpoint stability is evaluated over a complete measurement-target window.
+const ENDPOINT_STABLE_POSITION_M := 0.002
+const ENDPOINT_STABLE_ROTATION_DEG := 0.5
+const ENDPOINT_STABLE_DETECTIONS := 7
 
 var _common_provider := CommonPoseProvider.new()
 var _filter := SimplePoseStabilizer.new()
@@ -60,12 +56,9 @@ func _ready() -> void:
 		FILTER_ROTATION_DEAD_ZONE_DEG,
 		FILTER_SMOOTHING_TIME_S,
 		FILTER_PRIOR_TIME_S,
-		RELOCATION_POSITION_THRESHOLD_M,
-		RELOCATION_ROTATION_THRESHOLD_DEG,
-		RELOCATION_CONFIRM_DETECTIONS,
-		RELOCATION_STABLE_POSITION_M,
-		RELOCATION_STABLE_ROTATION_DEG,
-		RELOCATION_STABLE_DETECTIONS
+		ENDPOINT_STABLE_POSITION_M,
+		ENDPOINT_STABLE_ROTATION_DEG,
+		ENDPOINT_STABLE_DETECTIONS
 	)
 	_apply_look()
 	_common_provider.orientation_settled.connect(_on_orientation_settled)
@@ -157,17 +150,17 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 		_common_provider.rest_pose(),
 		_common_provider.has_rest_pose()
 	)
-	# Re-anchor only after the measurement-only relocation detector confirms both persistent offset
-	# and a stable endpoint. Dead-zone crossings and single raw poses cannot reach this path.
-	var reanchor_position := _filter.position_relocation_ready()
-	var reanchor_rotation := _filter.rotation_relocation_ready()
-	if _common_provider.reanchor_rest_after_relocation(
+	# Any movement can become the new rest; there is no minimum relocation distance. Re-anchor only
+	# after the complete measurement-only target window is stationary.
+	var reanchor_position := _filter.position_reanchor_ready()
+	var reanchor_rotation := _filter.rotation_reanchor_ready()
+	if _common_provider.reanchor_rest_from_stable_target(
 		_filter.measurement_target(),
 		detection_ms,
 		reanchor_position,
 		reanchor_rotation
 	):
-		_filter.complete_relocation(reanchor_position, reanchor_rotation)
+		_filter.complete_rest_reanchor(reanchor_position, reanchor_rotation)
 	if _filter.is_ready() and _common_provider.has_rest_pose():
 		global_transform = filtered_pose
 

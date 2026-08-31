@@ -5,12 +5,12 @@ Run:
 
 The labelled moving recording is mandatory because stationary data alone always rewards stronger
 smoothing and prior pull. The script first searches startup-rest convergence, then performs two
-coordinate-grid passes over medoid radius/window, dead zones/smoothing, prior, relocation and
+coordinate-grid passes over medoid radius/window, dead zones/smoothing, prior, endpoint stability and
 tracking timeout. This tests every listed value without an impractical full Cartesian sweep.
 
 The replay follows the active Quest order: partial-marker fusion, tracking-loss history reset,
-combined medoid, dead zones, render-rate smoothing, startup rest, prior pull and confirmed
-relocation re-anchoring.
+combined medoid, dead zones, render-rate smoothing, startup rest, prior pull and stable-endpoint
+re-anchoring.
 It writes the winner to tune_filter_best.txt and every evaluated display configuration to
 tune_filter_results.csv.
 
@@ -48,10 +48,7 @@ DEAD_ZONES = [(0.000, 0.00), (0.001, 0.25), (0.002, 0.50), (0.003, 1.00), (0.005
 SMOOTHING_TIMES_S = [0.10, 0.25, 0.50, 0.80, 1.20]
 PRIOR_TIMES_S = [2.0, 4.0, 8.0, 16.0, 30.0]
 TRACKING_TIMEOUTS_S = [0.30, 0.20, 0.40, 0.50]
-RELOCATION_POSITION_THRESHOLDS_M = [0.020, 0.040, 0.060, 0.080, 0.100, 0.120, 0.150]
-RELOCATION_ROTATION_THRESHOLDS_DEG = [2.0, 3.0, 5.0, 8.0, 10.0, 15.0]
-RELOCATION_CONFIRM_COUNTS = [3, 5, 7, 10]
-RELOCATION_STABLE_COUNTS = [3, 5, 7, 10]
+ENDPOINT_STABLE_COUNTS = [3, 5, 7, 10]
 
 # Radius converts angular disagreement into equivalent point displacement inside the 6-DoF
 # medoid. It is NOT avatar size or a dead zone. The exact old 15 mm / 3 degree balance is included
@@ -186,12 +183,9 @@ def startup_rest(positions, rotations, rest_config=None):
 def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_time_s,
               rest_index, initial_rest, prior_time_s=RUNTIME_PRIOR_TIME_S,
               tracking_timeout_s=TRACKING_LOSS_TIMEOUT_S,
-              relocation_position_threshold_m=0.100,
-              relocation_rotation_threshold_deg=5.0,
-              relocation_confirm_detections=7,
-              relocation_stable_position_m=0.002,
-              relocation_stable_rotation_deg=0.5,
-              relocation_stable_detections=7):
+              endpoint_stable_position_m=0.002,
+              endpoint_stable_rotation_deg=0.5,
+              endpoint_stable_detections=7):
     """Replay the active Quest order at render rate, sampled at each detection."""
     raw_positions, raw_rotations = raw_poses
     target_positions, target_rotations, reacquiring = targets
@@ -200,10 +194,7 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
     position, rotation = target_positions[0].copy(), target_rotations[0].copy()
     rest_position, rest_rotation = initial_rest[0].copy(), initial_rest[1].copy()
     rest_active = False
-    previous_relocation_target = None
-    position_candidate_count = rotation_candidate_count = 0
-    position_stable_count = rotation_stable_count = 0
-    position_relocating = rotation_relocating = False
+    endpoint_targets = []
 
     def render_step(target_p, target_r, delta_s):
         nonlocal position, rotation, rest_position, rest_rotation
@@ -216,46 +207,28 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
 
         if rest_active and prior_time_s > 0.0:
             pull = 1.0 - np.exp(-delta_s / prior_time_s)
-            if not position_relocating:
-                position = position + (rest_position - position) * pull
-            if not rotation_relocating:
-                rotation = slerp(rotation, rest_rotation, pull)
+            position = position + (rest_position - position) * pull
+            rotation = slerp(rotation, rest_rotation, pull)
 
     for i in range(len(target_positions)):
         if reacquiring[i]:
-            previous_relocation_target = None
-            position_candidate_count = rotation_candidate_count = 0
-            position_stable_count = rotation_stable_count = 0
-            position_relocating = rotation_relocating = False
+            endpoint_targets.clear()
+        position_reanchor_ready = rotation_reanchor_ready = False
         if rest_active and not reacquiring[i]:
             target_p, target_r = target_positions[i], target_rotations[i]
-            position_is_stable = (previous_relocation_target is not None and
-                np.linalg.norm(target_p - previous_relocation_target[0])
-                <= relocation_stable_position_m)
-            rotation_is_stable = (previous_relocation_target is not None and
-                angle_deg(target_r, previous_relocation_target[1])
-                <= relocation_stable_rotation_deg)
-
-            if not position_relocating:
-                if np.linalg.norm(target_p - rest_position) >= relocation_position_threshold_m:
-                    position_candidate_count += 1
-                    position_stable_count = position_stable_count + 1 if position_is_stable else 0
-                else:
-                    position_candidate_count = position_stable_count = 0
-                position_relocating = position_candidate_count >= relocation_confirm_detections
-            else:
-                position_stable_count = position_stable_count + 1 if position_is_stable else 0
-
-            if not rotation_relocating:
-                if angle_deg(target_r, rest_rotation) >= relocation_rotation_threshold_deg:
-                    rotation_candidate_count += 1
-                    rotation_stable_count = rotation_stable_count + 1 if rotation_is_stable else 0
-                else:
-                    rotation_candidate_count = rotation_stable_count = 0
-                rotation_relocating = rotation_candidate_count >= relocation_confirm_detections
-            else:
-                rotation_stable_count = rotation_stable_count + 1 if rotation_is_stable else 0
-            previous_relocation_target = (target_p.copy(), target_r.copy())
+            endpoint_targets.append((target_p.copy(), target_r.copy()))
+            endpoint_targets = endpoint_targets[-endpoint_stable_detections:]
+            if len(endpoint_targets) == endpoint_stable_detections:
+                position_is_stable = all(
+                    np.linalg.norm(p - target_p) <= endpoint_stable_position_m
+                    for p, _ in endpoint_targets)
+                rotation_is_stable = all(
+                    angle_deg(r, target_r) <= endpoint_stable_rotation_deg
+                    for _, r in endpoint_targets)
+                position_reanchor_ready = (position_is_stable and
+                    np.linalg.norm(target_p - rest_position) > dead_zone_m)
+                rotation_reanchor_ready = (rotation_is_stable and
+                    angle_deg(target_r, rest_rotation) > dead_zone_deg)
 
         if i > 0:
             # Before detection i arrives, Quest can only move toward detection i-1. The old replay
@@ -276,15 +249,11 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
 
         output_positions[i], output_rotations[i] = position, rotation
 
-        # Match Quest: update the display first, then adopt a separately confirmed stable endpoint.
-        if position_relocating and position_stable_count >= relocation_stable_detections:
+        # Match Quest: update the display first, then adopt any confirmed stable endpoint.
+        if position_reanchor_ready:
             rest_position = target_positions[i].copy()
-            position_candidate_count = position_stable_count = 0
-            position_relocating = False
-        if rotation_relocating and rotation_stable_count >= relocation_stable_detections:
+        if rotation_reanchor_ready:
             rest_rotation = target_rotations[i].copy()
-            rotation_candidate_count = rotation_stable_count = 0
-            rotation_relocating = False
 
     return output_positions, output_rotations
 
@@ -384,10 +353,7 @@ class DisplayConfig:
     smoothing_s: float = 0.8
     prior_s: float = 8.0
     timeout_s: float = 0.3
-    relocation_m: float = 0.100
-    relocation_deg: float = 5.0
-    relocation_confirm: int = 7
-    relocation_stable: int = 7
+    endpoint_stable: int = 7
 
 
 def contiguous_segments(recording):
@@ -479,12 +445,9 @@ def replay_recording(recording, config, rest_config):
                        config.dead_m, config.dead_deg, config.smoothing_s, rest_index, rest,
                        prior_time_s=config.prior_s,
                        tracking_timeout_s=config.timeout_s,
-                       relocation_position_threshold_m=config.relocation_m,
-                       relocation_rotation_threshold_deg=config.relocation_deg,
-                       relocation_confirm_detections=config.relocation_confirm,
-                       relocation_stable_position_m=rest_config["position_mm"] / 1000.0,
-                       relocation_stable_rotation_deg=rest_config["rotation_deg"],
-                       relocation_stable_detections=config.relocation_stable)
+                       endpoint_stable_position_m=rest_config["position_mm"] / 1000.0,
+                       endpoint_stable_rotation_deg=rest_config["rotation_deg"],
+                       endpoint_stable_detections=config.endpoint_stable)
     return output, rest_index
 
 
@@ -594,17 +557,8 @@ def search_display_parameters(stationary, moving, distance_mm, rest_config):
                       for prior in PRIOR_TIMES_S]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
 
-        candidates = [DisplayConfig(**{**current.__dict__, "relocation_m": position,
-                                       "relocation_deg": rotation})
-                      for position, rotation in product(
-                          RELOCATION_POSITION_THRESHOLDS_M,
-                          RELOCATION_ROTATION_THRESHOLDS_DEG)]
-        current = min(candidates, key=lambda config: evaluate(config)["total_score"])
-
-        candidates = [DisplayConfig(**{**current.__dict__, "relocation_confirm": confirm,
-                                       "relocation_stable": stable})
-                      for confirm, stable in product(
-                          RELOCATION_CONFIRM_COUNTS, RELOCATION_STABLE_COUNTS)]
+        candidates = [DisplayConfig(**{**current.__dict__, "endpoint_stable": stable})
+                      for stable in ENDPOINT_STABLE_COUNTS]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
 
         candidates = [DisplayConfig(**{**current.__dict__, "timeout_s": timeout})
@@ -657,10 +611,7 @@ def main():
         f"  rotation_dead_zone_deg   {best.dead_deg}",
         f"  smoothing_time_s         {best.smoothing_s}",
         f"  prior_time_s             {best.prior_s}",
-        f"  relocation_position_mm   {best.relocation_m * 1000:.1f}",
-        f"  relocation_rotation_deg  {best.relocation_deg}",
-        f"  relocation_confirm       {best.relocation_confirm}",
-        f"  relocation_stable        {best.relocation_stable}",
+        f"  endpoint_stable_count    {best.endpoint_stable}",
         f"  tracking_timeout_ms      {best.timeout_s * 1000:.0f}", "",
         "VALIDATION METRICS",
         f"  total_score              {metrics['total_score']:.4f}",

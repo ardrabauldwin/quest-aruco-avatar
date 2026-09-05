@@ -4,13 +4,15 @@ extends RefCounted
 
 signal orientation_settled
 
-# Rest checkpoints: E0 at 20 detections, then E1/E2/... every 5 detections.
-var rest_initial_detections := 40
-var rest_checkpoint_step := 5
-var rest_required_stable_checks := 3
+# Rest checkpoints selected by the 2026-09-04 grid run (identical winner across both the
+# 105 mm-assumed and 617.5 mm-corrected searches): E0 at 30 detections, then every 3.
+# Earliest confirmation is detection 42 (4 consecutive stable checks).
+var rest_initial_detections := 30
+var rest_checkpoint_step := 3
+var rest_required_stable_checks := 4
 var rest_max_detections := 100
-var rest_stable_position_m := 0.002
-var rest_stable_rotation_deg := 0.5
+var rest_stable_position_m := 0.0015
+var rest_stable_rotation_deg := 1.0
 
 var _offsets := {}
 var _common_pose := Transform3D.IDENTITY

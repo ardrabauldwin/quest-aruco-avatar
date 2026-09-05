@@ -4,28 +4,30 @@ REST PARAMETERS
   initial_detections       30
   checkpoint_step          3
   stable_position_mm       1.5
-  stable_rotation_deg      0.1
-  stable_checks            3
+  stable_rotation_deg      1.0
+  stable_checks            4
   fallback_detections      100
 
 DISPLAY PARAMETERS
-  medoid_window            7
-  medoid_radius_m          0.1
-  position_dead_zone_mm    6.0
-  rotation_dead_zone_deg   0.5
+  medoid_window            5
+  medoid_radius_m          0.2
+  position_dead_zone_mm    20.0
+  rotation_dead_zone_deg   0.3
   smoothing_time_s         1.2
   prior_time_s             2.0
-  rest_healing_time_s      1200.0
-  tracking_timeout_ms      200
+  endpoint_stable_count    3
+  reanchor_min_position_mm 40.0
+  reanchor_min_rotation_deg 3.0
+  tracking_timeout_ms      300
 
 VALIDATION METRICS
-  total_score              0.9702
-  stationary_score         0.2849
-  movement_score           1.6555
-  movement_retained        213.7%
-  movement_delay_s         2.723
-  endpoint_error_mm        249.83
-  return_error_mm          310.68
+  total_score              0.2166
+  stationary_score         0.4101
+  movement_score           0.0232
+  movement_retained        99.7%
+  movement_delay_s         2.242
+  endpoint_error_mm        4.79
+  return_error_mm          10.40
 
 Score = mean(stationary normalized jump/drift, movement normalized amplitude/delay/endpoint/return).
 The grid is staged and repeated twice; every listed value is tested without an impractical full Cartesian sweep.

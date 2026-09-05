@@ -30,20 +30,22 @@ extends Node3D
 const SAVE_PATH := "user://navel_calibration_20260905.cfg"
 const DEFAULT_CALIBRATION_PATH := "res://default_navel_calibration.cfg"
 
-# Runtime filter values. Provisional values are replaced after the labelled experiment.
-const FILTER_WINDOW := 7
-const FILTER_POSITION_DEAD_ZONE_M := 0.005
-const FILTER_ROTATION_DEAD_ZONE_DEG := 1.5
+# Runtime filter values selected by tune_filter.py on the 2026-09-04 labelled session
+# (calibration 1788433311 + stationary 1788430472 + moving 1788431407 at 617.5 mm):
+# movement retained 99.7%, endpoint error 4.8 mm, return error 10.4 mm.
+const FILTER_WINDOW := 5
+const FILTER_POSITION_DEAD_ZONE_M := 0.020
+const FILTER_ROTATION_DEAD_ZONE_DEG := 0.3
 const FILTER_SMOOTHING_TIME_S := 1.2
-const FILTER_PRIOR_TIME_S := 8.0
+const FILTER_PRIOR_TIME_S := 2.0
 # Endpoint stability is evaluated over a complete measurement-target window.
-const ENDPOINT_STABLE_POSITION_M := 0.002
-const ENDPOINT_STABLE_ROTATION_DEG := 0.5
-const ENDPOINT_STABLE_DETECTIONS := 7
-# Stationary experiment 1788185288 reached 19.623 mm / 5.687 deg measurement excursions.
-# Require a stable endpoint beyond that envelope before remembered rest may relocate.
-const REANCHOR_MIN_POSITION_M := 0.020
-const REANCHOR_MIN_ROTATION_DEG := 6.0
+const ENDPOINT_STABLE_POSITION_M := 0.0015
+const ENDPOINT_STABLE_ROTATION_DEG := 1.0
+const ENDPOINT_STABLE_DETECTIONS := 3
+# The floor comes from the same grid run; the small-move band (10-30 mm) has no direct
+# labelled evidence yet, so 40 mm is the safest value the data could not distinguish.
+const REANCHOR_MIN_POSITION_M := 0.040
+const REANCHOR_MIN_ROTATION_DEG := 3.0
 
 var _common_provider := CommonPoseProvider.new()
 var _filter := SimplePoseStabilizer.new()
@@ -238,7 +240,7 @@ func _on_button(button_name: String) -> void:
 	_common_provider.recalibrate_orientation()
 	visible = false
 	_filter.reset()
-	print("Common pose: re-levelling; collecting 20+5 detection checkpoints.")
+	print("Common pose: re-levelling; collecting 30+3 detection checkpoints.")
 
 
 func _on_orientation_settled() -> void:

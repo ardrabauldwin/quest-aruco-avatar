@@ -21,9 +21,8 @@ var reanchor_min_position_m := 0.0
 var reanchor_min_rotation_deg := 0.0
 
 # Converts rotation into equivalent point displacement inside the medoid score.
-# 0.2864789 m preserves the old 15 mm / 3 degree balance exactly. It is provisional until the
-# stationary + CPR experiment chooses a radius from the analysis grid.
-var medoid_rotation_radius_m := 0.10
+# 0.20 m was selected by the 2026-09-04 grid run; 1 degree scores like ~3.5 mm of position.
+var medoid_rotation_radius_m := 0.20
 
 # When the target corroborates rest but the display has not settled onto it (right after a
 # re-anchor), the dead zone would park the display short and leave the remainder to the slow

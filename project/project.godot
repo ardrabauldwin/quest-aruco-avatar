@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="OpenCV ArUco"
 run/main_scene="uid://catn06b43r1ce"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [editor_plugins]
@@ -34,5 +34,8 @@ anti_aliasing/quality/screen_space_aa=1
 
 openxr/enabled=true
 openxr/environment_blend_mode=2
+# LOCAL_FLOOR: Quest/OpenXR supplies the calibrated physical floor as world Y = 0.
+openxr/reference_space=2
 openxr/extensions/hand_tracking=true
+shaders/enabled=true
 openxr/extensions/meta/passthrough=true

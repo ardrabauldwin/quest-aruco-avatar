@@ -1,0 +1,32 @@
+ROTATION ANALYSIS RESULTS
+Generated with: analyze_rotation.py
+Calibration: data/calibration.csv
+Rotation values are equivalent movement at a 500 mm radius.
+
+==============================================================================
+WALKING
+Test CSV: data/today/walk_final_1785760244.csv
+Input: 438 rows; 6 bad rows removed; 419 complete rows
+==============================================================================
+
+phase         rows     ROT X     ROT Y     ROT Z    ROT 3D     POS X     POS Y     POS Z    POS 3D
+near           120   16.25mm   10.40mm    6.70mm   20.02mm    1.01mm    2.08mm    4.53mm    5.19mm
+far             61   43.98mm   21.09mm   15.41mm   65.12mm    2.31mm    4.82mm   13.75mm   14.28mm
+left_side       64   39.77mm   41.38mm   33.91mm   69.41mm    3.06mm    5.04mm   11.62mm   13.26mm
+right_side      52   42.25mm   64.17mm   37.80mm  105.27mm    2.74mm    7.44mm    9.71mm   15.28mm
+crouch          43   15.57mm   10.57mm    2.09mm   20.79mm    0.49mm    1.90mm    4.69mm    4.93mm
+stand_tall      92   17.41mm    4.68mm    4.19mm   20.65mm    0.51mm    2.53mm    3.09mm    4.91mm
+ALL            432   67.08mm   25.55mm   24.61mm   77.89mm    3.45mm    6.09mm    9.79mm   13.08mm
+
+==============================================================================
+HEAD MOTION
+Test CSV: data/today/headmotion_1785761051.csv
+Input: 645 rows; 0 bad rows removed; 626 complete rows
+==============================================================================
+
+phase         rows     ROT X     ROT Y     ROT Z    ROT 3D     POS X     POS Y     POS Z    POS 3D
+still           83   15.62mm    6.95mm    8.88mm   22.96mm    0.73mm    4.06mm    4.88mm    6.54mm
+slow           247   28.03mm    9.53mm    6.15mm   33.59mm    1.74mm    4.07mm    4.80mm    7.06mm
+medium         134   25.21mm   14.43mm    8.14mm   37.26mm    1.94mm    3.70mm    3.63mm    6.72mm
+fast           181   32.55mm    9.49mm    7.93mm   38.07mm    1.40mm    3.95mm    4.70mm    6.98mm
+ALL            645   29.03mm   10.41mm    6.81mm   35.77mm    1.64mm    4.65mm    4.60mm    7.34mm

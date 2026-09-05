@@ -12,16 +12,24 @@ var rotation_dead_zone_deg := 1.5
 var smoothing_time_s := 0.5
 var prior_time_s := 1.0
 
-# A stable endpoint is checked over a complete target-history window. This prevents slow movement
-# from being mistaken for rest without imposing a minimum relocation distance.
+# A stable endpoint is checked over a complete target-history window. A separate minimum distance
+# from remembered rest prevents stationary measurement bias from being accepted as relocation.
 var endpoint_stable_position_m := 0.002
 var endpoint_stable_rotation_deg := 0.5
 var endpoint_stable_detections := 7
+var reanchor_min_position_m := 0.0
+var reanchor_min_rotation_deg := 0.0
 
 # Converts rotation into equivalent point displacement inside the medoid score.
 # 0.2864789 m preserves the old 15 mm / 3 degree balance exactly. It is provisional until the
 # stationary + CPR experiment chooses a radius from the analysis grid.
-var medoid_rotation_radius_m := 0.2864789
+var medoid_rotation_radius_m := 0.10
+
+# When the target corroborates rest but the display has not settled onto it (right after a
+# re-anchor), the dead zone would park the display short and leave the remainder to the slow
+# prior. Landing closes onto rest at smoothing speed until within these margins.
+const LANDING_POSITION_M := 0.001
+const LANDING_ROTATION_DEG := 0.1
 
 var _stable_pose := Transform3D.IDENTITY
 var _target_pose := Transform3D.IDENTITY
@@ -44,7 +52,9 @@ func configure(
 		p_prior_time_s: float = 1.0,
 		p_endpoint_stable_position_m: float = 0.002,
 		p_endpoint_stable_rotation_deg: float = 0.5,
-		p_endpoint_stable_detections: int = 7
+		p_endpoint_stable_detections: int = 7,
+		p_reanchor_min_position_m: float = 0.0,
+		p_reanchor_min_rotation_deg: float = 0.0
 ) -> void:
 	window = maxi(p_window, 1)
 	position_dead_zone_m = maxf(p_position_dead_zone_m, 0.0)
@@ -54,6 +64,8 @@ func configure(
 	endpoint_stable_position_m = maxf(p_endpoint_stable_position_m, 0.0)
 	endpoint_stable_rotation_deg = maxf(p_endpoint_stable_rotation_deg, 0.0)
 	endpoint_stable_detections = maxi(p_endpoint_stable_detections, 1)
+	reanchor_min_position_m = maxf(p_reanchor_min_position_m, 0.0)
+	reanchor_min_rotation_deg = maxf(p_reanchor_min_rotation_deg, 0.0)
 	while _recent_poses.size() > window:
 		_recent_poses.pop_front()
 
@@ -86,6 +98,10 @@ func update(
 	var amount := _smoothing_amount(delta_s)
 	var next_position := _smoothed_position(amount)
 	var next_rotation := _smoothed_rotation(amount)
+
+	if use_rest_prior:
+		next_position = _landing_position(next_position, amount, rest_pose)
+		next_rotation = _landing_rotation(next_rotation, amount, rest_pose)
 
 	if use_rest_prior and prior_time_s > 0.0:
 		var pull := 1.0 - exp(-maxf(delta_s, 0.0) / prior_time_s)
@@ -151,19 +167,40 @@ func _update_stable_endpoint_state(rest_pose: Transform3D) -> void:
 
 	_position_reanchor_ready = (
 		position_is_stable
-		and _target_pose.origin.distance_to(rest_pose.origin) > position_dead_zone_m
+		and _target_pose.origin.distance_to(rest_pose.origin)
+			> maxf(position_dead_zone_m, reanchor_min_position_m)
 	)
 	_rotation_reanchor_ready = (
 		rotation_is_stable
 		and rad_to_deg(
 			newest_rotation.angle_to(rest_pose.basis.get_rotation_quaternion().normalized())
-		) > rotation_dead_zone_deg
+		) > maxf(rotation_dead_zone_deg, reanchor_min_rotation_deg)
 	)
 
 
 func _set_measurement_target(pose: Transform3D) -> void:
 	_has_measurement_target = true
 	_target_pose = pose
+
+
+## Close onto rest at smoothing speed while the target agrees with rest but the display sits off
+## it. Lerping toward rest rather than the target keeps measurement jitter out of the landing.
+func _landing_position(current: Vector3, amount: float, rest_pose: Transform3D) -> Vector3:
+	if _target_pose.origin.distance_to(rest_pose.origin) > position_dead_zone_m:
+		return current
+	if current.distance_to(rest_pose.origin) <= LANDING_POSITION_M:
+		return current
+	return current.lerp(rest_pose.origin, amount)
+
+
+func _landing_rotation(current: Quaternion, amount: float, rest_pose: Transform3D) -> Quaternion:
+	var rest_rotation := rest_pose.basis.get_rotation_quaternion().normalized()
+	var target_rotation := _target_pose.basis.get_rotation_quaternion().normalized()
+	if rad_to_deg(target_rotation.angle_to(rest_rotation)) > rotation_dead_zone_deg:
+		return current
+	if rad_to_deg(current.angle_to(rest_rotation)) <= LANDING_ROTATION_DEG:
+		return current
+	return current.slerp(rest_rotation, amount).normalized()
 
 
 func _smoothed_position(amount: float) -> Vector3:

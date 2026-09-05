@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://catn06b43r1ce"]
+
+[ext_resource type="Script" uid="uid://crxyq5donm67c" path="res://main_3d.gd" id="1_wiwsh"]
+[ext_resource type="Script" uid="uid://df20bwxeyvlj4" path="res://xr_startup.gd" id="2_xr"]
+[ext_resource type="PackedScene" uid="uid://dfi0nl6pl0gu4" path="res://assets/avatar/mannequin.glb" id="4_mann"]
+[ext_resource type="Script" uid="uid://uertqtehobur" path="res://marker_gizmo.gd" id="5_giz"]
+[ext_resource type="Script" uid="uid://cnrhn42u0xjmm" path="res://avatar_rig_navel.gd" id="6_navel"]
+[ext_resource type="Script" uid="uid://dvusgj1s4iqi3" path="res://aruco_csv_logger.gd" id="7_csv"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_wiwsh"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8jj3j"]
+no_depth_test = true
+shading_mode = 0
+albedo_color = Color(1, 0.05882353, 0.35686275, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_xofcu"]
+radius = 0.02
+height = 0.04
+
+[node name="main3d" type="Node3D" unique_id=327546220]
+script = ExtResource("1_wiwsh")
+
+[node name="XROrigin3D" type="XROrigin3D" parent="." unique_id=1743576496]
+script = ExtResource("2_xr")
+
+[node name="LeftHand" type="XRController3D" parent="XROrigin3D" unique_id=481364151]
+tracker = &"left_hand"
+
+[node name="RightHand" type="XRController3D" parent="XROrigin3D" unique_id=1982790555]
+tracker = &"right_hand"
+
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D" unique_id=1388799716]
+
+[node name="LoggerStatus3D" type="Label3D" parent="XROrigin3D/XRCamera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.18, -0.6)
+pixel_size = 0.0006
+billboard = 1
+shaded = false
+double_sided = true
+no_depth_test = true
+fixed_size = true
+text = "STOPPED"
+font_size = 64
+outline_size = 16
+horizontal_alignment = 1
+
+[node name="ArucoCsvLogger" type="Node" parent="." node_paths=PackedStringArray("detection_source", "right_controller", "left_controller", "status_label")]
+process_priority = 100
+script = ExtResource("7_csv")
+detection_source = NodePath("..")
+right_controller = NodePath("../XROrigin3D/RightHand")
+left_controller = NodePath("../XROrigin3D/LeftHand")
+status_label = NodePath("../XROrigin3D/XRCamera3D/LoggerStatus3D")
+
+[node name="aruco_patch0" type="Node3D" parent="XROrigin3D/XRCamera3D" unique_id=1968016531]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D/aruco_patch0" unique_id=297015256]
+transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
+mesh = SubResource("BoxMesh_wiwsh")
+
+[node name="aruco_patch1" type="Node3D" parent="XROrigin3D/XRCamera3D" unique_id=603516852]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D/aruco_patch1" unique_id=656717756]
+transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
+mesh = SubResource("BoxMesh_wiwsh")
+
+[node name="aruco_patch2" type="Node3D" parent="XROrigin3D/XRCamera3D" unique_id=603516853]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="XROrigin3D/XRCamera3D/aruco_patch2" unique_id=656717757]
+transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
+mesh = SubResource("BoxMesh_wiwsh")
+
+[node name="AvatarRig" type="Node3D" parent="." unique_id=98577932 node_paths=PackedStringArray("common_marker", "chest_marker", "torso_marker", "xr_controller_right", "target", "xr_controller_left")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
+script = ExtResource("6_navel")
+common_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch0")
+chest_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch1")
+torso_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch2")
+xr_controller_right = NodePath("../XROrigin3D/RightHand")
+target = NodePath("mannequin")
+xr_controller_left = NodePath("../XROrigin3D/LeftHand")
+
+[node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
+transform = Transform3D(0.77, 0, 0, 0, -3.365777e-08, 0.77, 0, -0.77, -3.365777e-08, 0.003, -0.115, 0.175)
+
+[node name="FillLight" type="OmniLight3D" parent="AvatarRig" unique_id=1966174494]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0.6)
+light_energy = 4.0
+omni_range = 8.0
+
+[node name="test" type="MeshInstance3D" parent="AvatarRig" unique_id=1362412167]
+visible = false
+material_override = SubResource("StandardMaterial3D_8jj3j")
+mesh = SubResource("SphereMesh_xofcu")
+
+[node name="MarkerGizmos" type="Node3D" parent="." unique_id=1835585909 node_paths=PackedStringArray("markers")]
+script = ExtResource("5_giz")
+markers = [NodePath("../XROrigin3D/XRCamera3D/aruco_patch0"), NodePath("../XROrigin3D/XRCamera3D/aruco_patch1"), NodePath("../XROrigin3D/XRCamera3D/aruco_patch2")]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1064034995]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+
+[node name="CameraLayer" type="CanvasLayer" parent="." unique_id=206553118]
+
+[node name="CameraPreview" type="TextureRect" parent="CameraLayer" unique_id=1073749614]
+custom_minimum_size = Vector2(320, 240)
+offset_right = 320.0
+offset_bottom = 240.0
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="LoggerStatus" type="Label" parent="CameraLayer"]
+offset_left = 12.0
+offset_top = 248.0
+offset_right = 420.0
+offset_bottom = 310.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+text = "STOPPED - stationary\nPhase: stationary\nA: start/stop   X: next phase"

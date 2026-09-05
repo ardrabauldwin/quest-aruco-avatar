@@ -1,0 +1,21 @@
+﻿tilt gate: rejected 0 of 645 detections
+
+ score  window  pos mm  smooth s
+ 0.080       7     6.0      0.80
+ 0.093       7     4.0      0.80
+ 0.093       5     6.0      0.80
+ 0.095       7     6.0      0.50
+ 0.099       7     2.0      0.80
+ 0.101       7     0.0      0.80
+ 0.103       5     4.0      0.80
+ 0.109       5     2.0      0.80
+ 0.110       5     0.0      0.80
+ 0.111       3     6.0      0.80
+
+Best setting (window 7, dead zone 6 mm, smoothing 0.80 s):
+  position wobble    7.28 ->  0.36 mm  ( 95% removed)
+  position jump     22.14 ->  1.32 mm  ( 94% removed)
+  position drift     7.39 ->  1.64 mm  ( 78% removed)
+  rotation wobble    4.00 ->  0.08 deg ( 98% removed)
+  rotation jump     10.84 ->  0.34 deg ( 97% removed)
+  rotation drift     4.05 ->  0.38 deg ( 91% removed)

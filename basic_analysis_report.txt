@@ -1,0 +1,71 @@
+ANALYSIS REPORT - generated 2026-08-06
+recordings: data/today/headmotion_1785761051.csv (working-position test), data/today/walk_final_1785760244.csv (calibration walk)
+
+==============================================================
+1. ROTATION AND POSITION WANDER (basic_analyze_rotation.py)
+   body-frame axes: X/Y in marker plane, Z = chest normal
+==============================================================
+
+headmotion_1785761051.csv: 645 poses, markers never moved, every value is repeatability error.
+
+  axis         rot deg    mm at 500 mm    pos mm
+  Body X          3.32           28.96      1.42
+  Body Y          1.35           11.81      2.58
+  Body Z          0.50            4.33      5.88
+  Total 3D        4.05           35.31      7.39
+
+walk_final_1785760244.csv: 438 poses, markers never moved, every value is repeatability error.
+
+  axis         rot deg    mm at 500 mm    pos mm
+  Body X          7.78           67.87      2.14
+  Body Y          3.85           33.58      1.66
+  Body Z          0.80            7.00     12.26
+  Total 3D        9.01           78.63     13.13
+
+  Only rotation needs the 500 mm radius: a rotation error moves a point more the
+  farther it is from the pivot. A position error moves every point equally,
+  so pos mm is the same at any radius.
+
+==============================================================
+2. FILTER GRID SEARCH (basic_tune_filter.py, headmotion)
+==============================================================
+
+ score  window  pos mm  rot deg  smooth s
+ 0.292       5     6.0     1.00      0.80
+ 0.295       5     6.0     0.00      0.80
+ 0.295       5     6.0     0.50      0.80
+ 0.296       3     6.0     1.00      0.80
+ 0.296       3     6.0     0.50      0.80
+ 0.296       3     6.0     0.00      0.80
+ 0.298       7     4.0     1.00      0.80
+ 0.299       7     4.0     0.50      0.80
+ 0.299       7     4.0     0.00      0.80
+ 0.301       5     4.0     1.00      0.80
+
+Best setting (window 5, dead zones 6 mm / 1.0 deg, smoothing 0.80 s), error before -> after:
+  position wobble    9.66 ->  1.63 mm  ( 83% removed)
+  position jump     31.61 ->  5.65 mm  ( 82% removed)
+  position drift     9.79 ->  6.51 mm  ( 33% removed)
+  rotation wobble    4.52 ->  0.64 deg ( 86% removed)
+  rotation jump     13.94 ->  1.62 deg ( 88% removed)
+  rotation drift     4.93 ->  2.37 deg ( 52% removed)
+
+==============================================================
+3. PER-ROW RULER CHECK (basic_ruler_check.py, summaries)
+==============================================================
+--- headmotion ---
+  pair         rows    median     worst
+  ID0-ID1       645       1.4      14.7
+  ID0-ID2       626       2.8      11.9
+  ID1-ID2       626       1.5      29.7
+
+  0 of 645 rows are over 30 mm and would be
+  dropped by load_csv(). A large share means the calibration is off, not the data.
+--- walk_final ---
+  pair         rows    median     worst
+  ID0-ID1       425       1.6      28.0
+  ID0-ID2       426       3.7      72.7
+  ID1-ID2       425       3.0      73.2
+
+  6 of 438 rows are over 30 mm and would be
+  dropped by load_csv(). A large share means the calibration is off, not the data.

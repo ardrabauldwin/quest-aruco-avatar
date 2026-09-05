@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ArUco Pose Logger and Filter Analysis</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  body { font: 10.5pt/1.45 "Segoe UI", Arial, sans-serif; color: #20242a; max-width: 900px; margin: 0 auto; }
+  h1 { color: #153d64; font-size: 24pt; margin-bottom: 4px; }
+  h2 { color: #245d88; font-size: 15pt; margin-top: 24px; border-bottom: 1px solid #cbd8e3; padding-bottom: 4px; }
+  .date { color: #66727d; margin-bottom: 24px; }
+  .summary { background: #edf6fc; border-left: 4px solid #2c7fb8; padding: 10px 14px; }
+  code { font-family: Consolas, monospace; background: #f2f4f6; padding: 1px 3px; }
+  pre { background: #f2f4f6; border: 1px solid #d9dde1; padding: 10px; white-space: pre-wrap; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 16px; page-break-inside: avoid; }
+  th, td { border: 1px solid #cbd2d9; padding: 6px 8px; text-align: left; }
+  th { background: #e7eef4; }
+  td:nth-child(n+2) { vertical-align: top; }
+  blockquote { margin: 12px 0; padding: 10px 14px; background: #f7f3e8; border-left: 4px solid #c28b2c; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<h1>ArUco Pose Logger and Filter Analysis</h1>
+<div class="date">29 July 2026</div>
+
+<div class="summary">
+  <strong>Purpose:</strong> record numerical ArUco poses for filter analysis.
+  The logger does not record video, does not run OpenCV a second time, and does
+  not add CSV logic to <code>main_3d.gd</code>.
+</div>
+
+<h2>1. Input and output</h2>
+<p>Paul’s C++ code produces one dictionary for every processed camera image:</p>
+<pre>result[ids[i]] = lens_pose * Transform3D(basis, origin);</pre>
+<p>Conceptually:</p>
+<pre>{
+    0: Transform3D(...),  # common
+    1: Transform3D(...),  # chest
+    2: Transform3D(...)   # navel
+}</pre>
+<p>One completed dictionary becomes one CSV row:</p>
+<pre>Quest image
+    ↓
+Paul/OpenCV calculates marker 6-DoF
+    ↓
+Dictionary {marker ID: Transform3D}
+    ↓
+Standalone logger copies the result
+    ↓
+One CSV row</pre>
+
+<p>The CSV stores logger time, detected count, camera pose, and the three marker
+poses. Each pose contains position <code>x, y, z</code> in metres and quaternion
+rotation <code>qx, qy, qz, qw</code>. A missing marker receives
+<code>seen=0</code> and empty pose fields.</p>
+
+<h2>2. Logger code structure</h2>
+<table>
+<tr><th>Section</th><th>Function</th><th>Responsibility</th></tr>
+<tr><td>Settings</td><td>constants and exports</td><td>Duration, marker IDs, node references</td></tr>
+<tr><td>Start</td><td><code>_ready()</code>, <code>_on_button()</code></td><td>Connect right-controller A</td></tr>
+<tr><td>Main flow</td><td><code>_process()</code></td><td>Copy, check, and save the result</td></tr>
+<tr><td>Safe copy</td><td><code>_get_latest_opencv_result()</code></td><td>Copy Paul’s result under the mutex</td></tr>
+<tr><td>Duplicate check</td><td><code>_is_new_result()</code></td><td>Write each changed result once</td></tr>
+<tr><td>File lifecycle</td><td><code>_start_recording()</code>, <code>_stop_recording()</code></td><td>Open and close CSV</td></tr>
+<tr><td>CSV conversion</td><td><code>_save_result_as_csv_row()</code></td><td>Convert transforms into columns</td></tr>
+</table>
+
+<pre>func _process(_delta: float) -> void:
+    var result := _get_latest_opencv_result()
+    if result.is_empty():
+        return
+
+    if not _is_new_result(result):
+        return
+
+    if _recording:
+        _save_result_as_csv_row(result.markers, result.camera_pose)</pre>
+
+<h2>3. Thread safety and duplicate prevention</h2>
+<p>OpenCV works on a worker thread. The mutex prevents the worker from replacing
+the dictionary halfway through the copy:</p>
+<pre>result_mutex.lock()
+var markers = detection_source.get("_result_markers").duplicate(true)
+var camera_pose = detection_source.get("_result_cam_xform")
+result_mutex.unlock()</pre>
+
+<p>Godot calls <code>_process()</code> about 72 times per second, while OpenCV
+normally produces 8–12 results per second. A hash fingerprints the latest
+result, preventing the same stored dictionary from being written on several
+Godot frames:</p>
+<pre>var result_hash := hash(result)
+if result_hash == _last_result_hash:
+    return</pre>
+
+<h2>4. Experimental procedure</h2>
+<ol>
+  <li>Launch the Quest application.</li>
+  <li>Make the required markers visible.</li>
+  <li>Press A once on the right controller.</li>
+  <li>Maintain the experimental condition for 30 seconds.</li>
+  <li>The logger stops automatically.</li>
+  <li>Do not press B during raw logging; B performs calibration.</li>
+</ol>
+<p>Files are stored as <code>user://aruco_raw_&lt;timestamp&gt;.csv</code>.</p>
+
+<div class="page-break"></div>
+<h2>5. Stationary-test analysis method</h2>
+<p>The stationary recording contained 260 OpenCV samples over 29.8 seconds.
+All three markers were simultaneously detected in 234 samples.</p>
+<p>Robust offsets were calculated for every synchronized sample:</p>
+<pre>common_to_navel = common_pose.affine_inverse() * navel_pose
+chest_to_navel  = chest_pose.affine_inverse()  * navel_pose</pre>
+<p>The navel was reconstructed from ID 0 and ID 1, fused, and compared with the
+robust stationary centre.</p>
+
+<table>
+<tr><th>Fused ID 0 + ID 1 error</th><th>Position</th><th>Rotation</th></tr>
+<tr><td>Median</td><td>0.81 mm</td><td>0.19°</td></tr>
+<tr><td>95th percentile</td><td>2.63 mm</td><td>0.46°</td></tr>
+<tr><td>99th percentile</td><td>7.55 mm</td><td>2.06°</td></tr>
+<tr><td>Maximum</td><td>9.60 mm</td><td>2.46°</td></tr>
+</table>
+
+<h2>6. Filter interpretation</h2>
+<table>
+<tr><th>Parameter</th><th>Current</th><th>Evidence-based starting value</th></tr>
+<tr><td>Position dead zone</td><td>15 mm</td><td>4–5 mm after outlier handling</td></tr>
+<tr><td>Rotation dead zone</td><td>3°</td><td>approximately 1°</td></tr>
+<tr><td>Smoothing time</td><td>0.40 seconds</td><td>Requires a controlled movement test</td></tr>
+</table>
+<p>The stationary log measures noise and can suggest dead zones. It cannot
+measure tracking delay, so it cannot determine the final smoothing time.</p>
+
+<h2>7. Conclusions</h2>
+<ul>
+  <li>Normal fused common/chest noise is a few millimetres and less than one degree.</li>
+  <li>There is no evidence of continuously accumulating relative drift.</li>
+  <li>ID 2 produced large errors after detection returned; calibration should use several stable samples.</li>
+  <li>ID 2 should be used for calibration and removed from normal common/chest fusion.</li>
+  <li>Position and rotation should be filtered independently.</li>
+  <li>A controlled movement log is required to select smoothing time.</li>
+</ul>
+
+<h2>8. Short oral explanation</h2>
+<blockquote>
+Paul’s OpenCV code produces one dictionary of marker poses for each processed
+camera image. I added a separate logger node that safely copies this dictionary
+using the same mutex. A hash prevents the same stored result from being written
+more than once. When I press A, each new dictionary is converted into one CSV
+row for 30 seconds. The CSV contains positions and quaternion rotations for the
+common, chest, and navel markers. No video is recorded, and the original
+detection script remains separate.
+</blockquote>
+
+<h2>9. Relevant files</h2>
+<ul>
+  <li><code>project/aruco_csv_logger.gd</code></li>
+  <li><code>project/main_3d.tscn</code></li>
+  <li><code>src/OpenCVProcessor.cpp</code></li>
+  <li><code>aruco_raw_1785317240_01.csv</code></li>
+</ul>
+</body>
+</html>

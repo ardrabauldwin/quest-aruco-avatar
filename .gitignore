@@ -112,3 +112,4 @@ deactivate_conan*
 conaninfo.txt
 conan.lock
 graph_info.json
+.tmp_godot_openxr_vendors/

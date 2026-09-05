@@ -32,7 +32,7 @@ from pathlib import Path
 
 import numpy as np
 
-from aruco_pose import MARKERS, average_poses, combine, marker_seen, read_pose
+from aruco_pose import MARKERS, combine, marker_seen, quaternion_multiply, read_pose
 from filter_errors import angle_deg, measure_errors
 from simple_aruco_analysis import learn_offsets, load_csv
 
@@ -49,6 +49,11 @@ SMOOTHING_TIMES_S = [0.10, 0.25, 0.50, 0.80, 1.20]
 PRIOR_TIMES_S = [2.0, 4.0, 8.0, 16.0, 30.0]
 TRACKING_TIMEOUTS_S = [0.30, 0.20, 0.40, 0.50]
 ENDPOINT_STABLE_COUNTS = [3, 5, 7, 10]
+# A stable-looking cluster can still be stationary measurement bias. These two values require the
+# candidate endpoint to be meaningfully separated from remembered rest before rest is re-anchored.
+# Zero preserves the earlier behaviour and remains in the grid as a control.
+REANCHOR_MIN_POSITION_MM = [0.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0]
+REANCHOR_MIN_ROTATION_DEG = [0.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
 
 # Radius converts angular disagreement into equivalent point displacement inside the 6-DoF
 # medoid. It is NOT avatar size or a dead zone. The exact old 15 mm / 3 degree balance is included
@@ -60,6 +65,10 @@ MEDOID_RADII_M = [0.10, 0.15, 0.20, 0.25, 0.2864789, 0.30, 0.40, 0.50, 0.75]
 # the moment its remaining error falls inside the zone.
 RENDER_HZ = 72.0
 TRACKING_LOSS_TIMEOUT_S = 0.300
+# Landing margins: when the target corroborates rest but the display has not settled onto it
+# (right after a re-anchor), the display closes onto rest at smoothing speed to within these.
+LANDING_POSITION_M = 0.001
+LANDING_ROTATION_DEG = 0.1
 RUNTIME_PRIOR_TIME_S = 8.0
 REST_INITIAL_DETECTIONS = 20
 REST_CHECKPOINT_STEP = 5
@@ -139,11 +148,41 @@ def medoid_targets(positions, rotations, gaps_s, window, medoid_radius_m,
     return target_positions, target_rotations, reacquiring
 
 
+def _rotation_log(base, rotation):
+    """Rotation from base to rotation as an axis-angle vector in base's tangent space."""
+    relative = quaternion_multiply(
+        np.array([-base[0], -base[1], -base[2], base[3]]), rotation
+    )
+    if relative[3] < 0.0:
+        relative = -relative
+    w = float(np.clip(relative[3], -1.0, 1.0))
+    half_sin = np.sqrt(max(1.0 - w * w, 0.0))
+    if half_sin < 1e-9:
+        return np.zeros(3)
+    return relative[:3] / half_sin * (2.0 * np.arccos(w))
+
+
+def _rotation_exp(vector):
+    """Axis-angle vector back to a quaternion."""
+    angle = float(np.linalg.norm(vector))
+    if angle < 1e-12:
+        return np.array([0.0, 0.0, 0.0, 1.0])
+    axis = vector / angle
+    return np.concatenate([axis * np.sin(angle / 2.0), [np.cos(angle / 2.0)]])
+
+
 def robust_pose(positions, rotations):
-    """Runtime rest/fusion robust pose: coordinate median plus angular quaternion medoid."""
+    """Runtime rest robust pose: coordinate median plus tangent-space rotation median.
+
+    The medoid is the base so every relative rotation is small; the per-axis median then runs in
+    the flat tangent space, matching navel_provider._rotation_tangent_median exactly.
+    """
     position = np.median(positions, axis=0)
+    rotations = np.asarray(rotations, dtype=float)
     distance = 2.0 * np.arccos(np.clip(np.abs(rotations @ rotations.T), 0.0, 1.0))
-    rotation = rotations[int(np.argmin(distance.sum(axis=1)))]
+    base = rotations[int(np.argmin(distance.sum(axis=1)))]
+    vectors = np.array([_rotation_log(base, rotation) for rotation in rotations])
+    rotation = quaternion_multiply(base, _rotation_exp(np.median(vectors, axis=0)))
     return position, rotation
 
 
@@ -185,7 +224,9 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
               tracking_timeout_s=TRACKING_LOSS_TIMEOUT_S,
               endpoint_stable_position_m=0.002,
               endpoint_stable_rotation_deg=0.5,
-              endpoint_stable_detections=7):
+              endpoint_stable_detections=7,
+              reanchor_min_position_m=0.0,
+              reanchor_min_rotation_deg=0.0):
     """Replay the active Quest order at render rate, sampled at each detection."""
     raw_positions, raw_rotations = raw_poses
     target_positions, target_rotations, reacquiring = targets
@@ -204,6 +245,15 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
             position = position + (target_p - position) * smooth
         if angle_deg(rotation, target_r) > dead_zone_deg:
             rotation = slerp(rotation, target_r, smooth)
+
+        # Landing: matches SimplePoseStabilizer._landing_position/_landing_rotation.
+        if rest_active:
+            if (np.linalg.norm(target_p - rest_position) <= dead_zone_m
+                    and np.linalg.norm(position - rest_position) > LANDING_POSITION_M):
+                position = position + (rest_position - position) * smooth
+            if (angle_deg(target_r, rest_rotation) <= dead_zone_deg
+                    and angle_deg(rotation, rest_rotation) > LANDING_ROTATION_DEG):
+                rotation = slerp(rotation, rest_rotation, smooth)
 
         if rest_active and prior_time_s > 0.0:
             pull = 1.0 - np.exp(-delta_s / prior_time_s)
@@ -226,9 +276,11 @@ def stabilize(raw_poses, targets, gaps_s, dead_zone_m, dead_zone_deg, smoothing_
                     angle_deg(r, target_r) <= endpoint_stable_rotation_deg
                     for _, r in endpoint_targets)
                 position_reanchor_ready = (position_is_stable and
-                    np.linalg.norm(target_p - rest_position) > dead_zone_m)
+                    np.linalg.norm(target_p - rest_position)
+                    > max(dead_zone_m, reanchor_min_position_m))
                 rotation_reanchor_ready = (rotation_is_stable and
-                    angle_deg(target_r, rest_rotation) > dead_zone_deg)
+                    angle_deg(target_r, rest_rotation)
+                    > max(dead_zone_deg, reanchor_min_rotation_deg))
 
         if i > 0:
             # Before detection i arrives, Quest can only move toward detection i-1. The old replay
@@ -272,11 +324,12 @@ def fuse_common(row, offsets):
         return None
     if len(estimates) == 1:
         return estimates[0]
-    if len(estimates) == 2:
-        return average_poses(estimates[0], estimates[1])
+    # Runtime parity: navel_provider._fuse takes the sign-aligned mean for every marker count.
     positions = np.array([pose[0] for pose in estimates])
     rotations = np.array([pose[1] for pose in estimates])
-    return robust_pose(positions, rotations)
+    aligned = np.where((rotations @ rotations[0])[:, None] < 0.0, -rotations, rotations)
+    summed = aligned.sum(axis=0)
+    return positions.mean(axis=0), summed / np.linalg.norm(summed)
 
 
 def row_time_s(row):
@@ -354,6 +407,8 @@ class DisplayConfig:
     prior_s: float = 8.0
     timeout_s: float = 0.3
     endpoint_stable: int = 7
+    reanchor_min_position_mm: float = 20.0
+    reanchor_min_rotation_deg: float = 6.0
 
 
 def contiguous_segments(recording):
@@ -447,7 +502,9 @@ def replay_recording(recording, config, rest_config):
                        tracking_timeout_s=config.timeout_s,
                        endpoint_stable_position_m=rest_config["position_mm"] / 1000.0,
                        endpoint_stable_rotation_deg=rest_config["rotation_deg"],
-                       endpoint_stable_detections=config.endpoint_stable)
+                       endpoint_stable_detections=config.endpoint_stable,
+                       reanchor_min_position_m=config.reanchor_min_position_mm / 1000.0,
+                       reanchor_min_rotation_deg=config.reanchor_min_rotation_deg)
     return output, rest_index
 
 
@@ -561,6 +618,13 @@ def search_display_parameters(stationary, moving, distance_mm, rest_config):
                       for stable in ENDPOINT_STABLE_COUNTS]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
 
+        candidates = [DisplayConfig(**{**current.__dict__,
+                                       "reanchor_min_position_mm": position_mm,
+                                       "reanchor_min_rotation_deg": rotation_deg})
+                      for position_mm, rotation_deg in product(
+                          REANCHOR_MIN_POSITION_MM, REANCHOR_MIN_ROTATION_DEG)]
+        current = min(candidates, key=lambda config: evaluate(config)["total_score"])
+
         candidates = [DisplayConfig(**{**current.__dict__, "timeout_s": timeout})
                       for timeout in TRACKING_TIMEOUTS_S]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
@@ -612,6 +676,8 @@ def main():
         f"  smoothing_time_s         {best.smoothing_s}",
         f"  prior_time_s             {best.prior_s}",
         f"  endpoint_stable_count    {best.endpoint_stable}",
+        f"  reanchor_min_position_mm {best.reanchor_min_position_mm}",
+        f"  reanchor_min_rotation_deg {best.reanchor_min_rotation_deg}",
         f"  tracking_timeout_ms      {best.timeout_s * 1000:.0f}", "",
         "VALIDATION METRICS",
         f"  total_score              {metrics['total_score']:.4f}",

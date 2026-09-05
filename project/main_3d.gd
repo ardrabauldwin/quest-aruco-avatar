@@ -1,6 +1,6 @@
 extends Node3D
 
-var processor: OpenCVProcessor
+var processor
 var marker_nodes: Dictionary = {}
 
 # Physical side length of the ArUco marker, in meters. Single source of truth: used as the
@@ -46,7 +46,6 @@ var _has_result := false
 const CAMERA_LATENCY_MS := 50.0
 var _pose_history: Array = []   # [t_usec, head Transform3D] pairs, newest last; main thread only
 
-
 #stream image of quest to laptop via tcp
 const TCP_HOST := "127.0.0.1"
 const TCP_PORT := 7007			#view available ports with adb reverse --list
@@ -60,7 +59,11 @@ const TCP_SEND_INTERVAL := 0.01
 #######################################################################################################
 
 func _ready() -> void:
-	processor = OpenCVProcessor.new()
+	if ClassDB.class_exists("OpenCVProcessor"):
+		processor = ClassDB.instantiate("OpenCVProcessor")
+	else:
+		push_warning("OpenCVProcessor is unavailable on this platform.")
+		return
 
 	# detect all available aruco_patch nodes, to later set their position
 	for child in xr_camera.get_children():
@@ -167,12 +170,17 @@ func _process(_delta: float) -> void:
 	_has_result = false
 	_detect_mutex.unlock()
 	if have_result:
+		# One OpenCV result comes from one camera image, so every marker in it must carry the same
+		# result timestamp. Calling the clock separately inside the loop could give same-frame
+		# markers adjacent millisecond values and force downstream code to guess a tolerance.
+		var result_timestamp_ms := Time.get_ticks_msec()
 		for id in markers:
 			if marker_nodes.has(id):
 				# markers[id] is the marker pose in CAMERA space; cam_xform is the head pose at
 				# capture time. Bake to world space and freeze it there, so the head can move
 				# between detections without dragging the patch along.
 				marker_nodes[id].global_transform = cam_xform * markers[id]
+				marker_nodes[id].set_meta("last_detected_ms", result_timestamp_ms)
 
 	# (b) Hand the newest camera frame to the worker. get_image() (the GPU->CPU readback) and the
 	# head-pose snapshot must happen on the main thread; the worker only does the OpenCV work.

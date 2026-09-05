@@ -3,7 +3,7 @@ extends Node
 
 const MARKER_IDS := [0, 1, 2]
 const MARKER_NAMES := ["common", "chest", "navel"]
-const TEST_TYPES := ["calibration", "stationary", "headmotion", "moving", "hiding"]
+const TEST_TYPES := ["calibration", "stationary", "headmotion", "moving", "hiding", "compressions"]
 # Where the head was standing while the markers stayed put. A marker's pose error is systematic
 # per VIEWPOINT, so labelling the viewpoint is what lets the analysis ask whether the offset
 # learned from the left of the mannequin agrees with the one learned from the right. Without
@@ -11,17 +11,24 @@ const TEST_TYPES := ["calibration", "stationary", "headmotion", "moving", "hidin
 const CALIBRATION_PHASES := [
 	"near", "far", "left_side", "right_side", "crouch", "stand_tall"
 ]
-const STATIONARY_PHASES := ["stationary"]
+const STATIONARY_PHASES := [
+	"stationary_front", "stationary_left_view", "stationary_right_view",
+	"stationary_high_view", "stationary_low_view", "stationary_far_view"
+]
 # How fast the head was moving. Capture latency displaces a marker in proportion to head speed,
 # so a recording that never changes speed cannot separate latency from anything else.
 const HEADMOTION_PHASES := ["still", "slow", "medium", "fast"]
 const MOVING_PHASES := [
-	"stationary", "moving_left", "stationary", "moving_right", "stationary"
+	"stationary_A", "moving_A_to_B", "stationary_B",
+	"moving_B_to_A", "stationary_A_return"
 ]
 const HIDING_PHASES := [
 	"all_visible", "common_hidden", "all_visible", "chest_hidden",
 	"all_visible", "navel_hidden", "all_visible"
 ]
+# Real chest compressions mix occlusion, marker flicker and mannequin rocking. The still phases
+# on both sides give the analysis a same-session baseline to compare the compression rows against.
+const COMPRESSION_PHASES := ["still_before", "compressions", "still_after"]
 const POSE_SUFFIXES := ["x", "y", "z", "qx", "qy", "qz", "qw"]
 
 @export var detection_source: Node
@@ -62,21 +69,24 @@ func _on_right_button(button: StringName) -> void:
 
 
 func _on_left_button(button: StringName) -> void:
-	# X marks the next phase, Y picks the test type. Both work whether or not a recording is
-	# running. X used to be ignored while stopped, which made it impossible to check the button
-	# worked before committing to a take: you pressed it, nothing moved, and the only way to find
-	# out whether the press had registered was to record a whole walk and read the file afterwards.
-	# A recording always starts at phase 1 (see _start_recording), so pressing X beforehand
-	# costs nothing.
+	# While stopped X selects the test; while recording X marks the next phase. Y remains an
+	# alternative test selector, but the experiment never depends on it.
 	if button == &"ax_button":
-		_phase_index = (_phase_index + 1) % _current_phases().size()
-		print("ArUco phase: ", _current_phase())
+		if _recording:
+			_phase_index = (_phase_index + 1) % _current_phases().size()
+			print("ArUco phase: ", _current_phase())
+		else:
+			_select_next_test()
 		_update_status()
 	elif button == &"by_button":
-		_test_index = (_test_index + 1) % TEST_TYPES.size()
-		_phase_index = 0
-		print("ArUco test type: ", _current_test())
+		_select_next_test()
 		_update_status()
+
+
+func _select_next_test() -> void:
+	_test_index = (_test_index + 1) % TEST_TYPES.size()
+	_phase_index = 0
+	print("ArUco test type: ", _current_test())
 
 
 func _process(_delta: float) -> void:
@@ -219,6 +229,8 @@ func _current_phases() -> Array:
 			return MOVING_PHASES
 		"hiding":
 			return HIDING_PHASES
+		"compressions":
+			return COMPRESSION_PHASES
 		_:
 			return STATIONARY_PHASES
 
@@ -233,9 +245,10 @@ func _update_status() -> void:
 	var state := "RECORDING" if _recording else "STOPPED"
 	# Which phase number it is matters while recording: the label alone does not say whether the
 	# press registered when two phases in a row carry the same name.
-	status_label.text = "%s - %s\nPhase %d/%d: %s\nA: start/stop   X: next phase   Y: test type" % [
+	var controls := "A: start   X: select test" if not _recording else "A: stop   X: next phase"
+	status_label.text = "%s - %s\nPhase %d/%d: %s\n%s" % [
 		state, _current_test(),
-		_phase_index + 1, _current_phases().size(), _current_phase()
+		_phase_index + 1, _current_phases().size(), _current_phase(), controls
 	]
 
 

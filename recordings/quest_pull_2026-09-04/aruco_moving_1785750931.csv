@@ -1,0 +1,4 @@
+sample_id,logger_ms,recording_ms,test_type,phase_label,camera_x,camera_y,camera_z,camera_qx,camera_qy,camera_qz,camera_qw,common_x,common_y,common_z,common_qx,common_qy,common_qz,common_qw,chest_x,chest_y,chest_z,chest_qx,chest_qy,chest_qz,chest_qw,navel_x,navel_y,navel_z,navel_qx,navel_qy,navel_qz,navel_qw
+0,458729,99,moving,stationary,-0.336291283,1.161038756,0.321065724,0.229673997,0.739017367,-0.145107165,0.616479576,,,,,,,,,,,,,,,,,,,,,
+1,458829,199,moving,stationary,-0.336038500,1.160822153,0.320875138,0.228675008,0.739394248,-0.145311400,0.616350889,,,,,,,,,,,,,,,,,,,,,
+2,458937,307,moving,stationary,-0.335706085,1.160884738,0.320982456,0.228516504,0.739565134,-0.145487055,0.616163254,,,,,,,,,,,,,,,,,,,,,

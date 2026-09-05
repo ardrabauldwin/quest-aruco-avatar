@@ -21,20 +21,29 @@ extends Node3D
 @export var target: Node3D
 @export var nudge_speed := 0.05
 @export var xr_controller_left: XRController3D
+## Supplies the Quest floor height (has_floor / floor_height_world). The floor is a one-sided
+## boundary only: it prevents penetration but never replaces the marker-measured height.
+@export var floor_provider: Node
 
-const SAVE_PATH := "user://navel_calibration.cfg"
+# Version the writable copy so this build starts from the validated previous calibration instead
+# of silently loading either of the older on-device calibration files.
+const SAVE_PATH := "user://navel_calibration_20260905.cfg"
 const DEFAULT_CALIBRATION_PATH := "res://default_navel_calibration.cfg"
 
 # Runtime filter values. Provisional values are replaced after the labelled experiment.
 const FILTER_WINDOW := 7
-const FILTER_POSITION_DEAD_ZONE_M := 0.006
-const FILTER_ROTATION_DEAD_ZONE_DEG := 0.5
-const FILTER_SMOOTHING_TIME_S := 0.8
+const FILTER_POSITION_DEAD_ZONE_M := 0.005
+const FILTER_ROTATION_DEAD_ZONE_DEG := 1.5
+const FILTER_SMOOTHING_TIME_S := 1.2
 const FILTER_PRIOR_TIME_S := 8.0
 # Endpoint stability is evaluated over a complete measurement-target window.
 const ENDPOINT_STABLE_POSITION_M := 0.002
 const ENDPOINT_STABLE_ROTATION_DEG := 0.5
 const ENDPOINT_STABLE_DETECTIONS := 7
+# Stationary experiment 1788185288 reached 19.623 mm / 5.687 deg measurement excursions.
+# Require a stable endpoint beyond that envelope before remembered rest may relocate.
+const REANCHOR_MIN_POSITION_M := 0.020
+const REANCHOR_MIN_ROTATION_DEG := 6.0
 
 var _common_provider := CommonPoseProvider.new()
 var _filter := SimplePoseStabilizer.new()
@@ -45,6 +54,8 @@ var _was_nudging := false
 var _tracking_was_available := false
 var _application_paused := false
 var _runtime_initialized := false
+var _mesh_floor_offset_ready := false
+var _lowest_mesh_vertex_offset_y := 0.0
 
 
 func _ready() -> void:
@@ -58,7 +69,9 @@ func _ready() -> void:
 		FILTER_PRIOR_TIME_S,
 		ENDPOINT_STABLE_POSITION_M,
 		ENDPOINT_STABLE_ROTATION_DEG,
-		ENDPOINT_STABLE_DETECTIONS
+		ENDPOINT_STABLE_DETECTIONS,
+		REANCHOR_MIN_POSITION_M,
+		REANCHOR_MIN_ROTATION_DEG
 	)
 	_apply_look()
 	_common_provider.orientation_settled.connect(_on_orientation_settled)
@@ -150,8 +163,8 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 		_common_provider.rest_pose(),
 		_common_provider.has_rest_pose()
 	)
-	# Any movement can become the new rest; there is no minimum relocation distance. Re-anchor only
-	# after the complete measurement-only target window is stationary.
+	# Re-anchor only after the complete measurement-only target window is stationary and its
+	# displacement exceeds the separately configured relocation threshold.
 	var reanchor_position := _filter.position_reanchor_ready()
 	var reanchor_rotation := _filter.rotation_reanchor_ready()
 	if _common_provider.reanchor_rest_from_stable_target(
@@ -162,7 +175,48 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 	):
 		_filter.complete_rest_reanchor(reanchor_position, reanchor_rotation)
 	if _filter.is_ready() and _common_provider.has_rest_pose():
-		global_transform = filtered_pose
+		_apply_filtered_pose(filtered_pose)
+
+
+## Place the rig at the ArUco pose, then treat the Quest floor as a boundary: if the avatar's
+## lowest mesh point would sink below the floor, raise the rig by exactly the penetration depth.
+## An avatar above the floor is left untouched, preserving the marker-to-mannequin alignment.
+func _apply_filtered_pose(pose: Transform3D) -> void:
+	global_transform = pose
+	if floor_provider == null or target == null:
+		return
+	if not floor_provider.has_floor():
+		return
+	if not _mesh_floor_offset_ready:
+		var measured_lowest := _lowest_mesh_world_y(target)
+		if not is_finite(measured_lowest):
+			return
+		_lowest_mesh_vertex_offset_y = measured_lowest - global_position.y
+		_mesh_floor_offset_ready = true
+		print(
+			"Floor boundary: exact lowest-vertex offset %.3f m."
+			% _lowest_mesh_vertex_offset_y
+		)
+	var lowest := global_position.y + _lowest_mesh_vertex_offset_y
+	var floor_y: float = floor_provider.floor_height_world()
+	if lowest < floor_y:
+		global_position.y += floor_y - lowest
+
+
+## World-space bottom from actual triangle vertices. Transforming an AABB's eight corners is
+## conservative and included empty space in this rotated GLB, causing an unnecessary ~18 mm lift.
+func _lowest_mesh_world_y(node: Node3D) -> float:
+	var lowest := INF
+	var instances := node.find_children("*", "MeshInstance3D", true, false)
+	if node is MeshInstance3D:
+		instances.append(node)
+	for instance in instances:
+		var mesh_instance := instance as MeshInstance3D
+		if mesh_instance.mesh == null:
+			continue
+		for vertex in mesh_instance.mesh.get_faces():
+			lowest = minf(lowest, (mesh_instance.global_transform * vertex).y)
+	return lowest
 
 
 ## On complete loss, freeze the avatar and discard measurements from before the gap.
@@ -202,6 +256,7 @@ func _update_nudge(delta: float) -> void:
 	var nudge := _read_nudge(delta)
 	if nudge != Vector3.ZERO:
 		target.position += nudge
+		_mesh_floor_offset_ready = false
 		_was_nudging = true
 	elif _was_nudging:
 		print("Final mannequin offset: ", target.position)

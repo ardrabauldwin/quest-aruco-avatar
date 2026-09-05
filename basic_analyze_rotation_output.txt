@@ -1,0 +1,10 @@
+
+data/today/headmotion_1785761051.csv: 645 poses, rotation repeatability error (degrees):
+
+  axis         median     mean      p95    mm at 500 mm
+  Body X         3.32     3.55     7.50           28.96
+  Body Y         1.35     1.57     3.77           11.81
+  Body Z         0.50     0.54     1.20            4.33
+  Total 3D       4.05     4.24     8.07           35.31
+
+  median = typical frame, mean = average incl. spikes, p95 = bad frame.

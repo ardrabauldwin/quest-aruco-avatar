@@ -1,0 +1,548 @@
+FILTER TUNING - 3 August 2026
+
+192 combinations: 4 medoid windows x 6 dead zones x 8 smoothing times.
+
+COLUMNS
+  WOBBLE  mm the avatar moves between detections on an ORDINARY frame (median)
+  JUMP    mm it moves on a BAD frame (p95) - this is what reads as glitching
+  DRIFT   mm it sits from its own centre - slow wander both step measures miss
+
+  The smoothing time IS the responsiveness: 95% of a real move is covered in about
+  three of them plus half a medoid window.
+
+FLAGS
+  FROZEN    output never moves - dead zone larger than the noise
+  STEPPING  sits still, then jumps - the dead zone holding and releasing
+
+THE RIG RUNS   window 5, dead zone 0 mm, smoothing 0.50 s
+
+==============================================================================
+WHAT SMOOTHING CAN AND CANNOT FIX
+==============================================================================
+
+Across a 24x range of smoothing time, on the head-motion recording:
+  JUMP   improves 5x    10.11 -> 2.11 mm    smoothing fixes this
+  DRIFT  barely moves    6.91 -> 5.32 mm    smoothing cannot touch this
+
+So the filter is finished. It has done what a filter can do, and further tuning
+trades responsiveness for nothing.
+
+WHAT DRIFT IS - and a correction
+
+It was first attributed to head motion, by comparing the still recording (0.29 mm)
+against the head-motion one (5.67 mm). That comparison was WRONG: those recordings
+also differ in range (80 cm vs 140 cm) and in ID2's position, so three variables
+moved at once.
+
+Comparing WITHIN the head-motion recording removes all three confounds, and the
+effect vanishes:
+
+    phase    head speed    wander within the phase
+    still         2 mm/s          10.23 mm
+    slow         45 mm/s           8.55 mm
+    medium       86 mm/s           9.47 mm
+    fast        120 mm/s           8.56 mm
+
+Flat across a 60x range of head speed, and 'still' is the worst of the four. Head
+motion does not cause drift.
+
+RANGE does. 0.3 mm at 80 cm against ~9 mm at 140 cm, which matches the +11.4 mm per
+metre measured independently on the calibration walk (correlation +0.95). Two
+separate measurements agreeing is what makes this one trustworthy.
+
+SO: working close is worth more than every filter setting combined, and costs
+nothing. Beyond that the remaining error needs the MARKERS changed - bigger,
+further apart, non-coplanar - not more code.
+
+==============================================================================
+HEAD-MOTION recording - markers still, head sweeping 2 to 123 mm/s, ~140 cm
+==============================================================================
+
+626 samples, 4.5 detections/s
+unfiltered jitter (p95 step between detections): 31.41 mm
+
+192 combinations tried (4 windows x 6 dead zones x 8 smoothing times)
+
+  WOBBLE  mm the avatar moves between detections on an ORDINARY frame (median)
+  JUMP    mm it moves on a BAD frame (p95) - this is what reads as glitching
+  DRIFT   mm it sits from its own centre - slow wander both step measures miss
+
+  The smoothing time IS the responsiveness: the avatar covers 95% of a real move in
+  about three of them, plus half a medoid window. A separate catch-up column was
+  tried and removed - it was those two settings' arithmetic dressed as a measurement.
+
+Quietest setting at each smoothing time - how still you can get for a given
+responsiveness:
+
+   smoothing  window  dead zone   WOBBLE    JUMP   DRIFT
+       0.05s       7        0 mm     0.74   10.11    6.91
+       0.10s       7        1 mm     1.12    8.77    6.75
+       0.15s       7        1 mm     1.31    7.51    6.64
+       0.25s       7        2 mm     1.33    5.85    6.29
+       0.40s       7        0 mm     1.19    4.42    6.10
+       0.50s       7        3 mm     0.94    3.97    5.67  <- the rig
+       0.80s       7        0 mm     0.89    2.88    5.68
+       1.20s       7        3 mm     0.72    2.11    5.32
+
+Every combination, steadiest typical wobble first. FROZEN marks a setting whose
+output never moves: its dead zone is larger than the noise, so it scores perfectly
+by doing nothing and sits permanently wherever it started.
+
+   window  dead zone  smoothing   WOBBLE    JUMP   DRIFT   note
+        7        3 mm      1.20s     0.72    2.11    5.32   
+        7        0 mm      1.20s     0.72    2.16    5.40   
+        7        1 mm      1.20s     0.72    2.16    5.42   
+        7        2 mm      1.20s     0.72    2.16    5.37   
+        7        0 mm      0.05s     0.74   10.11    6.91   
+        5        5 mm      1.20s     0.76    2.68    5.05   
+        5        2 mm      1.20s     0.85    2.71    5.16   
+        5        1 mm      1.20s     0.86    2.70    5.28   
+        5        0 mm      1.20s     0.86    2.71    5.30   
+        5        3 mm      1.20s     0.86    2.71    5.17   
+        7        0 mm      0.80s     0.89    2.88    5.68   
+        7        1 mm      0.80s     0.89    2.88    5.68   
+        7        2 mm      0.80s     0.90    2.95    5.68   
+        7        3 mm      0.80s     0.90    2.90    5.60   
+        7        3 mm      0.50s     0.94    3.97    5.67   
+        3        1 mm      1.20s     1.03    3.19    5.08   
+        3        0 mm      1.20s     1.03    3.19    5.09   
+        3        2 mm      1.20s     1.04    3.19    5.03   
+        3        3 mm      1.20s     1.04    3.18    4.93   
+        3        5 mm      1.20s     1.04    3.15    4.97   
+        7        2 mm      0.50s     1.07    3.90    5.79   
+        7        1 mm      0.50s     1.08    3.85    5.96   
+        7        0 mm      0.50s     1.09    3.84    5.98   
+        5        2 mm      0.80s     1.11    3.73    5.54   
+        5        0 mm      0.80s     1.11    3.73    5.72   
+        5        1 mm      0.80s     1.12    3.74    5.71   
+        7        1 mm      0.10s     1.12    8.77    6.75   
+        5        3 mm      0.80s     1.12    3.77    5.50   
+        7        0 mm      0.40s     1.19    4.42    6.10   
+        7        1 mm      0.40s     1.20    4.45    6.02   
+        7        2 mm      0.40s     1.21    4.43    5.90   
+        7        0 mm      0.10s     1.22    8.85    6.76   
+        7        1 mm      0.15s     1.31    7.51    6.64   
+        7        0 mm      0.15s     1.32    7.60    6.61   
+        7        2 mm      0.25s     1.33    5.85    6.29   
+        7        1 mm      0.25s     1.33    5.80    6.38   
+        7        0 mm      0.25s     1.34    5.81    6.47   
+        3        3 mm      0.80s     1.40    4.39    5.36   
+        3        2 mm      0.80s     1.42    4.45    5.44   
+        3        5 mm      0.80s     1.43    4.37    5.04   
+        3        1 mm      0.80s     1.43    4.44    5.53   
+        3        0 mm      0.80s     1.43    4.44    5.53   
+        5        0 mm      0.50s     1.44    5.13    6.10   <- the rig runs this
+        5        2 mm      0.50s     1.44    5.13    6.03   
+        5        1 mm      0.50s     1.44    5.13    6.14   
+        5        3 mm      0.50s     1.44    5.14    5.78   
+        1        8 mm      1.20s     1.49    4.18    5.02   
+        1        5 mm      1.20s     1.50    4.20    5.14   
+        1        2 mm      1.20s     1.50    4.13    5.25   
+        1        3 mm      1.20s     1.51    4.13    5.23   
+        1        0 mm      1.20s     1.51    4.13    5.26   
+        1        1 mm      1.20s     1.51    4.13    5.25   
+        5        0 mm      0.40s     1.57    6.16    6.48   
+        5        1 mm      0.40s     1.57    6.11    6.51   
+        5        3 mm      0.40s     1.59    5.97    6.14   
+        5        2 mm      0.40s     1.60    6.01    6.27   
+        5        3 mm      0.25s     1.75    8.31    6.31   
+        5        0 mm      0.25s     1.79    8.29    6.68   
+        5        2 mm      0.25s     1.79    8.29    6.34   
+        5        1 mm      0.25s     1.79    8.36    6.57   
+        3        1 mm      0.50s     1.86    6.36    6.04   
+        3        0 mm      0.50s     1.86    6.35    6.08   
+        3        2 mm      0.50s     1.86    6.30    6.01   
+        5        1 mm      0.15s     1.86   10.58    6.93   
+        3        5 mm      0.50s     1.87    6.27    5.70   
+        5        0 mm      0.15s     1.87   10.60    7.10   
+        5        0 mm      0.10s     1.87   12.53    7.22   
+        3        3 mm      0.50s     1.88    6.24    5.97   
+        5        1 mm      0.10s     1.89   12.46    7.15   
+        5        2 mm      0.15s     1.90   10.64    6.90   
+        5        2 mm      0.10s     1.92   12.39    7.14   
+        5        0 mm      0.05s     1.98   13.30    7.34   
+        5        1 mm      0.05s     1.98   13.31    7.35   
+        5        2 mm      0.05s     2.02   13.63    7.40   
+        3        1 mm      0.40s     2.04    7.69    6.34   
+        3        0 mm      0.40s     2.04    7.69    6.39   
+        3        2 mm      0.40s     2.04    7.69    6.32   
+        1        5 mm      0.80s     2.09    6.00    5.37   
+        3        3 mm      0.40s     2.11    7.76    6.20   
+        1        3 mm      0.80s     2.12    6.03    5.47   
+        1        0 mm      0.80s     2.12    6.05    5.54   
+        1        1 mm      0.80s     2.12    6.05    5.54   
+        1        2 mm      0.80s     2.12    6.03    5.56   
+        1        8 mm      0.80s     2.18    6.10    5.12   
+        3        1 mm      0.25s     2.58   10.53    6.83   
+        3        0 mm      0.25s     2.58   10.53    6.81   
+        3        2 mm      0.25s     2.59   10.53    6.62   
+        3        3 mm      0.25s     2.61   10.56    6.59   
+        3        1 mm      0.15s     2.93   14.04    7.32   
+        3        0 mm      0.15s     2.97   14.03    7.35   
+        3        2 mm      0.15s     2.97   14.23    7.34   
+        3        2 mm      0.10s     3.05   16.28    7.53   
+        1        5 mm      0.50s     3.05    9.12    5.90   
+        3        0 mm      0.10s     3.06   16.17    7.59   
+        3        3 mm      0.15s     3.06   14.23    7.13   
+        3        1 mm      0.10s     3.06   16.18    7.52   
+        1        8 mm      0.50s     3.10    9.22    5.80   
+        3        3 mm      0.10s     3.12   16.12    7.56   
+        1        0 mm      0.50s     3.12    9.25    6.08   
+        1        1 mm      0.50s     3.12    9.25    6.06   
+        1        2 mm      0.50s     3.12    9.24    6.00   
+        1        3 mm      0.50s     3.13    9.13    5.98   
+        3        1 mm      0.05s     3.13   18.62    7.68   
+        3        0 mm      0.05s     3.19   18.62    7.69   
+        3        2 mm      0.05s     3.19   18.62    7.78   
+        3        3 mm      0.05s     3.39   18.88    7.83   
+        1        5 mm      0.40s     3.61   11.11    6.29   
+        1        0 mm      0.40s     3.64   11.04    6.45   
+        1        2 mm      0.40s     3.66   11.05    6.40   
+        1        1 mm      0.40s     3.66   11.04    6.45   
+        1        3 mm      0.40s     3.68   11.07    6.37   
+        1        8 mm      0.40s     3.69   10.94    6.12   
+        1        3 mm      0.25s     5.03   15.99    7.32   
+        1        5 mm      0.25s     5.03   16.05    7.22   
+        1        0 mm      0.25s     5.07   16.04    7.34   
+        1        1 mm      0.25s     5.07   16.03    7.35   
+        1        8 mm      0.25s     5.08   15.80    7.05   
+        1        2 mm      0.25s     5.09   16.03    7.30   
+        1        5 mm      0.15s     6.83   22.01    8.41   
+        1        0 mm      0.15s     6.89   22.49    8.41   
+        1        1 mm      0.15s     6.89   22.49    8.41   
+        1        2 mm      0.15s     7.01   22.50    8.51   
+        1        3 mm      0.15s     7.01   22.50    8.52   
+        1        8 mm      0.15s     7.01   21.42    8.29   
+        1        0 mm      0.10s     8.01   26.84    9.15   
+        1        1 mm      0.10s     8.01   26.84    9.18   
+        1        5 mm      0.10s     8.03   26.81    9.13   
+        1        2 mm      0.10s     8.11   26.84    9.17   
+        1        3 mm      0.10s     8.20   26.84    9.22   
+        1        8 mm      0.10s     8.30   26.48    9.03   
+        1        2 mm      0.05s     9.52   31.07    9.65   
+        1        0 mm      0.05s     9.52   30.94    9.70   
+        1        1 mm      0.05s     9.52   30.94    9.70   
+        1        8 mm      0.05s     9.55   30.73    9.34   
+        1        3 mm      0.05s     9.57   31.07    9.77   
+        1        5 mm      0.05s     9.62   31.07    9.84   
+        3        5 mm      0.05s     0.00   18.88    7.89   STEPPING
+        3        5 mm      0.10s     0.00   16.19    7.65   STEPPING
+        3        5 mm      0.15s     0.00   13.65    7.17   STEPPING
+        3        5 mm      0.25s     0.00   10.60    6.42   STEPPING
+        3        5 mm      0.40s     0.00    7.84    6.06   STEPPING
+        3        8 mm      0.05s     0.00   18.89    7.64   STEPPING
+        3        8 mm      0.10s     0.00   16.38    7.56   STEPPING
+        3        8 mm      0.15s     0.00   13.82    6.82   STEPPING
+        3        8 mm      0.25s     0.00    9.94    6.23   STEPPING
+        3        8 mm      0.40s     0.00    7.64    5.42   STEPPING
+        3        8 mm      0.50s     0.00    6.40    5.20   STEPPING
+        3        8 mm      0.80s     0.00    4.46    5.06   STEPPING
+        3        8 mm      1.20s     0.00    3.13    4.60   STEPPING
+        5        3 mm      0.05s     0.00   13.63    7.35   STEPPING
+        5        3 mm      0.10s     0.00   12.52    7.30   STEPPING
+        5        3 mm      0.15s     0.00   10.65    6.88   STEPPING
+        5        5 mm      0.05s     0.00   13.95    7.40   STEPPING
+        5        5 mm      0.10s     0.00   12.48    6.94   STEPPING
+        5        5 mm      0.15s     0.00   10.53    6.82   STEPPING
+        5        5 mm      0.25s     0.00    8.50    5.93   STEPPING
+        5        5 mm      0.40s     0.00    6.18    5.50   STEPPING
+        5        5 mm      0.50s     0.00    5.31    5.47   STEPPING
+        5        5 mm      0.80s     0.00    3.73    5.34   STEPPING
+        5        8 mm      0.05s     0.00   14.00    7.68   STEPPING
+        5        8 mm      0.10s     0.00   13.09    6.95   STEPPING
+        5        8 mm      0.15s     0.00   11.17    6.09   STEPPING
+        5        8 mm      0.25s     0.00    8.36    5.64   STEPPING
+        5        8 mm      0.40s     0.00    6.01    5.04   STEPPING
+        5        8 mm      0.50s     0.00    5.19    5.08   STEPPING
+        5        8 mm      0.80s     0.00    3.70    4.87   STEPPING
+        5        8 mm      1.20s     0.00    2.69    4.37   STEPPING
+        7        1 mm      0.05s     0.00    9.95    6.91   STEPPING
+        7        2 mm      0.05s     0.00   10.10    6.97   STEPPING
+        7        2 mm      0.10s     0.00    9.14    6.66   STEPPING
+        7        2 mm      0.15s     0.00    7.41    6.53   STEPPING
+        7        3 mm      0.05s     0.00   10.12    6.90   STEPPING
+        7        3 mm      0.10s     0.00    9.35    6.67   STEPPING
+        7        3 mm      0.15s     0.00    7.85    6.26   STEPPING
+        7        3 mm      0.25s     0.00    6.04    6.27   STEPPING
+        7        3 mm      0.40s     0.00    4.58    5.95   STEPPING
+        7        5 mm      0.05s     0.00   11.26    6.89   STEPPING
+        7        5 mm      0.10s     0.00    9.65    6.45   STEPPING
+        7        5 mm      0.15s     0.00    8.52    6.01   STEPPING
+        7        5 mm      0.25s     0.00    6.07    5.70   STEPPING
+        7        5 mm      0.40s     0.00    4.56    5.70   STEPPING
+        7        5 mm      0.50s     0.00    4.03    5.64   STEPPING
+        7        5 mm      0.80s     0.00    2.87    5.39   STEPPING
+        7        5 mm      1.20s     0.00    2.11    5.05   STEPPING
+        7        8 mm      0.05s     0.00   11.44    6.51   STEPPING
+        7        8 mm      0.10s     0.00    9.73    6.94   STEPPING
+        7        8 mm      0.15s     0.00    8.65    6.13   STEPPING
+        7        8 mm      0.25s     0.00    6.61    5.59   STEPPING
+        7        8 mm      0.40s     0.00    4.78    4.79   STEPPING
+        7        8 mm      0.50s     0.00    4.05    4.72   STEPPING
+        7        8 mm      0.80s     0.00    2.84    4.25   STEPPING
+        7        8 mm      1.20s     0.00    2.09    4.35   STEPPING
+
+Jitter keeps falling as smoothing rises, because the markers never move - so this
+table has no minimum and cannot choose for you. LAG is the bound: how long the avatar
+takes to catch up once the mannequin is nudged. Pick the lag you can live with, then
+read the steadiest setting that stays inside it off the first table.
+
+step between detections: typical 9.69 mm, p95 31.41 mm (3x)
+  large ratio -> rare bad frames; reject them. small ratio -> steady noise; filter it.
+measured detection noise: 5.12 mm per axis
+smoothing time a Kalman filter would choose, per assumed target speed:
+   target can move  moves per step  smoothing time
+            0.5 cm/s          1.1 mm          1.03 s
+            1.0 cm/s          2.2 mm          0.52 s
+            2.5 cm/s          5.6 mm          0.21 s
+            5.0 cm/s         11.2 mm          0.12 s
+           10.0 cm/s         22.4 mm          0.07 s
+Pick the row matching how fast the mannequin can actually move. That row's smoothing
+time is the principled answer; the table above is the same answer found by searching.
+
+==============================================================================
+STILL recording - head and markers still, but at ~80 cm and an older ID2 position.
+NOT comparable with the above. Kept as the best-case benchmark only.
+==============================================================================
+
+303 samples, 6.0 detections/s
+unfiltered jitter (p95 step between detections): 0.71 mm
+
+192 combinations tried (4 windows x 6 dead zones x 8 smoothing times)
+
+  WOBBLE  mm the avatar moves between detections on an ORDINARY frame (median)
+  JUMP    mm it moves on a BAD frame (p95) - this is what reads as glitching
+  DRIFT   mm it sits from its own centre - slow wander both step measures miss
+
+  The smoothing time IS the responsiveness: the avatar covers 95% of a real move in
+  about three of them, plus half a medoid window. A separate catch-up column was
+  tried and removed - it was those two settings' arithmetic dressed as a measurement.
+
+Quietest setting at each smoothing time - how still you can get for a given
+responsiveness:
+
+   smoothing  window  dead zone   WOBBLE    JUMP   DRIFT
+       0.05s       7        0 mm     0.01    0.24    0.30
+       0.10s       7        0 mm     0.03    0.19    0.29
+       0.15s       7        0 mm     0.04    0.16    0.29
+       0.25s       7        0 mm     0.03    0.12    0.29
+       0.40s       7        0 mm     0.03    0.08    0.29
+       0.50s       7        0 mm     0.03    0.07    0.29  <- the rig
+       0.80s       7        0 mm     0.02    0.05    0.29
+       1.20s       7        0 mm     0.01    0.04    0.29
+
+Every combination, steadiest typical wobble first. FROZEN marks a setting whose
+output never moves: its dead zone is larger than the noise, so it scores perfectly
+by doing nothing and sits permanently wherever it started.
+
+   window  dead zone  smoothing   WOBBLE    JUMP   DRIFT   note
+        7        0 mm      0.05s     0.01    0.24    0.30   
+        7        0 mm      1.20s     0.01    0.04    0.29   
+        5        0 mm      1.20s     0.02    0.04    0.29   
+        7        0 mm      0.80s     0.02    0.05    0.29   
+        3        0 mm      1.20s     0.02    0.05    0.29   
+        5        0 mm      0.80s     0.02    0.06    0.29   
+        7        0 mm      0.50s     0.03    0.07    0.29   
+        1        0 mm      1.20s     0.03    0.07    0.29   
+        3        0 mm      0.80s     0.03    0.07    0.29   
+        7        0 mm      0.40s     0.03    0.08    0.29   
+        5        0 mm      0.50s     0.03    0.09    0.29   <- the rig runs this
+        7        0 mm      0.10s     0.03    0.19    0.29   
+        7        0 mm      0.25s     0.03    0.12    0.29   
+        5        0 mm      0.40s     0.04    0.10    0.29   
+        7        0 mm      0.15s     0.04    0.16    0.29   
+        1        0 mm      0.80s     0.04    0.10    0.29   
+        3        0 mm      0.50s     0.04    0.10    0.29   
+        5        0 mm      0.25s     0.04    0.13    0.29   
+        3        0 mm      0.40s     0.05    0.11    0.29   
+        5        0 mm      0.15s     0.05    0.18    0.29   
+        1        0 mm      0.50s     0.06    0.16    0.29   
+        5        0 mm      0.10s     0.06    0.23    0.29   
+        3        0 mm      0.25s     0.06    0.17    0.29   
+        1        0 mm      0.40s     0.07    0.20    0.30   
+        5        0 mm      0.05s     0.07    0.29    0.30   
+        3        0 mm      0.15s     0.08    0.24    0.29   
+        3        0 mm      0.10s     0.09    0.31    0.29   
+        1        0 mm      0.25s     0.10    0.29    0.30   
+        3        0 mm      0.05s     0.10    0.40    0.30   
+        1        0 mm      0.15s     0.14    0.44    0.31   
+        1        0 mm      0.10s     0.18    0.54    0.31   
+        1        0 mm      0.05s     0.24    0.67    0.32   
+        1        1 mm      0.05s     0.00    0.00    0.00   FROZEN
+        1        1 mm      0.10s     0.00    0.00    0.00   FROZEN
+        1        1 mm      0.15s     0.00    0.00    0.00   FROZEN
+        1        1 mm      0.25s     0.00    0.00    0.40   FROZEN
+        1        1 mm      0.40s     0.00    0.00    0.00   FROZEN
+        1        1 mm      0.50s     0.00    0.00    0.00   FROZEN
+        1        1 mm      0.80s     0.00    0.00    0.15   FROZEN
+        1        1 mm      1.20s     0.00    0.00    0.20   FROZEN
+        1        2 mm      0.05s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.10s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.15s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.25s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.40s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.50s     0.00    0.00    0.00   FROZEN
+        1        2 mm      0.80s     0.00    0.00    0.00   FROZEN
+        1        2 mm      1.20s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.05s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.10s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.15s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.25s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.40s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.50s     0.00    0.00    0.00   FROZEN
+        1        3 mm      0.80s     0.00    0.00    0.00   FROZEN
+        1        3 mm      1.20s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.05s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.10s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.15s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.25s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.40s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.50s     0.00    0.00    0.00   FROZEN
+        1        5 mm      0.80s     0.00    0.00    0.00   FROZEN
+        1        5 mm      1.20s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.05s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.10s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.15s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.25s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.40s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.50s     0.00    0.00    0.00   FROZEN
+        1        8 mm      0.80s     0.00    0.00    0.00   FROZEN
+        1        8 mm      1.20s     0.00    0.00    0.00   FROZEN
+        3        1 mm      0.05s     0.00    0.00    0.40   FROZEN
+        3        1 mm      0.10s     0.00    0.00    0.34   FROZEN
+        3        1 mm      0.15s     0.00    0.00    0.36   FROZEN
+        3        1 mm      0.25s     0.00    0.00    0.36   FROZEN
+        3        1 mm      0.40s     0.00    0.00    0.22   FROZEN
+        3        1 mm      0.50s     0.00    0.00    0.18   FROZEN
+        3        1 mm      0.80s     0.00    0.00    0.00   FROZEN
+        3        1 mm      1.20s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.05s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.10s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.15s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.25s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.40s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.50s     0.00    0.00    0.00   FROZEN
+        3        2 mm      0.80s     0.00    0.00    0.00   FROZEN
+        3        2 mm      1.20s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.05s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.10s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.15s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.25s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.40s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.50s     0.00    0.00    0.00   FROZEN
+        3        3 mm      0.80s     0.00    0.00    0.00   FROZEN
+        3        3 mm      1.20s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.05s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.10s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.15s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.25s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.40s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.50s     0.00    0.00    0.00   FROZEN
+        3        5 mm      0.80s     0.00    0.00    0.00   FROZEN
+        3        5 mm      1.20s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.05s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.10s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.15s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.25s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.40s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.50s     0.00    0.00    0.00   FROZEN
+        3        8 mm      0.80s     0.00    0.00    0.00   FROZEN
+        3        8 mm      1.20s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.05s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.10s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.15s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.25s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.40s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.50s     0.00    0.00    0.00   FROZEN
+        5        1 mm      0.80s     0.00    0.00    0.00   FROZEN
+        5        1 mm      1.20s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.05s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.10s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.15s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.25s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.40s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.50s     0.00    0.00    0.00   FROZEN
+        5        2 mm      0.80s     0.00    0.00    0.00   FROZEN
+        5        2 mm      1.20s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.05s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.10s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.15s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.25s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.40s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.50s     0.00    0.00    0.00   FROZEN
+        5        3 mm      0.80s     0.00    0.00    0.00   FROZEN
+        5        3 mm      1.20s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.05s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.10s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.15s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.25s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.40s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.50s     0.00    0.00    0.00   FROZEN
+        5        5 mm      0.80s     0.00    0.00    0.00   FROZEN
+        5        5 mm      1.20s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.05s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.10s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.15s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.25s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.40s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.50s     0.00    0.00    0.00   FROZEN
+        5        8 mm      0.80s     0.00    0.00    0.00   FROZEN
+        5        8 mm      1.20s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.05s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.10s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.15s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.25s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.40s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.50s     0.00    0.00    0.00   FROZEN
+        7        1 mm      0.80s     0.00    0.00    0.00   FROZEN
+        7        1 mm      1.20s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.05s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.10s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.15s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.25s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.40s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.50s     0.00    0.00    0.00   FROZEN
+        7        2 mm      0.80s     0.00    0.00    0.00   FROZEN
+        7        2 mm      1.20s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.05s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.10s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.15s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.25s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.40s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.50s     0.00    0.00    0.00   FROZEN
+        7        3 mm      0.80s     0.00    0.00    0.00   FROZEN
+        7        3 mm      1.20s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.05s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.10s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.15s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.25s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.40s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.50s     0.00    0.00    0.00   FROZEN
+        7        5 mm      0.80s     0.00    0.00    0.00   FROZEN
+        7        5 mm      1.20s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.05s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.10s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.15s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.25s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.40s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.50s     0.00    0.00    0.00   FROZEN
+        7        8 mm      0.80s     0.00    0.00    0.00   FROZEN
+        7        8 mm      1.20s     0.00    0.00    0.00   FROZEN
+
+Jitter keeps falling as smoothing rises, because the markers never move - so this
+table has no minimum and cannot choose for you. LAG is the bound: how long the avatar
+takes to catch up once the mannequin is nudged. Pick the lag you can live with, then
+read the steadiest setting that stays inside it off the first table.
+
+step between detections: typical 0.25 mm, p95 0.71 mm (3x)
+  large ratio -> rare bad frames; reject them. small ratio -> steady noise; filter it.
+measured detection noise: 0.12 mm per axis
+smoothing time a Kalman filter would choose, per assumed target speed:
+   target can move  moves per step  smoothing time
+            0.5 cm/s          0.8 mm          0.04 s
+            1.0 cm/s          1.7 mm          0.03 s
+            2.5 cm/s          4.2 mm          0.02 s
+            5.0 cm/s          8.3 mm          0.02 s
+           10.0 cm/s         16.7 mm          0.02 s
+Pick the row matching how fast the mannequin can actually move. That row's smoothing
+time is the principled answer; the table above is the same answer found by searching.

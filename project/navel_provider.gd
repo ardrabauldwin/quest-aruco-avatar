@@ -5,10 +5,10 @@ extends RefCounted
 signal orientation_settled
 
 # Rest checkpoints: E0 at 20 detections, then E1/E2/... every 5 detections.
-var rest_initial_detections := 20
+var rest_initial_detections := 40
 var rest_checkpoint_step := 5
 var rest_required_stable_checks := 3
-var rest_max_detections := 50
+var rest_max_detections := 100
 var rest_stable_position_m := 0.002
 var rest_stable_rotation_deg := 0.5
 
@@ -39,7 +39,7 @@ func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
 	if estimates.is_empty():
 		return _common_pose
 
-	_common_pose = _fuse(estimates)
+	_common_pose = _floor_lock(_fuse(estimates))
 	_has_common_pose = true
 	_update_rest(_common_pose, detection_ms)
 	return _common_pose
@@ -219,14 +219,30 @@ func _rotation_medoid(poses: Array[Transform3D]) -> Quaternion:
 	return best
 
 
+## Enforce the CPR domain rule: the marker/common local Y axis lies along the mannequin on the
+## floor and local Z points down. The down sign matches the mannequin child's fixed -90 degree
+## import correction so the avatar lies face-up. Only measured horizontal heading is retained.
+func _floor_lock(pose: Transform3D) -> Transform3D:
+	var up := Vector3.UP
+	var body_z := Vector3.DOWN
+	var body_y := pose.basis.y.slide(up)
+	if body_y.length_squared() < 1.0e-6:
+		# A nearly vertical body axis is an unusable ArUco orientation. Keep the last valid heading
+		# when possible; before the first valid result, use a deterministic horizontal fallback.
+		body_y = _common_pose.basis.y.slide(up) if _has_common_pose else Vector3.FORWARD
+	body_y = body_y.normalized()
+	var body_x := body_y.cross(body_z).normalized()
+	var flat_basis := Basis(body_x, body_y, body_z).orthonormalized()
+	# Floor locking constrains orientation only. Marker position remains untouched.
+	return Transform3D(flat_basis, pose.origin)
+
+
 ## Fuse the common-pose estimates produced by same-frame markers.
 func _fuse(poses: Array[Transform3D]) -> Transform3D:
-	# With three markers, a coordinate median plus rotation medoid prevents one corrupted marker
-	# from dragging the complete pose. Two estimates cannot identify which one is wrong without an
-	# extra assumption, so retain the symmetric mean in that case.
-	if poses.size() >= 3:
-		return _robust_estimate(poses)
-
+	# Symmetric sign-aligned mean for every marker count: steadier than median/medoid while all
+	# markers are good, at the cost of absorbing 1/3 of a corrupted marker's error. The robust
+	# alternative stays in _robust_estimate (still used for rest collection) until the labelled
+	# experiment compares mean, robust and agreement-checked mean.
 	var position := Vector3.ZERO
 	var rotation := Quaternion(0, 0, 0, 0)
 	var first_rotation := poses[0].basis.get_rotation_quaternion()

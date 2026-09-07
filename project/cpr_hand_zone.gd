@@ -29,6 +29,14 @@ signal placement_restarted
 ## Time in seconds that hands must stay in correct position before auto-starting CPR.
 @export_range(0.1, 2.0, 0.1) var placement_confirm_time_s := 0.5
 
+@export_group("CPR Feedback")
+## Target compression rate in beats per minute.
+@export_range(80.0, 140.0, 5.0) var target_bpm := 110.0
+## Target compression depth in metres (5-6 cm for adults).
+@export_range(0.03, 0.10, 0.01) var target_depth_m := 0.055
+## Tolerance for depth feedback (±cm).
+@export_range(0.005, 0.02, 0.005) var depth_tolerance_m := 0.010
+
 var left_hand_inside := false
 var right_hand_inside := false
 var correct_placement: bool:
@@ -46,6 +54,17 @@ var _paused := false
 var _material: StandardMaterial3D
 
 var _correct_placement_start_time: float = -1.0  # When correct placement began
+
+# CPR feedback state
+var _cpr_cycle_phase := "compressions"  # "compressions" or "breathing"
+var _compression_count := 0  # 0-30
+var _breathing_time_remaining_s: float = 0.0
+var _last_hand_y: float = 0.0  # Previous frame's hand Y for motion detection
+var _in_downstroke := false  # Hand currently moving downward
+var _stroke_start_y: float = 0.0  # Hand Y when downstroke began
+var _last_compression_time: float = -1.0  # Time of last detected compression
+var _last_beep_time: float = -1.0  # Time of last metronome beep
+var _beep_interval_s: float = 0.6  # 60 / 110 bpm = 0.545s, rounded to 0.6s
 
 
 func _ready() -> void:
@@ -88,6 +107,12 @@ func _process(_delta: float) -> void:
 			start_cpr()
 	elif not correct_placement:
 		_correct_placement_start_time = -1.0
+
+	# CPR feedback: track compression depth and cycle.
+	if is_cpr_started and can_check:
+		var hand_to_track: Dictionary = left if lower_hand == &"left" else right
+		if not hand_to_track.is_empty():
+			_update_cpr_feedback(_delta, hand_to_track)
 
 
 func _read_hand(tracker_name: StringName) -> Dictionary:
@@ -161,6 +186,14 @@ func start_cpr() -> void:
 	is_cpr_started = true
 	_clear_placement()
 	_update_feedback()
+	# Reset CPR feedback state.
+	_cpr_cycle_phase = "compressions"
+	_compression_count = 0
+	_breathing_time_remaining_s = 0.0
+	_last_hand_y = 0.0
+	_in_downstroke = false
+	_last_compression_time = -1.0
+	_last_beep_time = -1.0
 	cpr_started.emit()
 
 
@@ -168,6 +201,14 @@ func reset_placement() -> void:
 	is_cpr_started = false
 	_clear_placement()
 	_update_feedback()
+	# Reset CPR feedback state.
+	_cpr_cycle_phase = "compressions"
+	_compression_count = 0
+	_breathing_time_remaining_s = 0.0
+	_last_hand_y = 0.0
+	_in_downstroke = false
+	_last_compression_time = -1.0
+	_last_beep_time = -1.0
 	placement_restarted.emit()
 
 
@@ -190,6 +231,59 @@ func _update_feedback() -> void:
 	_hand_illustration.visible = _highlight.visible
 	if not guide_only:
 		_material.albedo_color = Color(0.1, 0.9, 0.25, 0.75) if correct_placement else Color(1.0, 0.35, 0.05, 0.75)
+
+
+func _update_cpr_feedback(delta: float, hand: Dictionary) -> void:
+	## Track compression depth, count strokes, and manage 30:2 cycle.
+	var chest_normal := _shape.global_basis.y.normalized()
+	var hand_y: float = hand.heel.dot(chest_normal)
+	var now: float = Time.get_ticks_msec() / 1000.0
+
+	# Manage breathing phase timer.
+	if _cpr_cycle_phase == "breathing":
+		_breathing_time_remaining_s -= delta
+		if _breathing_time_remaining_s <= 0:
+			_cpr_cycle_phase = "compressions"
+			_compression_count = 0
+		return  # Don't track compressions during breathing phase.
+
+	# Track downstroke and detect compression.
+	if _last_hand_y == 0:
+		_last_hand_y = hand_y
+		return
+
+	var hand_moved_down := hand_y < _last_hand_y - 0.005  # Moved down >5mm
+	var hand_moved_up := hand_y > _last_hand_y + 0.005    # Moved up >5mm
+
+	if hand_moved_down and not _in_downstroke:
+		# Start of new downstroke.
+		_in_downstroke = true
+		_stroke_start_y = _last_hand_y
+	elif hand_moved_up and _in_downstroke:
+		# End of downstroke (upstroke begun). Calculate compression depth.
+		_in_downstroke = false
+		var depth: float = _stroke_start_y - hand_y
+		if depth > 0.015:  # Minimum 1.5cm to count as compression.
+			_compression_count += 1
+			_last_compression_time = now
+			# Audio beep for each compression (if timed correctly for BPM).
+			_try_metronome_beep(now)
+
+		# Check if 30 compressions reached.
+		if _compression_count >= 30:
+			_cpr_cycle_phase = "breathing"
+			_breathing_time_remaining_s = 5.0  # 5 seconds for 2 breaths.
+
+	_last_hand_y = hand_y
+
+
+func _try_metronome_beep(now: float) -> void:
+	## Emit audio beep if it's time (based on target BPM).
+	_beep_interval_s = 60.0 / target_bpm
+	if now - _last_beep_time >= _beep_interval_s:
+		# Play beep sound here (placeholder).
+		print("beep")  # TODO: play actual audio
+		_last_beep_time = now
 
 
 func _on_start_button(button: StringName) -> void:

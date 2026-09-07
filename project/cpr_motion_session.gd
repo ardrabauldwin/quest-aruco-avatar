@@ -22,6 +22,7 @@ var _stroke_time := 0.0
 var _candidate_count := 0
 var _since_stroke := 99.0
 var _beat_remaining := 0.0
+var _last_beat_time := -99.0  # When last beep occurred
 
 func reset() -> void:
 	active = false
@@ -61,9 +62,11 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 			_beat_remaining = 0.0
 		return
 	# Beat timing is independent of hand movements and continues through hand occlusion.
+	var now := Time.get_ticks_msec() / 1000.0
 	_beat_remaining -= delta
 	if _beat_remaining <= 0.0:
 		beat_requested.emit()
+		_last_beat_time = now
 		var interval := 60.0 / clampf(target_bpm, 100.0, 120.0)
 		_beat_remaining = interval + fmod(_beat_remaining, interval)
 	# Never bridge an occlusion or a long render stall into a counted stroke.
@@ -94,7 +97,8 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 	# Require a full return near the top, not merely a change of velocity at the bottom.
 	if height_m >= _top - return_tolerance_m and height_m - _bottom >= 0.006:
 		var excursion := _top - _bottom
-		if excursion >= minimum_travel_m and _stroke_time >= 0.20 and _since_stroke >= 0.25:
+		var time_since_beat := absf(now - _last_beat_time)
+		if excursion >= minimum_travel_m and time_since_beat <= 0.2:
 			last_stroke_travel_m = excursion
 			if not active:
 				active = true

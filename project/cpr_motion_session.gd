@@ -61,12 +61,11 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 			_beat_remaining = 0.0
 		return
 	# Beat timing is independent of hand movements and continues through hand occlusion.
-	if active:
-		_beat_remaining -= delta
-		if _beat_remaining <= 0.0:
-			beat_requested.emit()
-			var interval := 60.0 / clampf(target_bpm, 100.0, 120.0)
-			_beat_remaining = interval + fmod(_beat_remaining, interval)
+	_beat_remaining -= delta
+	if _beat_remaining <= 0.0:
+		beat_requested.emit()
+		var interval := 60.0 / clampf(target_bpm, 100.0, 120.0)
+		_beat_remaining = interval + fmod(_beat_remaining, interval)
 	# Never bridge an occlusion or a long render stall into a counted stroke.
 	if not valid or not is_finite(height_m) or delta > 0.25:
 		invalidate_tracking()
@@ -98,12 +97,10 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 		if excursion >= minimum_travel_m and _stroke_time >= 0.20 and _since_stroke >= 0.25:
 			last_stroke_travel_m = excursion
 			if not active:
-				_candidate_count = _candidate_count + 1 if _since_stroke <= 1.5 else 1
-				if _candidate_count >= 2:
-					active = true
-					count = _candidate_count
-					total_count = count
-					_beat_remaining = 0.0
+				active = true
+				count = 1
+				total_count = 1
+				_beat_remaining = 0.0
 			else:
 				count += 1
 				total_count += 1

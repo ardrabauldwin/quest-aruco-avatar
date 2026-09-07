@@ -51,15 +51,21 @@ func _process(_delta: float) -> void:
 	if session.phase == "breathing":
 		_title.text = "GIVE 2 BREATHS"
 		_counter.text = "%.1f s" % session.breathing_remaining_s
-		_detail.text = "30/30 strokes\nPractice pause timer"
+		_detail.text = "30/30 compressions\nPractice pause"
 		fraction = session.breathing_remaining_s / maxf(0.1, session.breathing_duration_s)
 	else:
-		_title.text = "HAND-MOTION PRACTICE"
-		_counter.text = "%d / 30" % session.count
-		if not session.tracking_available:
-			_detail.text = "%s\nCounting waits for a tracked hand" % zone.get("hand_tracking_status")
+		if not session.active:
+			_title.text = "LISTEN TO BEEP"
+			_counter.text = ""
+			_detail.text = "Waiting for first\ncompression..."
+			fraction = 0.0
 		else:
-			_detail.text = "Estimated hand travel: %.1f cm\n%.0f BPM pace" % [session.travel_m * 100.0, session.target_bpm]
-		fraction = session.travel_m / 0.08
+			_title.text = "COMPRESS"
+			_counter.text = "%d / 30" % session.count
+			if session.travel_m < 0.050:
+				_detail.text = "Press deeper: %.1f cm\n%.0f BPM" % [session.travel_m * 100.0, session.target_bpm]
+			else:
+				_detail.text = "Good depth: %.1f cm\n%.0f BPM" % [session.travel_m * 100.0, session.target_bpm]
+			fraction = session.travel_m / 0.08
 	_bar.scale.x = maxf(0.001, clampf(fraction, 0.0, 1.0))
 	_bar.position.x = -0.145 + 0.145 * _bar.scale.x

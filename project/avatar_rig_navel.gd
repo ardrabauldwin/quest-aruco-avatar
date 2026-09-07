@@ -110,13 +110,11 @@ func _process(delta: float) -> void:
 	else:
 		_update_tracking(result_markers, result_timestamp_ms, delta)
 
-	# Do not reveal a stale held pose. After startup, resume, or a complete tracking gap, show the
-	# avatar only after the required fresh measurements have produced a confirmed pose.
+	# Once a pose is confirmed, keep it visible through marker loss and reacquisition.
+	# Startup, app resume, and re-levelling still require a newly confirmed rest pose.
 	visible = (
 		not _application_paused
-		and _tracking_was_available
 		and _filter.is_ready()
-		and not _filter.is_reacquiring()
 		and _common_provider.has_rest_pose()
 	)
 	_update_nudge(delta)
@@ -214,6 +212,8 @@ func _lowest_mesh_world_y(node: Node3D) -> float:
 		instances.append(node)
 	for instance in instances:
 		var mesh_instance := instance as MeshInstance3D
+		if mesh_instance.has_meta("cpr_feedback"):
+			continue
 		if mesh_instance.mesh == null:
 			continue
 		for vertex in mesh_instance.mesh.get_faces():
@@ -280,6 +280,8 @@ func _apply_look() -> void:
 	var alpha := clampf(1.0 - avatar_transparency, 0.05, 1.0)
 	for node in find_children("*", "MeshInstance3D", true, false):
 		var mesh_instance := node as MeshInstance3D
+		if mesh_instance.has_meta("cpr_feedback"):
+			continue
 		for surface in mesh_instance.get_surface_override_material_count():
 			var material := mesh_instance.get_active_material(surface)
 			if material is BaseMaterial3D:

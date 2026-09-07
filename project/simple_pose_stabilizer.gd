@@ -129,11 +129,9 @@ func _accept_new_detection(raw_pose: Transform3D, detection_ms: int) -> bool:
 		if _recent_poses.size() < window:
 			return true
 		_set_measurement_target(_medoid())
-		# The avatar is hidden while this window is collected. Start directly at the confirmed
-		# post-gap pose instead of interpolating visibly from a stale pre-gap world position.
-		_stable_pose = _target_pose
+		# The avatar stays visible at its held pose while collecting this window.
+		# Resume normal smoothing from that pose once the new target is confirmed.
 		_reacquiring = false
-		_hold_anchor_once = true
 		return true
 
 	# Before the window fills, use the newest measurement instead of a weak partial medoid.

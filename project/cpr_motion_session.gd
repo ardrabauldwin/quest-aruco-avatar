@@ -98,7 +98,8 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 	if height_m >= _top - return_tolerance_m and height_m - _bottom >= 0.006:
 		var excursion := _top - _bottom
 		var time_since_beat := absf(now - _last_beat_time)
-		if excursion >= minimum_travel_m and time_since_beat <= 0.2:
+		var is_on_beat := (not active) or (time_since_beat <= 0.2)
+		if excursion >= minimum_travel_m and is_on_beat:
 			last_stroke_travel_m = excursion
 			if not active:
 				active = true

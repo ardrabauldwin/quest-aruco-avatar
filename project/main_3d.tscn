@@ -101,6 +101,7 @@ transform = Transform3D(0.77, 0, 0, 0, -3.36578e-08, 0.77, 0, -0.77, -3.36578e-0
 
 [node name="CPRHandZone" parent="AvatarRig/mannequin" node_paths=PackedStringArray("xr_origin", "start_controller") instance=ExtResource("8_cpr")]
 position = Vector3(0, 0.127, 0.12)
+guide_only = false
 xr_origin = NodePath("../../../XROrigin3D")
 start_controller = NodePath("../../../XROrigin3D/RightHand")
 

@@ -20,10 +20,10 @@ signal placement_restarted
 ## Approximate joint-centre to skin offset toward the palm-facing side, in metres.
 @export_range(0.0, 0.025, 0.001) var heel_surface_offset_m := 0.008
 @export_group("Stack tolerances")
-@export var stack_min_height_m := 0.012
-@export var stack_max_height_m := 0.060
-@export var stack_lateral_tolerance_m := 0.025
-@export_range(0.0, 80.0, 1.0) var max_palm_tilt_degrees := 40.0
+@export var stack_min_height_m := 0.008
+@export var stack_max_height_m := 0.080
+@export var stack_lateral_tolerance_m := 0.035
+@export_range(0.0, 80.0, 1.0) var max_palm_tilt_degrees := 50.0
 
 @export_group("Compression detection")
 ## Time in seconds that hands must stay in correct position before auto-starting CPR.
@@ -109,7 +109,7 @@ func _read_hand(tracker_name: StringName) -> Dictionary:
 	if not palm.is_finite() or not wrist.origin.is_finite() or absf(palm.basis.determinant()) < 0.001:
 		return {}
 	var wrist_to_palm := wrist.origin.distance_to(palm.origin)
-	if wrist_to_palm < 0.015 or wrist_to_palm > 0.12:
+	if wrist_to_palm < 0.010 or wrist_to_palm > 0.150:
 		return {}
 	# Godot's OpenXR Humanoid conversion makes -Z face out the back of the hand:
 	# +Z therefore points toward the palm skin/contact surface (both left and right).

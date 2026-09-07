@@ -1,6 +1,6 @@
 extends Area3D
 ## Green visual placement guide by default. Experimental heel grading is opt-in.
-## Auto-detects compression strokes from hand motion when guide_only = false.
+## Auto-hides when correct hand placement is detected and held stable.
 
 signal placement_changed(correct: bool)
 signal cpr_started
@@ -26,12 +26,8 @@ signal placement_restarted
 @export_range(0.0, 80.0, 1.0) var max_palm_tilt_degrees := 40.0
 
 @export_group("Compression detection")
-## Minimum depth of motion in one stroke, in metres.
-@export_range(0.01, 0.15, 0.01) var compression_min_depth_m := 0.04
-## Expected strokes per minute; detection looks for rates in this ±50% band.
-@export_range(60.0, 200.0, 5.0) var compression_target_bpm := 100.0
-## Consecutive detected strokes before confirming compression has started.
-@export_range(1, 10, 1) var compression_confirm_strokes := 3
+## Time in seconds that hands must stay in correct position before auto-starting CPR.
+@export_range(0.1, 2.0, 0.1) var placement_confirm_time_s := 0.5
 
 var left_hand_inside := false
 var right_hand_inside := false
@@ -49,10 +45,7 @@ var _paused := false
 @onready var _hand_illustration: Sprite3D = $HandIllustration
 var _material: StandardMaterial3D
 
-var _hand_positions: Array = []  # History of [time, lower_hand_y] during correct placement
-var _detected_strokes := 0  # Count of consecutive valid strokes
-var _last_peak_time: float = -1.0  # Time of the most recent detected upstroke peak
-var _was_placement_correct := false  # Track if placement was valid last frame, for detection window
+var _correct_placement_start_time: float = -1.0  # When correct placement began
 
 
 func _ready() -> void:
@@ -67,7 +60,7 @@ func _ready() -> void:
 	_update_feedback()
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	var was_correct := correct_placement
 	var can_check := not guide_only and not _paused and is_visible_in_tree() and not is_cpr_started
 	var left := _read_hand(left_tracker) if can_check else {}
@@ -85,34 +78,16 @@ func _process(delta: float) -> void:
 	if correct_placement != was_correct:
 		placement_changed.emit(correct_placement)
 
-	# Auto-detect compressions from hand motion when in detector mode (not guide_only).
-	# Once placement is established, keep detection running through brief losses (pumping motion).
-	# Need to read raw hand data even when not in contact, to track the motion.
-	if can_check and not guide_only:
-		if correct_placement:
-			_was_placement_correct = true
-		elif _was_placement_correct:
-			# Keep tracking for up to 0.5s after placement is lost, to detect strokes.
-			if not _hand_positions.is_empty():
-				var time_since_last: float = Time.get_ticks_msec() / 1000.0 - _hand_positions[-1][0]
-				if time_since_last > 0.5:
-					_was_placement_correct = false
-
-		if _was_placement_correct:
-			# During correct placement, remember which hand was lower.
-			# After it leaves the zone (during pumping), keep reading that hand's motion.
-			if correct_placement:
-				if lower_hand == &"left":
-					_detect_compression(delta, left)
-				elif lower_hand == &"right":
-					_detect_compression(delta, right)
-			else:
-				# Placement momentarily lost; try to track the hand that was lower.
-				# Fall back to trying both if we're not sure.
-				if not left.is_empty():
-					_detect_compression(delta, left)
-				elif not right.is_empty():
-					_detect_compression(delta, right)
+	# Auto-start CPR when correct placement is held stable.
+	if can_check and not guide_only and correct_placement and not is_cpr_started:
+		var now: float = Time.get_ticks_msec() / 1000.0
+		if _correct_placement_start_time < 0:
+			_correct_placement_start_time = now
+		elif now - _correct_placement_start_time >= placement_confirm_time_s:
+			# Correct placement held for the threshold time; auto-start CPR (hides guide).
+			start_cpr()
+	elif not correct_placement:
+		_correct_placement_start_time = -1.0
 
 
 func _read_hand(tracker_name: StringName) -> Dictionary:
@@ -202,10 +177,7 @@ func _clear_placement() -> void:
 	right_hand_inside = false
 	_placement_correct = false
 	lower_hand = &""
-	_hand_positions.clear()
-	_detected_strokes = 0
-	_last_peak_time = -1.0
-	_was_placement_correct = false
+	_correct_placement_start_time = -1.0
 	if was_correct:
 		placement_changed.emit(false)
 
@@ -218,79 +190,6 @@ func _update_feedback() -> void:
 	_hand_illustration.visible = _highlight.visible
 	if not guide_only:
 		_material.albedo_color = Color(0.1, 0.9, 0.25, 0.75) if correct_placement else Color(1.0, 0.35, 0.05, 0.75)
-
-
-func _detect_compression(_delta: float, lower_hand_data: Dictionary) -> void:
-	## Track the Y position (chest normal direction) of the lower hand and look for
-	## repeated down-up strokes (peaks). Each stroke must be at least compression_min_depth_m deep
-	## and the time between peaks must fall within a ±50% band around compression_target_bpm.
-	if lower_hand_data.is_empty():
-		return
-	var chest_normal := _shape.global_basis.y.normalized()
-	var hand_y: float = lower_hand_data.heel.dot(chest_normal)
-	var now: float = Time.get_ticks_msec() / 1000.0  # seconds since engine start
-
-	# Maintain a sliding window of recent positions for stroke detection.
-	_hand_positions.append([now, hand_y])
-	# Keep only the last 3 seconds of data to limit memory and detect multi-stroke rhythm.
-	while _hand_positions.size() > 0 and now - _hand_positions[0][0] > 3.0:
-		_hand_positions.pop_front()
-
-	if _hand_positions.size() < 4:
-		# Need minimum samples to detect a stroke reliably.
-		return
-
-	# Find the range of motion in the last ~1 second (recent motion).
-	var recent_window_start: float = now - 1.0
-	var recent_lowest: float = hand_y
-	var recent_highest: float = hand_y
-	for entry in _hand_positions:
-		if entry[0] >= recent_window_start:
-			recent_lowest = minf(recent_lowest, entry[1])
-			recent_highest = maxf(recent_highest, entry[1])
-
-	var recent_depth: float = recent_highest - recent_lowest
-	if recent_depth < compression_min_depth_m:
-		# Not deep enough to be a compression stroke.
-		_detected_strokes = 0
-		_last_peak_time = -1.0
-		return
-
-	# Detect an upstroke peak: hand rising back up after a compression.
-	# A peak is when hand_y is near the recent_highest and was lower moments ago.
-	var peak_threshold: float = recent_highest - recent_depth * 0.15  # Within 15% of highest
-	var is_at_peak: bool = hand_y >= peak_threshold
-
-	if not is_at_peak:
-		return
-
-	# Check if we've detected a new peak (not just hovering at the top).
-	if _last_peak_time > 0 and now - _last_peak_time < 0.1:
-		# Still in the same peak; wait for the hand to drop and rise again.
-		return
-
-	# Valid peak detected. Check the rhythm if we have a previous peak.
-	var min_interval_s: float = 60.0 / (compression_target_bpm * 1.5)  # ±50% band
-	var max_interval_s: float = 60.0 / (compression_target_bpm * 0.5)
-	var time_since_last: float = now - _last_peak_time
-
-	if _last_peak_time < 0:
-		# First peak; initialize.
-		_detected_strokes = 1
-		_last_peak_time = now
-	elif time_since_last >= min_interval_s and time_since_last <= max_interval_s:
-		# Peak timing is in the valid BPM range.
-		_detected_strokes += 1
-		_last_peak_time = now
-		if _detected_strokes >= compression_confirm_strokes:
-			print("CPR compression detected: %d peaks in valid rhythm (~%.0f bpm)" % [
-				compression_confirm_strokes, 60.0 / time_since_last
-			])
-			start_cpr()
-	else:
-		# Rhythm broken; reset.
-		_detected_strokes = 1
-		_last_peak_time = now
 
 
 func _on_start_button(button: StringName) -> void:
@@ -310,15 +209,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED:
 		_paused = true
-		_hand_positions.clear()
-		_detected_strokes = 0
-		_last_peak_time = -1.0
 		_clear_placement()
 		_update_feedback()
 	elif what == NOTIFICATION_APPLICATION_RESUMED:
 		_paused = false
-		_hand_positions.clear()
-		_detected_strokes = 0
-		_last_peak_time = -1.0
 		_clear_placement()
 		_update_feedback()

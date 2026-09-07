@@ -1,6 +1,6 @@
 extends Area3D
 ## Green visual placement guide by default. Experimental heel grading is opt-in.
-## Auto-hides when correct hand placement is detected and held stable.
+## Uses tracked hand motion to start a sensor-free practice cycle after two strokes.
 
 signal placement_changed(correct: bool)
 signal cpr_started
@@ -25,17 +25,11 @@ signal placement_restarted
 @export var stack_lateral_tolerance_m := 0.035
 @export_range(0.0, 80.0, 1.0) var max_palm_tilt_degrees := 50.0
 
-@export_group("Compression detection")
-## Time in seconds that hands must stay in correct position before auto-starting CPR.
-@export_range(0.1, 2.0, 0.1) var placement_confirm_time_s := 0.5
-
-@export_group("CPR Feedback")
-## Target compression rate in beats per minute.
-@export_range(80.0, 140.0, 5.0) var target_bpm := 110.0
-## Target compression depth in metres (5-6 cm for adults).
-@export_range(0.03, 0.10, 0.01) var target_depth_m := 0.055
-## Tolerance for depth feedback (±cm).
-@export_range(0.005, 0.02, 0.005) var depth_tolerance_m := 0.010
+@export_group("Hand-motion practice")
+@export var enable_motion_practice := true
+@export_range(100.0, 120.0, 5.0) var target_bpm := 110.0
+## Configurable practice pause, not detection of breaths.
+@export_range(2.0, 9.0, 0.5) var breathing_duration_s := 5.0
 
 var left_hand_inside := false
 var right_hand_inside := false
@@ -50,21 +44,16 @@ var _paused := false
 @onready var _shape: CollisionShape3D = $CollisionShape3D
 @onready var _highlight: MeshInstance3D = $Highlight
 @onready var _instruction: Label3D = $Instruction
-@onready var _hand_illustration: Sprite3D = $HandIllustration
 var _material: StandardMaterial3D
 
-var _correct_placement_start_time: float = -1.0  # When correct placement began
-
-# CPR feedback state
-var _cpr_cycle_phase := "compressions"  # "compressions" or "breathing"
-var _compression_count := 0  # 0-30
-var _breathing_time_remaining_s: float = 0.0
-var _last_hand_y: float = 0.0  # Previous frame's hand Y for motion detection
-var _in_downstroke := false  # Hand currently moving downward
-var _stroke_start_y: float = 0.0  # Hand Y when downstroke began
-var _last_compression_time: float = -1.0  # Time of last detected compression
-var _last_beep_time: float = -1.0  # Time of last metronome beep
-var _beep_interval_s: float = 0.6  # 60 / 110 bpm = 0.545s, rounded to 0.6s
+var motion_session = preload("res://cpr_motion_session.gd").new()
+var _motion_tracker: StringName = &""
+var _last_chest_pose := Transform3D.IDENTITY
+var _have_chest_pose := false
+var hand_tracking_status := "Show your hands"
+var _motion_reasons := {}
+var _last_tracking_status := ""
+var _metronome: AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -76,43 +65,135 @@ func _ready() -> void:
 		_highlight.material_override = _material
 	if start_controller != null:
 		start_controller.button_pressed.connect(_on_start_button)
+	_metronome = AudioStreamPlayer.new()
+	_metronome.set_script(preload("res://cpr_metronome.gd"))
+	add_child(_metronome)
+	motion_session.beat_requested.connect(_metronome.play.bind(0.0))
 	_update_feedback()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	var was_correct := correct_placement
-	var can_check := not guide_only and not _paused and is_visible_in_tree() and not is_cpr_started
-	var left := _read_hand(left_tracker) if can_check else {}
-	var right := _read_hand(right_tracker) if can_check else {}
-	# These per-hand flags now mean heel contact with the chest, not palm containment.
-	left_hand_inside = _heel_on_target(left)
-	right_hand_inside = _heel_on_target(right)
+	var available := not _paused and is_visible_in_tree()
+	var read_hands := available and not guide_only
+	var left := _read_hand(left_tracker) if read_hands else {}
+	var right := _read_hand(right_tracker) if read_hands else {}
+	left_hand_inside = not guide_only and _heel_on_target(left)
+	right_hand_inside = not guide_only and _heel_on_target(right)
 	lower_hand = &""
 	if left_hand_inside and _is_stacked(left, right):
 		lower_hand = &"left"
 	elif right_hand_inside and _is_stacked(right, left):
 		lower_hand = &"right"
 	_placement_correct = lower_hand != &""
-	_update_feedback()
 	if correct_placement != was_correct:
 		placement_changed.emit(correct_placement)
+	if enable_motion_practice:
+		var motion_left := _read_motion_hand(left_tracker) if available else {}
+		var motion_right := _read_motion_hand(right_tracker) if available else {}
+		_update_hand_motion(delta, available, motion_left, motion_right)
+	_update_feedback()
 
-	# Auto-start CPR when correct placement is held stable.
-	if can_check and not guide_only and correct_placement and not is_cpr_started:
-		var now: float = Time.get_ticks_msec() / 1000.0
-		if _correct_placement_start_time < 0:
-			_correct_placement_start_time = now
-		elif now - _correct_placement_start_time >= placement_confirm_time_s:
-			# Correct placement held for the threshold time; auto-start CPR (hides guide).
-			start_cpr()
-	elif not correct_placement:
-		_correct_placement_start_time = -1.0
 
-	# CPR feedback: track compression depth and cycle.
-	if is_cpr_started and can_check:
-		var hand_to_track: Dictionary = left if lower_hand == &"left" else right
-		if not hand_to_track.is_empty():
-			_update_cpr_feedback(_delta, hand_to_track)
+func _update_hand_motion(delta: float, available: bool, left: Dictionary, right: Dictionary) -> void:
+	motion_session.target_bpm = target_bpm
+	motion_session.breathing_duration_s = breathing_duration_s
+	var sample := {}
+	var chosen: StringName = &""
+	# Keep the same hand through a stroke. Prefer right if both first become available;
+	# the visible upper hand is sufficient for motion estimation, not placement approval.
+	if _motion_tracker == left_tracker and _motion_hand_usable(left):
+		sample = left
+		chosen = left_tracker
+	elif _motion_tracker == right_tracker and _motion_hand_usable(right):
+		sample = right
+		chosen = right_tracker
+	elif _motion_hand_usable(right):
+		sample = right
+		chosen = right_tracker
+	elif _motion_hand_usable(left):
+		sample = left
+		chosen = left_tracker
+	if chosen != _motion_tracker:
+		motion_session.invalidate_tracking()
+		_motion_tracker = chosen
+	var chest := _shape.global_transform
+	var units := _units_per_metre()
+	var jumped := _have_chest_pose and (
+		chest.origin.distance_to(_last_chest_pose.origin) > 0.03 * units
+		or chest.basis.orthonormalized().get_rotation_quaternion().angle_to(
+			_last_chest_pose.basis.orthonormalized().get_rotation_quaternion()) > deg_to_rad(5.0))
+	_last_chest_pose = chest
+	_have_chest_pose = available
+	var valid := available and not jumped and not sample.is_empty()
+	var height := 0.0
+	if valid:
+		height = (sample.point - chest.origin).dot(chest.basis.y.normalized()) / units
+	if not sample.is_empty():
+		hand_tracking_status = "Hand tracked"
+	elif not left.is_empty() or not right.is_empty():
+		hand_tracking_status = "Move your hand over the ring"
+	elif _motion_reasons.values().has("controller"):
+		hand_tracking_status = "Put controllers down to use hands"
+	elif _motion_reasons.values().has("no_tracker"):
+		hand_tracking_status = "Enable hand tracking on Quest"
+	else:
+		hand_tracking_status = "Keep your hands in view"
+	if available and hand_tracking_status != _last_tracking_status:
+		_last_tracking_status = hand_tracking_status
+		print("CPR hands: ", hand_tracking_status, " | ", _motion_reasons)
+	motion_session.update(delta, valid, height, not available)
+	if motion_session.active and not is_cpr_started:
+		is_cpr_started = true
+		cpr_started.emit()
+	if not available:
+		_metronome.stop()
+
+
+func _units_per_metre() -> float:
+	if xr_origin == null:
+		return 1.0
+	return maxf(0.001, XRServer.world_scale * xr_origin.global_basis.get_scale().length() / sqrt(3.0))
+
+
+func _motion_hand_usable(hand: Dictionary) -> bool:
+	if hand.is_empty():
+		return false
+	var offset: Vector3 = hand.point - _shape.global_position
+	var units := _units_per_metre()
+	var height := offset.dot(_shape.global_basis.y.normalized()) / units
+	var sideways := offset.dot(_shape.global_basis.x.normalized()) / units
+	var lengthwise := offset.dot(_shape.global_basis.z.normalized()) / units
+	return absf(sideways) < 0.08 and absf(lengthwise) < 0.08 and height > -0.12 and height < 0.15
+
+## Motion needs only an actively tracked palm position, not a wrist or orientation.
+## Keep the stricter heel/orientation checks exclusively in the experimental placement grader.
+func _read_motion_hand(tracker_name: StringName) -> Dictionary:
+	_motion_reasons[tracker_name] = "no_tracker"
+	if xr_origin == null:
+		return {}
+	var hand := XRServer.get_tracker(tracker_name) as XRHandTracker
+	if hand == null:
+		return {}
+	if hand.hand_tracking_source == XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER:
+		_motion_reasons[tracker_name] = "controller"
+		return {}
+	_motion_reasons[tracker_name] = "not_tracked"
+	if not hand.has_tracking_data or hand.hand_tracking_source == XRHandTracker.HAND_TRACKING_SOURCE_NOT_TRACKED:
+		return {}
+	var flags := hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM)
+	var required := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+	if (flags & required) != required:
+		_motion_reasons[tracker_name] = "palm_not_tracked (flags=%d)" % flags
+		return {}
+	var palm := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
+	if not palm.origin.is_finite():
+		return {}
+	var pose := XRPose.new()
+	pose.transform = Transform3D(Basis.IDENTITY, palm.origin)
+	var position_world := xr_origin.global_transform * pose.get_adjusted_transform().origin
+	_motion_reasons[tracker_name] = "tracked"
+	return {"point": position_world}
 
 
 func _read_hand(tracker_name: StringName) -> Dictionary:
@@ -184,33 +265,22 @@ func start_cpr() -> void:
 	if is_cpr_started or _paused or not is_visible_in_tree():
 		return
 	is_cpr_started = true
+	motion_session.start()
+	_motion_tracker = &""
 	_clear_placement()
 	_update_feedback()
-	# Reset CPR feedback state.
-	_cpr_cycle_phase = "compressions"
-	_compression_count = 0
-	_breathing_time_remaining_s = 0.0
-	_last_hand_y = 0.0
-	_in_downstroke = false
-	_last_compression_time = -1.0
-	_last_beep_time = -1.0
 	cpr_started.emit()
-
 
 func reset_placement() -> void:
 	is_cpr_started = false
+	motion_session.reset()
+	_motion_tracker = &""
+	_have_chest_pose = false
+	if _metronome != null:
+		_metronome.stop()
 	_clear_placement()
 	_update_feedback()
-	# Reset CPR feedback state.
-	_cpr_cycle_phase = "compressions"
-	_compression_count = 0
-	_breathing_time_remaining_s = 0.0
-	_last_hand_y = 0.0
-	_in_downstroke = false
-	_last_compression_time = -1.0
-	_last_beep_time = -1.0
 	placement_restarted.emit()
-
 
 func _clear_placement() -> void:
 	var was_correct := correct_placement
@@ -218,7 +288,6 @@ func _clear_placement() -> void:
 	right_hand_inside = false
 	_placement_correct = false
 	lower_hand = &""
-	_correct_placement_start_time = -1.0
 	if was_correct:
 		placement_changed.emit(false)
 
@@ -228,62 +297,8 @@ func _update_feedback() -> void:
 		return
 	_highlight.visible = not is_cpr_started and not _paused
 	_instruction.visible = _highlight.visible
-	_hand_illustration.visible = _highlight.visible
 	if not guide_only:
 		_material.albedo_color = Color(0.1, 0.9, 0.25, 0.75) if correct_placement else Color(1.0, 0.35, 0.05, 0.75)
-
-
-func _update_cpr_feedback(delta: float, hand: Dictionary) -> void:
-	## Track compression depth, count strokes, and manage 30:2 cycle.
-	var chest_normal := _shape.global_basis.y.normalized()
-	var hand_y: float = hand.heel.dot(chest_normal)
-	var now: float = Time.get_ticks_msec() / 1000.0
-
-	# Manage breathing phase timer.
-	if _cpr_cycle_phase == "breathing":
-		_breathing_time_remaining_s -= delta
-		if _breathing_time_remaining_s <= 0:
-			_cpr_cycle_phase = "compressions"
-			_compression_count = 0
-		return  # Don't track compressions during breathing phase.
-
-	# Track downstroke and detect compression.
-	if _last_hand_y == 0:
-		_last_hand_y = hand_y
-		return
-
-	var hand_moved_down := hand_y < _last_hand_y - 0.005  # Moved down >5mm
-	var hand_moved_up := hand_y > _last_hand_y + 0.005    # Moved up >5mm
-
-	if hand_moved_down and not _in_downstroke:
-		# Start of new downstroke.
-		_in_downstroke = true
-		_stroke_start_y = _last_hand_y
-	elif hand_moved_up and _in_downstroke:
-		# End of downstroke (upstroke begun). Calculate compression depth.
-		_in_downstroke = false
-		var depth: float = _stroke_start_y - hand_y
-		if depth > 0.015:  # Minimum 1.5cm to count as compression.
-			_compression_count += 1
-			_last_compression_time = now
-			# Audio beep for each compression (if timed correctly for BPM).
-			_try_metronome_beep(now)
-
-		# Check if 30 compressions reached.
-		if _compression_count >= 30:
-			_cpr_cycle_phase = "breathing"
-			_breathing_time_remaining_s = 5.0  # 5 seconds for 2 breaths.
-
-	_last_hand_y = hand_y
-
-
-func _try_metronome_beep(now: float) -> void:
-	## Emit audio beep if it's time (based on target BPM).
-	_beep_interval_s = 60.0 / target_bpm
-	if now - _last_beep_time >= _beep_interval_s:
-		# Play beep sound here (placeholder).
-		print("beep")  # TODO: play actual audio
-		_last_beep_time = now
 
 
 func _on_start_button(button: StringName) -> void:
@@ -303,9 +318,14 @@ func _unhandled_key_input(event: InputEvent) -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED:
 		_paused = true
+		motion_session.invalidate_tracking()
+		if _metronome != null:
+			_metronome.stop()
 		_clear_placement()
 		_update_feedback()
 	elif what == NOTIFICATION_APPLICATION_RESUMED:
 		_paused = false
+		motion_session.invalidate_tracking()
+		_have_chest_pose = false
 		_clear_placement()
 		_update_feedback()

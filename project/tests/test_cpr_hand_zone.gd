@@ -114,6 +114,12 @@ func _run() -> void:
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM, POS)
 	zone._process(0.016)
 	check(not zone.correct_placement, "Missing orientation rejected")
+	check(not zone._read_motion_hand(zone.left_tracker).is_empty(), "Motion accepts tracked palm without orientation")
+	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, 0)
+	check(not zone._read_motion_hand(zone.left_tracker).is_empty(), "Motion does not require a wrist joint")
+	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM, XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID)
+	check(zone._read_motion_hand(zone.left_tracker).is_empty(), "Motion rejects stale palm positions")
+	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, POS)
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM, FULL)
 	var saved_scale := XRServer.world_scale
 	XRServer.world_scale = 1.5
@@ -133,6 +139,31 @@ func _run() -> void:
 	check(not zone._highlight.visible, "Highlight stays hidden")
 	zone._on_start_button(&"by_button")
 	check(not zone.is_cpr_started and zone._highlight.visible, "Reset restores guide")
+	# Exercise the actual XR joint reader through automatic start and continued counting.
+	for cycle in 3:
+		for sample in 41:
+			var travel := 0.035 * (1.0 - cos(TAU * float(sample) / 40.0)) * 0.5
+			set_hand(left, centre - normal * travel, -normal)
+			set_hand(right, centre + normal * (0.035 - travel), -normal)
+			zone._process(1.0 / 72.0)
+		if cycle == 0:
+			check(not zone.is_cpr_started, "Guide remains after first stroke")
+	check(zone.is_cpr_started and zone.motion_session.count == 3, "Joint tracking auto-starts and keeps counting after start")
+	check(not zone._highlight.visible, "Automatic motion start hides guide")
+	check(zone._metronome.stream is AudioStreamWAV and zone._metronome.stream.data.size() > 1000, "Actual PCM beep generated")
+	var hud := Node3D.new()
+	hud.set_script(preload("res://cpr_feedback_hud.gd"))
+	hud.zone = zone
+	root.add_child(hud)
+	hud._process(0.016)
+	check(hud._counter.text == "3 / 30", "HUD displays compression count")
+	check("Estimated hand travel" in hud._detail.text, "HUD labels motion estimate honestly")
+	zone.motion_session.phase = "breathing"
+	zone.motion_session.breathing_remaining_s = 4.2
+	hud._process(0.016)
+	check(hud._title.text == "GIVE 2 BREATHS" and hud._counter.text == "4.2 s", "HUD displays breathing countdown")
+	hud.free()
+	zone.reset_placement()
 	avatar.hide()
 	zone._process(0.016)
 	check(not zone.correct_placement, "Hidden avatar cannot pass")
@@ -143,16 +174,17 @@ func _run() -> void:
 	guide._process(0.016)
 	check(guide.guide_only and not guide.correct_placement, "Default guide makes no correctness claim")
 	check(guide._highlight.material_override is ShaderMaterial, "Default guide uses green target ring")
-	check(guide._hand_illustration.texture != null and guide._hand_illustration.visible, "Stacked-hands illustration loaded and visible")
-	check(guide._highlight.visible and guide._instruction.visible, "Guide and heel instruction visible without tracking")
+	check(guide._highlight.visible, "Ring visible without tracking")
 	guide.start_cpr()
-	check(not guide._highlight.visible and not guide._instruction.visible, "Start hides guide and instruction together")
-	check(not guide._hand_illustration.visible, "Start also hides hand illustration")
+	check(not guide._instruction.visible, "Start hides heel-placement label")
+	check(not guide._highlight.visible, "Start hides ring together")
 	guide.reset_placement()
-	check(guide._highlight.visible and guide._instruction.visible, "Reset restores guide and instruction")
-	check(guide._hand_illustration.visible, "Reset also restores hand illustration")
+	check(guide._instruction.visible and "Place hand heel here" in guide._instruction.text, "Reset restores heel-placement label")
+	check(guide._highlight.visible, "Reset restores ring")
 	guide.free()
 	avatar.free()
 	origin.free()
+	# Let the audio mixer release stopped PCM playback before the test process exits.
+	await create_timer(0.1).timeout
 	print("CPR heel placement tests: ", "PASS" if failures == 0 else "FAIL")
 	quit(0 if failures == 0 else 1)

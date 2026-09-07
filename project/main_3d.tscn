@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://dvusgj1s4iqi3" path="res://aruco_csv_logger.gd" id="7_csv"]
 [ext_resource type="PackedScene" path="res://cpr_hand_zone.tscn" id="8_cpr"]
 [ext_resource type="Script" path="res://avatar_placement_status.gd" id="9_status"]
+[ext_resource type="Script" path="res://cpr_feedback_hud.gd" id="10_cpr_hud"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_wiwsh"]
 
@@ -33,6 +34,12 @@ tracker = &"left_hand"
 tracker = &"right_hand"
 
 [node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D" unique_id=1388799716]
+
+[node name="CPRFeedbackHUD" type="Node3D" parent="XROrigin3D/XRCamera3D" node_paths=PackedStringArray("zone")]
+position = Vector3(0, 0.06, -0.8)
+process_priority = 30
+script = ExtResource("10_cpr_hud")
+zone = NodePath("../../../AvatarRig/mannequin/CPRHandZone")
 
 [node name="LoggerStatus3D" type="Label3D" parent="XROrigin3D/XRCamera3D" node_paths=PackedStringArray("avatar_rig")]
 process_priority = 20

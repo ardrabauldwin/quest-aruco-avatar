@@ -1,19 +1,66 @@
 # CPR hand placement feedback
 
 `AvatarRig/mannequin/CPRHandZone` follows the mannequin's held or tracked pose.
-The default is **guide-only mode** (`guide_only = true`): a constant green target ring
-with an open centre, a small centre dot, and a stacked-hands illustration beside it.
-The instruction reads **Hand heel here / Other hand on top**.
-Green indicates where to place the lower hand's heel, not measured
-correctness. No hand tracking is read and no placement approval is emitted in this mode.
-The ring, illustration, and instruction hide together on Start and return together on reset.
-The circular ring is about 4.7 cm across at the mannequin's scale; the experimental
-detector retains its rectangular footprint. The illustration faces the viewer and sits
-beside the ring, not over the contact point.
+The default is **guide-only mode** (`guide_only = true`): a constant green ring with
+an open centre and a small centre dot. The hand illustration is removed; the label
+**Place hand heel here / Other hand on top** sits just above the ring on the chest plane.
+Green indicates the intended heel target, not measured correctness.
+The ring and label hide after two completed practice strokes and return on reset. The target
+centre is unchanged. The visual ring is enlarged from about 4.7 to 7.4 cm across at mannequin
+scale for visibility; this does not enlarge the experimental contact box or counting bounds.
+Place the lower hand's heel at the centre; the entire hand does not need to fit inside the ring.
+
+Hand motion is read separately when `enable_motion_practice` is enabled (the default).
+Motion counting now needs only an actively tracked palm position; it does not require
+wrist tracking, palm orientation, or the stricter experimental heel-placement check.
+Controller-inferred hands and stale palm positions are still rejected. A missing wrist
+therefore no longer blocks the motion counter. Tracking a palm's movement does not imply
+using the palm centre as the intended chest contact point: the ring remains a heel guide.
+
+The HUD distinguishes missing trackers, controller-based input, unavailable hands,
+and tracked hands outside the target region. Changes are logged with the `CPR hands:`
+prefix for on-device diagnosis. The app uses the real-world camera passthrough to show
+hands; no virtual hand mesh is included. Not seeing a rendered hand model does not itself
+mean that joint tracking is unavailable.
 
 - Right-controller **B** starts CPR and hides the guide; **B** again resets it.
 - Desktop **C** performs the same toggle.
 - A future exercise controller can call `start_cpr()` directly.
+
+## Hand-tracking practice feedback (no mannequin sensors)
+
+The app estimates motion of one tracked hand near the chest, along the chest normal and
+relative to the avatar's current chest surface. It keeps the same hand while it remains
+usable and can fall back to the other hand when it disappears. Changing hands, tracking
+loss, app pauses, large avatar pose jumps, and long frame stalls discard unfinished strokes.
+Counts cannot bridge those gaps. Existing counts remain; the HUD reports unavailable tracking.
+
+The detector uses peak-to-trough travel and return toward the starting height, not a per-frame
+5 mm velocity threshold. Two repeated complete strokes start the practice session and count
+as its first two strokes. Prototype minimum travel is 15 mm, minimum stroke time 0.20 seconds,
+and minimum spacing 0.25 seconds. These thresholds filter noise; they are not CPR quality criteria.
+Movement over 12 cm or lasting more than 1.5 seconds invalidates an unfinished stroke.
+
+The camera-attached HUD shows `12 / 30`, a cyan **Estimated hand travel** bar (0–8 cm display
+range), and the configured pacing BPM. This is NOT measured chest depth: optical tracking cannot
+prove contact, pressure, recoil, or compression of the mannequin. Repetitive hovering near the
+target may still look like strokes. Do not interpret a counted stroke as a correct compression.
+
+After 30 estimated strokes, the HUD prompts two breaths and runs the requested configurable
+five-second **practice pause timer**, then resets the counter for the next cycle. This timer
+does not detect or verify breaths. It continues if hands leave view, but freezes when the app
+is paused or the avatar's world placement is unavailable.
+
+The metronome generates a 55 ms, 880 Hz PCM tone through `AudioStreamPlayer`, paced independently
+at 110 BPM by default (configurable 100–120). It runs during the active compression phase even
+if hands briefly disappear, stops during breathing/app pause, and never creates counts.
+Missed beats after a long frame are skipped rather than played in a burst.
+
+`cpr_motion_session.gd` owns stroke/cycle timing, `cpr_feedback_hud.gd` owns the headset display,
+and `cpr_metronome.gd` generates the tone. `test_cpr_motion_session.gd` tests 30/72/90 Hz synthetic
+strokes, auto-start, jitter, gaps, 30-stroke cycles, breathing timers, and independent BPM timing.
+`test_cpr_hand_zone.gd` also tests the XR joint-to-motion integration, continued counting after
+start, PCM creation, and HUD values. This has not yet been validated on the Quest/mannequin.
 
 ## Experimental detector (off by default)
 
@@ -31,7 +78,7 @@ physics layers and overlap signals are intentionally unused.
   their sideways separation is small, and both palms face the chest.
 - Right-controller **B** starts CPR and hides the highlight; **B** again resets placement.
 - Desktop **C** performs the same toggle.
-- A future compression detector can call `start_cpr()`; entering the zone does not start CPR.
+- `start_cpr()` can also be called explicitly; entering the zone alone does not start CPR.
 
 The source is the OpenXR left/right hand tracker, not the existing controller grip nodes.
 Controller-inferred joints are rejected. Unknown tracking sources are accepted only with
@@ -49,12 +96,12 @@ transformed through `XROrigin3D` into scene coordinates.
 
 The 30% fraction and 8 mm skin offset are tunable estimates; they have not been fitted
 to measured hand anatomy. They are exposed under `Heel estimate` on the zone instance.
-The wrist-to-palm length must be 15–120 mm; missing/invalid data fails the check.
+The wrist-to-palm length must be 10–150 mm; missing/invalid data fails the check.
 
 Either hand can be lower. Its estimated heel must be in the thin contact slab.
-The upper estimated heel must be 12–60 mm above it along the chest normal, with at most
-25 mm sideways displacement. Both palm-facing normals must point toward the chest
-within 40 degrees. These are editable prototype tolerances, not clinical thresholds.
+The upper estimated heel must be 8–80 mm above it along the chest normal, with at most
+35 mm sideways displacement. Both palm-facing normals must point toward the chest
+within 50 degrees. These are editable prototype tolerances, not clinical thresholds.
 This evaluates approximate heel-over-heel geometry; it does not verify physical contact,
 finger interlocking, pressure, or compression quality.
 

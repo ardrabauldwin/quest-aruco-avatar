@@ -30,5 +30,5 @@ VALIDATION METRICS
   return_error_mm          10.40
 
 Score = mean(stationary normalized jump/drift, movement normalized amplitude/delay/endpoint/return).
-The grid is staged and repeated twice; every listed value is tested without an impractical full Cartesian sweep.
+The grid is staged and repeated until a complete pass changes nothing (max 5 passes).
 Tracking-timeout evidence is weak unless a labelled hiding/loss recording is also analysed.

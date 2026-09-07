@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://cpr_hand_zone.gd" id="1_zone"]
 [ext_resource type="Shader" path="res://cpr_target_guide.gdshader" id="2_guide"]
-[ext_resource type="Texture2D" path="res://assets/ui/cpr_stacked_hands.svg" id="3_hands"]
 
 [sub_resource type="ShaderMaterial" id="Material_guide"]
 shader = ExtResource("2_guide")
@@ -11,7 +10,7 @@ shader = ExtResource("2_guide")
 size = Vector3(0.08, 0.026, 0.07)
 
 [sub_resource type="QuadMesh" id="Quad_highlight"]
-size = Vector2(0.07, 0.07)
+size = Vector2(0.11, 0.11)
 
 [node name="CPRHandZone" type="Area3D"]
 process_priority = 10
@@ -34,22 +33,14 @@ material_override = SubResource("Material_guide")
 metadata/cpr_feedback = true
 
 [node name="Instruction" type="Label3D" parent="."]
-position = Vector3(0, -0.015, -0.13)
-billboard = 1
+position = Vector3(0, -0.056, -0.085)
+rotation = Vector3(-1.5707963, 0, 0)
+billboard = 0
 shaded = false
 double_sided = true
-pixel_size = 0.00055
+pixel_size = 0.0004
 font_size = 32
 outline_size = 6
-modulate = Color(0.8, 1, 0.88, 1)
-outline_modulate = Color(0.02, 0.08, 0.06, 0.9)
-text = "Hand heel here\nOther hand on top"
-
-[node name="HandIllustration" type="Sprite3D" parent="."]
-position = Vector3(0.18, -0.005, -0.035)
-billboard = 1
-shaded = false
-double_sided = true
-pixel_size = 0.00055
-texture = ExtResource("3_hands")
-metadata/cpr_feedback = true
+modulate = Color(0.88, 1, 0.93, 1)
+outline_modulate = Color(0.015, 0.045, 0.03, 0.95)
+text = "Place hand heel here\nOther hand on top"

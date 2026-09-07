@@ -600,7 +600,9 @@ def search_display_parameters(stationary, moving, distance_mm, rest_config):
         return cache[config]
 
     # Coordinate-grid passes test every value while avoiding a 100,000-cell Cartesian explosion.
-    for _ in range(2):
+    # Repeat until a complete pass changes no parameter (a proven fixed point), capped at 5 passes.
+    for pass_index in range(5):
+        pass_start = current
         candidates = [DisplayConfig(**{**current.__dict__, "window": window, "radius_m": radius})
                       for window, radius in product(WINDOWS, MEDOID_RADII_M)]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
@@ -628,6 +630,13 @@ def search_display_parameters(stationary, moving, distance_mm, rest_config):
         candidates = [DisplayConfig(**{**current.__dict__, "timeout_s": timeout})
                       for timeout in TRACKING_TIMEOUTS_S]
         current = min(candidates, key=lambda config: evaluate(config)["total_score"])
+
+        if current == pass_start:
+            print(f"Display search converged: pass {pass_index + 1} changed nothing.")
+            break
+        print(f"Display search pass {pass_index + 1} changed parameters; continuing.")
+    else:
+        print("Display search hit the 5-pass cap without a no-change pass.")
 
     return current, evaluate(current), cache
 
@@ -688,7 +697,7 @@ def main():
         f"  endpoint_error_mm        {metrics['endpoint_mm']:.2f}",
         f"  return_error_mm          {metrics['return_mm']:.2f}", "",
         "Score = mean(stationary normalized jump/drift, movement normalized amplitude/delay/endpoint/return).",
-        "The grid is staged and repeated twice; every listed value is tested without an impractical full Cartesian sweep.",
+        "The grid is staged and repeated until a complete pass changes nothing (max 5 passes).",
         "Tracking-timeout evidence is weak unless a labelled hiding/loss recording is also analysed.",
     ]
     text = "\n".join(lines)

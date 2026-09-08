@@ -1,0 +1,21 @@
+[configuration]
+
+entry_symbol = "camera_library_init"
+compatibility_minimum = "4.4"
+
+[libraries]
+
+# Android entries removed: Godot 4.5+ has a native CameraServer (Camera2) backend, so this
+# plugin isn't used on Android (and its Android binaries aren't installed here anyway).
+ios.arm64 = "res://addons/CameraServerExtension/arm64/libcameraserver-extension.ios.dylib"
+ios.x86_64 = "res://addons/CameraServerExtension/x86_64/libcameraserver-extension.ios.dylib"
+linux.arm64 = "res://addons/CameraServerExtension/arm64/libcameraserver-extension.linux.so"
+linux.x86_32 = "res://addons/CameraServerExtension/x86_32/libcameraserver-extension.linux.so"
+linux.x86_64 = "res://addons/CameraServerExtension/x86_64/libcameraserver-extension.linux.so"
+linux.rv64 = "res://addons/CameraServerExtension/rv64/libcameraserver-extension.linux.so"
+macos.arm64 = "res://addons/CameraServerExtension/arm64/libcameraserver-extension.macos.dylib"
+macos.x86_64 = "res://addons/CameraServerExtension/x86_64/libcameraserver-extension.macos.dylib"
+windows.arm64 = "res://addons/CameraServerExtension/arm64/libcameraserver-extension.windows.dll"
+windows.x86_32 = "res://addons/CameraServerExtension/x86_32/libcameraserver-extension.windows.dll"
+windows.x86_64 = "res://addons/CameraServerExtension/x86_64/libcameraserver-extension.windows.dll"
+web = "res://addons/CameraServerExtension/wasm32/libcameraserver-extension.web.wasm"

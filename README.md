@@ -1,3 +1,39 @@
+# Start here: APK filtering and hand tracking
+
+Open `project/project.godot` in Godot. Its starting scene is `project/main_3d.tscn`.
+The scene selects the avatar script automatically; you do not need to choose among the avatar rig files.
+
+## Files used by the starting scene
+
+| Purpose | Source |
+|---|---|
+| Main scene and node connections | [project/main_3d.tscn](project/main_3d.tscn) |
+| Camera frames and detection worker | [project/main_3d.gd](project/main_3d.gd) |
+| Native ArUco detection | [src/OpenCVProcessor.cpp](src/OpenCVProcessor.cpp) |
+| Active avatar rig and filter parameters | [project/avatar_rig_navel.gd](project/avatar_rig_navel.gd) |
+| Active filtering algorithm | [project/simple_pose_stabilizer.gd](project/simple_pose_stabilizer.gd) |
+| Common marker pose and calibration | [project/navel_provider.gd](project/navel_provider.gd) |
+| Marker freshness checks | [project/marker_freshness.gd](project/marker_freshness.gd) |
+| Hand tracking and placement checks | [project/cpr_hand_zone.gd](project/cpr_hand_zone.gd) |
+| Hand target scene | [project/cpr_hand_zone.tscn](project/cpr_hand_zone.tscn) |
+| Compression practice counting | [project/cpr_motion_session.gd](project/cpr_motion_session.gd) |
+| Practice display and sound | [project/cpr_feedback_hud.gd](project/cpr_feedback_hud.gd), [project/cpr_metronome.gd](project/cpr_metronome.gd) |
+| XR startup | [project/xr_startup.gd](project/xr_startup.gd) |
+
+**For filtering, start with `avatar_rig_navel.gd` and `simple_pose_stabilizer.gd`. For hand tracking, start with `cpr_hand_zone.gd`.**
+
+Other `avatar_rig_*.gd` scripts and `one_euro_filter.gd` are alternative implementations; they are not the avatar/filter selected by this starting scene. They remain in the project because this is a source snapshot, not a dependency-pruned rebuild.
+
+The active filter uses a medoid window, dead zones, smoothing and a rest-pose prior. Its settings are the `FILTER_*`, `ENDPOINT_*` and `REANCHOR_*` constants in `avatar_rig_navel.gd`.
+
+## Version and scope
+
+Runtime source is from commit `4dae8039edd72e38c1daf7722b82a5b05efb54e0`, saved immediately before `quest_cpr_final.apk` was built on 2026-09-07. The source-to-APK association is based on the local build and commit timestamps; binary equivalence and headset behavior have not been revalidated. The APK itself is not uploaded here.
+
+Keep the complete project when opening or building it: the scene also needs assets, calibration, shaders, addons and the native extension. Initialize the `godot-cpp` submodule before building the native extension. Original build instructions follow below.
+
+---
+
 # Godot C++ GDExtension with OpenCV/ArUco and Quest 3 Android Export
 
 This repository is based on the `godot-cpp` GDExtension template for Godot 4.x, but extends it with an OpenCV dependency managed by Conan and a documented Windows + WSL workflow for exporting an Android APK to a Meta Quest 3.
@@ -35,18 +71,18 @@ Typical layout:
 
 ```text
 .
-├── SConstruct
-├── conanfile.py
-├── godot-cpp/
-├── src/
-├── project/
-│   ├── project.godot
-│   ├── export_presets.cfg
-│   ├── bin/
-│   │   ├── opencv_aruco.gdextension
-│   │   └── android/
-│   └── addons/
-└── .github/
+â”œâ”€â”€ SConstruct
+â”œâ”€â”€ conanfile.py
+â”œâ”€â”€ godot-cpp/
+â”œâ”€â”€ src/
+â”œâ”€â”€ project/
+â”‚   â”œâ”€â”€ project.godot
+â”‚   â”œâ”€â”€ export_presets.cfg
+â”‚   â”œâ”€â”€ bin/
+â”‚   â”‚   â”œâ”€â”€ opencv_aruco.gdextension
+â”‚   â”‚   â””â”€â”€ android/
+â”‚   â””â”€â”€ addons/
+â””â”€â”€ .github/
 ```
 
 Important files:
@@ -244,7 +280,7 @@ The Godot editor does **not** build the GDExtension `.so` for Android automatica
 
 ---
 
-## 3. Track 1 — Set up WSL/Linux build host
+## 3. Track 1 â€” Set up WSL/Linux build host
 
 ### 3.1 Check whether WSL is installed
 
@@ -418,7 +454,7 @@ This WSL NDK is used for compiling the Android `.so`.
 
 ---
 
-## 5. Track 2 — Build the GDExtension `.so` for Android arm64
+## 5. Track 2 â€” Build the GDExtension `.so` for Android arm64
 
 ### 5.1 Clone the repository
 
@@ -552,7 +588,7 @@ Windows: <repo>\project\bin\android\libopencv_aruco.android.template_debug.arm64
 
 ---
 
-## 6. Track 3 — Configure Godot on Windows for Android/OpenXR export
+## 6. Track 3 â€” Configure Godot on Windows for Android/OpenXR export
 
 Important distinction:
 
@@ -677,7 +713,7 @@ Alternative: use Godot's remote deploy function once the Quest is connected via 
 
 ---
 
-## 7. Track 4 — Set up Quest 3 and sideload APK
+## 7. Track 4 â€” Set up Quest 3 and sideload APK
 
 The used Quest 3 was already in developer mode.
 

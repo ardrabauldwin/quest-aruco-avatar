@@ -61,6 +61,7 @@ var _runtime_initialized := false
 var _mesh_floor_offset_ready := false
 var _lowest_mesh_vertex_offset_y := 0.0
 var _manual_nudge := Vector3.ZERO
+var _locked_pose := Transform3D.IDENTITY
 
 
 func _ready() -> void:
@@ -179,8 +180,14 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 		reanchor_rotation
 	):
 		_filter.complete_rest_reanchor(reanchor_position, reanchor_rotation)
+
 	if _filter.is_ready() and _common_provider.has_rest_pose():
-		_apply_filtered_pose(filtered_pose)
+		# Lock logic: only update locked position when all 3 markers detected
+		if markers.size() == 3:
+			_locked_pose = filtered_pose
+
+		# Always output locked position (avatar follows lock, not raw measurement)
+		_apply_filtered_pose(_locked_pose)
 
 
 ## Place the rig at the ArUco pose, then treat the Quest floor as a boundary: if the avatar's

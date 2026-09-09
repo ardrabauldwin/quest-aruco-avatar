@@ -1,5 +1,27 @@
 extends SceneTree
 
+
+class CandidateProvider extends CommonPoseProvider:
+	var constrain_first := false
+	func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
+		var estimates: Array[Transform3D] = []
+		for marker in markers:
+			if marker == null or not _offsets.has(marker):
+				continue
+			var offset: Transform3D = _offsets[marker]
+			var common: Transform3D = marker.global_transform * offset
+			if constrain_first:
+				var flat := _floor_lock(common)
+				var marker_in_common := offset.affine_inverse().origin
+				common = Transform3D(flat.basis, marker.global_position - flat.basis * marker_in_common)
+			estimates.append(common)
+		if estimates.is_empty():
+			return _common_pose
+		_common_pose = _floor_lock(_fuse(estimates))
+		_has_common_pose = true
+		_update_rest(_common_pose, detection_ms)
+		return _common_pose
+
 class ReplayRig extends "res://avatar_rig_navel.gd":
 	var freeze_rest := false
 	var has_display_pose := false
@@ -35,13 +57,16 @@ func run() -> void:
 		var row := source.get_csv_line()
 		if row.size() >= 33:
 			rows.append(row)
-	for mode in ["current72", "current90", "no_prior72", "fixed_rest72"]:
+	for mode in ["floor_baseline72", "floor_candidate72"]:
 		replay(rows, mode)
 	print("Research replay complete")
 	quit()
 
 func replay(rows: Array[PackedStringArray], mode: String) -> void:
 	var rig := ReplayRig.new()
+	var provider := CandidateProvider.new()
+	provider.constrain_first = mode == "floor_candidate72"
+	rig._common_provider = provider
 	var markers: Array = []
 	for i in range(3):
 		var marker := Node3D.new()

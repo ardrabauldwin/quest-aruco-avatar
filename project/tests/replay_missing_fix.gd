@@ -35,13 +35,15 @@ func run() -> void:
 		var row := source.get_csv_line()
 		if row.size() >= 33:
 			rows.append(row)
-	for mode in ["current72", "current90", "no_prior72", "fixed_rest72"]:
+	for mode in ["missing_before72", "missing_after72"]:
 		replay(rows, mode)
 	print("Research replay complete")
 	quit()
 
 func replay(rows: Array[PackedStringArray], mode: String) -> void:
 	var rig := ReplayRig.new()
+	if mode == "missing_before72":
+		rig._common_provider = preload("res://tests/provider_before_missing_fix.gd").new()
 	var markers: Array = []
 	for i in range(3):
 		var marker := Node3D.new()

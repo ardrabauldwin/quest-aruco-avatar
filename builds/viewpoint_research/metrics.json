@@ -1,228 +1,228 @@
 {
   "reference_world_m": [
-    -0.73957544565201,
-    0.09579315781593,
-    -2.23906850814819
+    -0.739568650722505,
+    0.09579361975192999,
+    -2.23909878730774
   ],
   "summary": [
     {
       "phase": "front",
       "series": "raw",
       "shift_from_front_reference_cm": 0.0,
-      "scatter_p90_cm": 6.820304715762069,
-      "samples": 181
+      "scatter_p90_cm": 6.821171194002829,
+      "samples": 180
     },
     {
       "phase": "front",
       "series": "filtered",
-      "shift_from_front_reference_cm": 0.11115829315344825,
+      "shift_from_front_reference_cm": 0.11413175606960495,
       "scatter_p90_cm": 0.0,
-      "samples": 181
+      "samples": 180
     },
     {
       "phase": "left",
       "series": "raw",
-      "shift_from_front_reference_cm": 5.793181601529225,
-      "scatter_p90_cm": 3.9354158641183807,
+      "shift_from_front_reference_cm": 5.7933236909096895,
+      "scatter_p90_cm": 3.9853060162650062,
       "samples": 208
     },
     {
       "phase": "left",
       "series": "filtered",
-      "shift_from_front_reference_cm": 4.423947378589187,
+      "shift_from_front_reference_cm": 4.421708272119887,
       "scatter_p90_cm": 0.1341604947731841,
       "samples": 208
     },
     {
       "phase": "right",
       "series": "raw",
-      "shift_from_front_reference_cm": 2.362595356626543,
-      "scatter_p90_cm": 8.543992411862702,
+      "shift_from_front_reference_cm": 2.4130230553820757,
+      "scatter_p90_cm": 7.058525007474903,
       "samples": 171
     },
     {
       "phase": "right",
       "series": "filtered",
-      "shift_from_front_reference_cm": 2.377020044799742,
-      "scatter_p90_cm": 2.383944295494157,
+      "shift_from_front_reference_cm": 3.383292618728294,
+      "scatter_p90_cm": 2.1398430659620686,
       "samples": 171
     },
     {
       "phase": "far_front",
       "series": "raw",
-      "shift_from_front_reference_cm": 9.821813588132425,
-      "scatter_p90_cm": 5.5113038281724505,
+      "shift_from_front_reference_cm": 8.918484296196983,
+      "scatter_p90_cm": 6.714798582759422,
       "samples": 134
     },
     {
       "phase": "far_front",
       "series": "filtered",
-      "shift_from_front_reference_cm": 10.482998412045914,
-      "scatter_p90_cm": 4.0963203915221325,
+      "shift_from_front_reference_cm": 9.344495366180421,
+      "scatter_p90_cm": 3.7281852837332896,
       "samples": 134
     },
     {
       "phase": "far_left",
       "series": "raw",
-      "shift_from_front_reference_cm": 13.608745004648043,
-      "scatter_p90_cm": 4.900117213700115,
+      "shift_from_front_reference_cm": 13.714868272783306,
+      "scatter_p90_cm": 5.5554757072522865,
       "samples": 133
     },
     {
       "phase": "far_left",
       "series": "filtered",
-      "shift_from_front_reference_cm": 14.258134488971693,
-      "scatter_p90_cm": 1.081879082553815,
+      "shift_from_front_reference_cm": 14.306917278184079,
+      "scatter_p90_cm": 1.2108414298174097,
       "samples": 133
     },
     {
       "phase": "far_right",
       "series": "raw",
-      "shift_from_front_reference_cm": 15.295815123011286,
-      "scatter_p90_cm": 11.785806088952826,
+      "shift_from_front_reference_cm": 11.45757960858676,
+      "scatter_p90_cm": 5.3625218883847605,
       "samples": 116
     },
     {
       "phase": "far_right",
       "series": "filtered",
-      "shift_from_front_reference_cm": 16.208484165054855,
-      "scatter_p90_cm": 1.193790629379403,
+      "shift_from_front_reference_cm": 11.599631905607797,
+      "scatter_p90_cm": 2.382949663918827,
       "samples": 116
     },
     {
       "phase": "front_return",
       "series": "raw",
-      "shift_from_front_reference_cm": 13.26585661367507,
-      "scatter_p90_cm": 4.834786323190754,
+      "shift_from_front_reference_cm": 12.545123774712938,
+      "scatter_p90_cm": 7.6149114547965215,
       "samples": 104
     },
     {
       "phase": "front_return",
       "series": "filtered",
-      "shift_from_front_reference_cm": 12.706920983531035,
-      "scatter_p90_cm": 0.5926117754223535,
+      "shift_from_front_reference_cm": 11.456741097187717,
+      "scatter_p90_cm": 2.4841703107311472,
       "samples": 104
     }
   ],
   "comparisons": {
     "current72": {
       "front": {
-        "shift_cm": 0.11115829315344825,
+        "shift_cm": 0.11413175606960495,
         "scatter_cm": 0.0
       },
       "left": {
-        "shift_cm": 4.423947378589187,
+        "shift_cm": 4.421708272119887,
         "scatter_cm": 0.1341604947731841
       },
       "right": {
-        "shift_cm": 2.377020044799742,
-        "scatter_cm": 2.383944295494157
+        "shift_cm": 3.383292618728294,
+        "scatter_cm": 2.1398430659620686
       },
       "far_front": {
-        "shift_cm": 10.482998412045914,
-        "scatter_cm": 4.0963203915221325
+        "shift_cm": 9.344495366180421,
+        "scatter_cm": 3.7281852837332896
       },
       "far_left": {
-        "shift_cm": 14.258134488971693,
-        "scatter_cm": 1.081879082553815
+        "shift_cm": 14.306917278184079,
+        "scatter_cm": 1.2108414298174097
       },
       "far_right": {
-        "shift_cm": 16.208484165054855,
-        "scatter_cm": 1.193790629379403
+        "shift_cm": 11.599631905607797,
+        "scatter_cm": 2.382949663918827
       },
       "front_return": {
-        "shift_cm": 12.706920983531035,
-        "scatter_cm": 0.5926117754223535
+        "shift_cm": 11.456741097187717,
+        "scatter_cm": 2.4841703107311472
       }
     },
     "current90": {
       "front": {
-        "shift_cm": 0.11115829315344825,
+        "shift_cm": 0.11413175606960495,
         "scatter_cm": 0.0
       },
       "left": {
-        "shift_cm": 4.42497464276796,
+        "shift_cm": 4.422735583397454,
         "scatter_cm": 0.1424181803463941
       },
       "right": {
-        "shift_cm": 2.3957726853726347,
-        "scatter_cm": 2.3445938705729175
+        "shift_cm": 3.391307410467824,
+        "scatter_cm": 2.135502266052388
       },
       "far_front": {
-        "shift_cm": 10.482983276782369,
-        "scatter_cm": 4.096298243741259
+        "shift_cm": 9.335892300104465,
+        "scatter_cm": 3.720443813328421
       },
       "far_left": {
-        "shift_cm": 14.259392811762503,
-        "scatter_cm": 1.0894588265369436
+        "shift_cm": 14.306381083543442,
+        "scatter_cm": 1.2141463223435223
       },
       "far_right": {
-        "shift_cm": 16.205290084692642,
-        "scatter_cm": 1.194081220510591
+        "shift_cm": 11.56197366770703,
+        "scatter_cm": 2.361560623675424
       },
       "front_return": {
-        "shift_cm": 12.699133624038906,
-        "scatter_cm": 0.5962661163799305
+        "shift_cm": 11.46869714887325,
+        "scatter_cm": 2.4856951729227785
       }
     },
     "no_prior72": {
       "front": {
-        "shift_cm": 0.11115829315344825,
+        "shift_cm": 0.11413175606960495,
         "scatter_cm": 0.0
       },
       "left": {
-        "shift_cm": 4.490703095237601,
+        "shift_cm": 4.488472902512794,
         "scatter_cm": 0.1759720417794997
       },
       "right": {
-        "shift_cm": 2.1114878668930084,
-        "scatter_cm": 2.516347987150101
+        "shift_cm": 3.1694864750565688,
+        "scatter_cm": 2.021283856811443
       },
       "far_front": {
-        "shift_cm": 10.564524149159817,
-        "scatter_cm": 4.113178325727906
+        "shift_cm": 9.281346351134248,
+        "scatter_cm": 2.662986621273462
       },
       "far_left": {
-        "shift_cm": 13.959463251064347,
-        "scatter_cm": 1.6367036593715345
+        "shift_cm": 14.1356770872132,
+        "scatter_cm": 1.1588831783147906
       },
       "far_right": {
-        "shift_cm": 15.416271601693923,
-        "scatter_cm": 2.0286262653971225
+        "shift_cm": 11.584033946857964,
+        "scatter_cm": 1.6952204284893142
       },
       "front_return": {
-        "shift_cm": 12.665105648053101,
-        "scatter_cm": 0.6985338306897239
+        "shift_cm": 11.872574788958772,
+        "scatter_cm": 2.1157044698241205
       }
     },
     "fixed_rest72": {
       "front": {
-        "shift_cm": 0.11115829315344825,
+        "shift_cm": 0.11413175606960495,
         "scatter_cm": 0.0
       },
       "left": {
-        "shift_cm": 3.513115065848354,
-        "scatter_cm": 0.3016586384065233
+        "shift_cm": 3.5115835633307815,
+        "scatter_cm": 0.288196146935551
       },
       "right": {
-        "shift_cm": 0.8848896262146827,
-        "scatter_cm": 1.7617211935629224
+        "shift_cm": 1.102131449733915,
+        "scatter_cm": 1.5829929028062233
       },
       "far_front": {
-        "shift_cm": 6.446010993129615,
-        "scatter_cm": 2.8246910976039463
+        "shift_cm": 5.799984916318782,
+        "scatter_cm": 2.262172647925593
       },
       "far_left": {
-        "shift_cm": 8.536170719667584,
-        "scatter_cm": 0.9873795206702257
+        "shift_cm": 8.545362198948693,
+        "scatter_cm": 1.0673289632907759
       },
       "far_right": {
-        "shift_cm": 9.622257048356733,
-        "scatter_cm": 1.0038700908595513
+        "shift_cm": 7.222529759716342,
+        "scatter_cm": 0.935632293692182
       },
       "front_return": {
-        "shift_cm": 8.107467237383958,
-        "scatter_cm": 0.8626749330843406
+        "shift_cm": 7.735964007442594,
+        "scatter_cm": 1.102909961289181
       }
     }
   }

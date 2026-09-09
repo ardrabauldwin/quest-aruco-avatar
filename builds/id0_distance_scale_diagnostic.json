@@ -1,0 +1,50 @@
+{
+  "hypothesis": "Single optical translation scale with existing camera rotation and lens offset. Fit on front,left,far_front; validate others. Relative geometry only, no surveyed absolute ground truth.",
+  "scale": 0.9524448547375037,
+  "views": {
+    "front": {
+      "set": "fit",
+      "original_residual_cm": 3.913189350047972,
+      "corrected_residual_cm": 3.085434801378594,
+      "id0_samples": 205
+    },
+    "left": {
+      "set": "fit",
+      "original_residual_cm": 2.547085567495947,
+      "corrected_residual_cm": 1.1352869257309715,
+      "id0_samples": 200
+    },
+    "right": {
+      "set": "validation",
+      "original_residual_cm": 10.558249679230848,
+      "corrected_residual_cm": 5.381581431381998,
+      "id0_samples": 121
+    },
+    "far_front": {
+      "set": "fit",
+      "original_residual_cm": 4.826002664679744,
+      "corrected_residual_cm": 2.8927176439215123,
+      "id0_samples": 61
+    },
+    "far_left": {
+      "set": "validation",
+      "original_residual_cm": 8.504443763275328,
+      "corrected_residual_cm": 5.597690551306932,
+      "id0_samples": 72
+    },
+    "far_right": {
+      "set": "validation",
+      "original_residual_cm": 24.076335136763532,
+      "corrected_residual_cm": 16.96227766783423,
+      "id0_samples": 12
+    },
+    "front_return": {
+      "set": "validation",
+      "original_residual_cm": 4.776360304729716,
+      "corrected_residual_cm": 2.112090735832383,
+      "id0_samples": 23
+    }
+  },
+  "validation_rms_original_cm": 14.02039346264971,
+  "validation_rms_corrected_cm": 9.387163431621438
+}

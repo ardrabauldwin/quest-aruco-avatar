@@ -1,6 +1,6 @@
 extends Area3D
 ## Green visual placement guide by default. Experimental heel grading is opt-in.
-## Uses tracked hand motion to start a sensor-free practice cycle after two strokes.
+## Uses a complete tracked hand stroke to start a sensor-free practice cycle.
 
 signal placement_changed(correct: bool)
 signal cpr_started
@@ -65,8 +65,7 @@ func _ready() -> void:
 		_highlight.material_override = _material
 	if start_controller != null:
 		start_controller.button_pressed.connect(_on_start_button)
-	_metronome = AudioStreamPlayer.new()
-	_metronome.set_script(preload("res://cpr_metronome.gd"))
+	_metronome = preload("res://cpr_metronome.gd").new()
 	add_child(_metronome)
 	motion_session.beat_requested.connect(_metronome.play.bind(0.0))
 	_update_feedback()
@@ -100,21 +99,30 @@ func _update_hand_motion(delta: float, available: bool, left: Dictionary, right:
 	motion_session.breathing_duration_s = breathing_duration_s
 	var sample := {}
 	var chosen: StringName = &""
-	# Keep the same hand through a stroke. Prefer right if both first become available;
-	# the visible upper hand is sufficient for motion estimation, not placement approval.
-	if _motion_tracker == left_tracker and _motion_hand_usable(left):
+	var left_usable := available and _motion_hand_usable(left)
+	var right_usable := available and _motion_hand_usable(right)
+	# Keep a usable hand to avoid switching references when the other reappears.
+	# On acquisition prefer the upper palm along the chest normal; a single visible
+	# palm is also sufficient for motion, although its stack order is then unknown.
+	if _motion_tracker == left_tracker and left_usable:
 		sample = left
 		chosen = left_tracker
-	elif _motion_tracker == right_tracker and _motion_hand_usable(right):
+	elif _motion_tracker == right_tracker and right_usable:
 		sample = right
 		chosen = right_tracker
-	elif _motion_hand_usable(right):
-		sample = right
-		chosen = right_tracker
-	elif _motion_hand_usable(left):
+	elif left_usable and right_usable:
+		var separation: float = (left.point - right.point).dot(_shape.global_basis.y.normalized())
+		chosen = left_tracker if separation > 0.0 else right_tracker
+		sample = left if chosen == left_tracker else right
+	elif left_usable:
 		sample = left
 		chosen = left_tracker
+	elif right_usable:
+		sample = right
+		chosen = right_tracker
 	if chosen != _motion_tracker:
+		# Never interpret the gap between palms as hand travel. This clears only the
+		# unfinished movement/baseline; completed counts and cycle progress survive.
 		motion_session.invalidate_tracking()
 		_motion_tracker = chosen
 	var chest := _shape.global_transform
@@ -130,9 +138,9 @@ func _update_hand_motion(delta: float, available: bool, left: Dictionary, right:
 	if valid:
 		height = (sample.point - chest.origin).dot(chest.basis.y.normalized()) / units
 	if not sample.is_empty():
-		hand_tracking_status = "Hand tracked"
+		hand_tracking_status = "Tracking %s palm" % ("left" if chosen == left_tracker else "right")
 	elif not left.is_empty() or not right.is_empty():
-		hand_tracking_status = "Move your hand over the ring"
+		hand_tracking_status = "Move your hand over the target"
 	elif _motion_reasons.values().has("controller"):
 		hand_tracking_status = "Put controllers down to use hands"
 	elif _motion_reasons.values().has("no_tracker"):

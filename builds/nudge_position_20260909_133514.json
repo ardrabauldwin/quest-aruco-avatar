@@ -1,0 +1,7 @@
+{
+  "log_timestamp": "09-09 13:35:14.477",
+  "target_position_m": [0.057376, -0.046644, 0.579667],
+  "scene_base_position_m": [0.065894, -0.023727, 0.530701],
+  "manual_nudge_delta_m": [-0.008518, -0.022917, 0.048966],
+  "note": "Captured from Quest logcat. This record does not change the APK default. Preserve the manual delta separately from the base position so floor correction does not cancel it."
+}

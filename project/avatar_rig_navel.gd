@@ -20,6 +20,8 @@ extends Node3D
 @export var enable_nudge := false
 @export var target: Node3D
 @export var nudge_speed := 0.05
+## Saved manual alignment relative to the scene's original placement, in rig-local metres.
+@export var default_nudge := Vector3.ZERO
 @export var xr_controller_left: XRController3D
 ## Supplies the Quest floor height (has_floor / floor_height_world). The floor is a one-sided
 ## boundary only: it prevents penetration but never replaces the marker-measured height.
@@ -58,10 +60,13 @@ var _application_paused := false
 var _runtime_initialized := false
 var _mesh_floor_offset_ready := false
 var _lowest_mesh_vertex_offset_y := 0.0
+var _manual_nudge := Vector3.ZERO
 
 
 func _ready() -> void:
 	visible = false
+	if target != null:
+		_apply_manual_nudge(default_nudge)
 	_markers = [common_marker, chest_marker, torso_marker]
 	_filter.configure(
 		FILTER_WINDOW,
@@ -191,7 +196,10 @@ func _apply_filtered_pose(pose: Transform3D) -> void:
 		var measured_lowest := _lowest_mesh_world_y(target)
 		if not is_finite(measured_lowest):
 			return
-		_lowest_mesh_vertex_offset_y = measured_lowest - global_position.y
+		# Floor placement uses the original mesh position. Manual alignment is an
+		# explicit offset from that placement and must not be cancelled by the floor.
+		var manual_world_offset := global_basis * _manual_nudge
+		_lowest_mesh_vertex_offset_y = measured_lowest - manual_world_offset.y - global_position.y
 		_mesh_floor_offset_ready = true
 		print(
 			"Floor boundary: exact lowest-vertex offset %.3f m."
@@ -257,12 +265,17 @@ func _update_nudge(delta: float) -> void:
 
 	var nudge := _read_nudge(delta)
 	if nudge != Vector3.ZERO:
-		target.position += nudge
-		_mesh_floor_offset_ready = false
+		_apply_manual_nudge(nudge)
 		_was_nudging = true
 	elif _was_nudging:
 		print("Final mannequin offset: ", target.position)
 		_was_nudging = false
+
+
+func _apply_manual_nudge(nudge: Vector3) -> void:
+	target.position += nudge
+	_manual_nudge += nudge
+	_mesh_floor_offset_ready = false
 
 
 func _read_nudge(delta: float) -> Vector3:

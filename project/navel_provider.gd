@@ -15,6 +15,7 @@ var rest_stable_position_m := 0.0015
 var rest_stable_rotation_deg := 1.0
 
 var _offsets := {}
+var _inverse_offsets := {}  # For rigid-body reconstruction when markers are missing
 var _common_pose := Transform3D.IDENTITY
 var _has_common_pose := false
 
@@ -31,12 +32,32 @@ var _rest_reanchor_last_detection_ms := -1
 
 
 ## Convert each visible marker to the common pose, then robustly fuse the estimates.
+## Uses rigid-body reconstruction to estimate missing markers from detected ones.
 func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
 	var estimates: Array[Transform3D] = []
+	var detected_markers: Dictionary = {}
+
+	# Convert all detected markers to common pose
 	for marker in markers:
 		if marker != null and _offsets.has(marker):
 			var marker_to_common: Transform3D = _offsets[marker]
 			estimates.append(marker.global_transform * marker_to_common)
+			detected_markers[marker] = true
+
+	# Rigid-body reconstruction: for any missing marker, estimate it from detected ones
+	for missing_marker in _offsets.keys():
+		if detected_markers.has(missing_marker):
+			continue  # Already detected, no need to reconstruct
+
+		if not _inverse_offsets.has(missing_marker):
+			continue  # No reconstruction rules available
+
+		# Find any detected marker that can be used to reconstruct this missing one
+		for source_marker in _inverse_offsets[missing_marker].keys():
+			if detected_markers.has(source_marker):
+				var source_to_missing: Transform3D = _inverse_offsets[missing_marker][source_marker]
+				estimates.append(source_marker.global_transform * source_to_missing)
+				break  # Use first available source marker
 
 	if estimates.is_empty():
 		return _common_pose
@@ -259,6 +280,36 @@ func _fuse(poses: Array[Transform3D]) -> Transform3D:
 	return Transform3D(Basis(rotation.normalized()), position / poses.size())
 
 
+## Build inverse offset relationships for rigid-body reconstruction.
+## If marker A is missing but marker B is detected, reconstruct A's pose using B and the
+## precomputed inverse offset B→A.
+func _build_inverse_offsets() -> void:
+	_inverse_offsets.clear()
+	var markers_list = _offsets.keys()
+
+	# For each marker, build inverse relationships from all others
+	for target_marker in markers_list:
+		_inverse_offsets[target_marker] = {}
+
+		# Common→ID1: offset stored as common→marker[ID1]. Inverse is ID1→common.
+		for source_marker in markers_list:
+			if source_marker == target_marker:
+				continue
+
+			# We have: common = marker[source] * _offsets[source]
+			# We need: target = marker[source] * inverse_offset
+			# Solution: target = common * _offsets[target]^-1
+			#           target = marker[source] * _offsets[source] * _offsets[target]^-1
+			# So: inverse = _offsets[source] * _offsets[target]^-1
+
+			var source_offset: Transform3D = _offsets[source_marker]
+			var target_offset: Transform3D = _offsets[target_marker]
+			var target_inverse: Transform3D = target_offset.inverse()
+			var reconstruction_offset: Transform3D = source_offset * target_inverse
+
+			_inverse_offsets[target_marker][source_marker] = reconstruction_offset
+
+
 ## Persist marker-local offsets only. World-space rest is relearned every XR session.
 func save_to(path: String) -> void:
 	var cfg := ConfigFile.new()
@@ -291,5 +342,6 @@ func load_from(path: String, markers: Array) -> bool:
 		return false
 
 	_offsets = loaded_offsets
+	_build_inverse_offsets()
 	_restart_rest_collection()
 	return true

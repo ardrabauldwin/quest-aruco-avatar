@@ -3,7 +3,7 @@ extends AudioStreamPlayer
 
 func _ready() -> void:
 	var sample_rate := 22050
-	var duration := 0.055
+	var duration := 0.09
 	var frames := int(sample_rate * duration)
 	var pcm := PackedByteArray()
 	pcm.resize(frames * 2)
@@ -18,4 +18,5 @@ func _ready() -> void:
 	tone.mix_rate = sample_rate
 	tone.data = pcm
 	stream = tone
-	volume_db = -14.0
+	bus = &"Master"
+	volume_db = -3.0

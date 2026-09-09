@@ -11,9 +11,10 @@ func check(ok: bool, message: String) -> void:
 		failures += 1
 		push_error(message)
 
-func stroke(session, hz := 72, amplitude := 0.04) -> void:
-	var frames := int(round(hz * 60.0 / 110.0))
-	for i in range(frames + 1):
+func stroke(session, hz := 72, amplitude := 0.055, bpm := 110.0) -> void:
+	var frames := int(round(hz * 60.0 / bpm))
+	session.update(0.0, true, 0.0)
+	for i in range(1, frames + 1):
 		var height := -amplitude * (1.0 - cos(TAU * float(i) / frames)) * 0.5
 		session.update(1.0 / hz, true, height)
 
@@ -24,9 +25,9 @@ func run() -> void:
 			session.update(1.0 / hz, true, 0.0)
 		check(not session.active and session.count == 0, "Rest alone must not start CPR")
 		stroke(session, hz)
-		check(not session.active, "One stroke does not hide guide")
+		check(session.active and session.count == 1, "First complete stroke starts counting")
 		stroke(session, hz)
-		check(session.active and session.count == 2, "Two full strokes auto-start at %d Hz" % hz)
+		check(session.active and session.count == 2, "Two full strokes counted at %d Hz" % hz)
 		for i in 28:
 			stroke(session, hz)
 		check(session.phase == "breathing" and session.count == 30, "30 strokes enter breathing phase")
@@ -59,6 +60,50 @@ func run() -> void:
 		pacing.update(1.0 / 72, false, 0.0)
 	check(beats == 19, "110 BPM produces 19 paced beats in 10 seconds including initial beat")
 	check(pacing.count == 0, "Metronome never creates compressions")
+	# Simulated delta, deliberately unrelated to wall-clock time and beep phase.
+	for bpm in [100.0, 110.0, 120.0]:
+		for offset in [0.0, 0.15, 0.35, 0.50]:
+			var offbeat = Session.new()
+			offbeat._beat_remaining = offset
+			for i in 12:
+				stroke(offbeat, 90, 0.055, bpm)
+			check(offbeat.count == 12, "No missed complete strokes at %s BPM / phase %s" % [bpm, offset])
+	var slow = Session.new()
+	stroke(slow)
+	stroke(slow)
+	check(slow.count == 2, "Slow-press test begins with two counts")
+	stroke(slow, 72, 0.055, 50.0)
+	check(slow.count == 3 and slow.feedback == "Press faster", "Slow complete stroke counts and shows pace feedback")
+	for i in 360:
+		slow.update(1.0 / 72, true, 0.0)
+	check(slow.count == 3 and slow.total_count == 3, "Long tracked pause preserves counts")
+	stroke(slow, 72, 0.055, 20.0)
+	check(slow.count == 4, "Very slow complete stroke also counts")
+	stroke(slow)
+	check(slow.count == 5, "Normal stroke continues the existing count")
+	stroke(slow)
+	check(slow.count == 6 and slow.feedback == "Good timing", "Normal cadence clears slow feedback")
+	for bpm in [90.0, 100.0, 110.0, 120.0, 150.0]:
+		var speed = Session.new()
+		for repetition in 6:
+			stroke(speed, 300, 0.055, bpm)
+		var expected := "Press faster" if bpm < 100.0 else ("Press slower" if bpm > 120.0 else "Good timing")
+		check(speed.feedback == expected, "Correct speed message at %s BPM" % bpm)
+		check(speed.count == 6, "Speed feedback never rejects counts")
+		check(speed._bpm_samples.size() == 4, "Average contains four actual intervals")
+	var first = Session.new()
+	stroke(first)
+	check(first._bpm_samples.is_empty() and first.feedback == "Measuring pace", "First press does not add startup delay to BPM")
+	first.invalidate_tracking()
+	stroke(first)
+	check(first._bpm_samples.is_empty() and first.count == 2, "Timing restarts after tracking loss without resetting counts")
+	var lost = Session.new()
+	stroke(lost)
+	for i in 100:
+		lost.update(1.0 / 72, false, 0.0)
+	check(lost.count == 1, "Occlusion does not reset completed counts")
+	stroke(lost)
+	check(lost.count == 2, "New complete stroke counts after occlusion")
 	var before := beats
 	pacing.update(5.0, false, 0.0, true)
 	check(beats == before, "No audio beats during application pause")

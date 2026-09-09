@@ -3,7 +3,12 @@ extends Node
 
 const MARKER_IDS := [0, 1, 2]
 const MARKER_NAMES := ["common", "chest", "navel"]
-const TEST_TYPES := ["calibration", "stationary", "headmotion", "moving", "hiding", "compressions"]
+const TEST_TYPES := ["viewpoint", "calibration", "stationary", "headmotion", "moving", "hiding", "compressions"]
+const VIEWPOINT_PHASES := [
+	"front", "moving_to_left", "left", "moving_to_right", "right",
+	"moving_to_far_front", "far_front", "moving_to_far_left", "far_left",
+	"moving_to_far_right", "far_right", "moving_to_front_return", "front_return"
+]
 # Where the head was standing while the markers stayed put. A marker's pose error is systematic
 # per VIEWPOINT, so labelling the viewpoint is what lets the analysis ask whether the offset
 # learned from the left of the mannequin agrees with the one learned from the right. Without
@@ -73,12 +78,15 @@ func _on_left_button(button: StringName) -> void:
 	# alternative test selector, but the experiment never depends on it.
 	if button == &"ax_button":
 		if _recording:
-			_phase_index = (_phase_index + 1) % _current_phases().size()
+			if _current_test() == "viewpoint":
+				_phase_index = mini(_phase_index + 1, _current_phases().size() - 1)
+			else:
+				_phase_index = (_phase_index + 1) % _current_phases().size()
 			print("ArUco phase: ", _current_phase())
 		else:
 			_select_next_test()
 		_update_status()
-	elif button == &"by_button":
+	elif button == &"by_button" and not _recording:
 		_select_next_test()
 		_update_status()
 
@@ -221,6 +229,8 @@ func _current_test() -> String:
 
 func _current_phases() -> Array:
 	match _current_test():
+		"viewpoint":
+			return VIEWPOINT_PHASES
 		"calibration":
 			return CALIBRATION_PHASES
 		"headmotion":
@@ -246,6 +256,13 @@ func _update_status() -> void:
 	# Which phase number it is matters while recording: the label alone does not say whether the
 	# press registered when two phases in a row carry the same name.
 	var controls := "A: start   X: select test" if not _recording else "A: stop   X: next phase"
+	if _recording and _current_test() == "viewpoint":
+		if _current_phase().begins_with("moving_to_"):
+			controls = "Walk to %s\nX: arrived   A: stop" % _current_phase().trim_prefix("moving_to_").replace("_", " ")
+		elif _phase_index == VIEWPOINT_PHASES.size() - 1:
+			controls = "Stand still for 5 seconds\nA: finish recording"
+		else:
+			controls = "Stand still for 5 seconds\nX: move to %s   A: stop" % VIEWPOINT_PHASES[_phase_index + 2].replace("_", " ")
 	status_label.text = "%s - %s\nPhase %d/%d: %s\n%s" % [
 		state, _current_test(),
 		_phase_index + 1, _current_phases().size(), _current_phase(), controls

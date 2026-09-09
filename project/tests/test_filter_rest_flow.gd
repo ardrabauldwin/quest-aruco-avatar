@@ -58,13 +58,36 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 	rig.torso_marker = torso_marker
 	# Enter the tree so Node3D global transforms are valid, but do not run the tracking loop.
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
+	rig.default_nudge = Vector3(-0.008518, -0.022917, 0.048966)
 	root.add_child(rig)
+	assert(avatar.position.is_equal_approx(rig.default_nudge))
+	assert(rig._manual_nudge.is_equal_approx(rig.default_nudge))
+	rig._apply_manual_nudge(-rig.default_nudge)
 
 	# Start 35 cm below the floor. A 20 cm-tall mesh has its bottom 10 cm below its rig origin.
 	rig._apply_filtered_pose(Transform3D(Basis.IDENTITY, Vector3(4.0, -0.35, 5.0)))
 	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
 	assert(is_equal_approx(rig.global_position.x, 4.0))
 	assert(is_equal_approx(rig.global_position.z, 5.0))
+	# A downward manual correction must survive repeated marker updates, even below
+	# the detected floor. Returning the stick offset to zero restores floor contact.
+	var pose := Transform3D(Basis.IDENTITY, Vector3(4.0, -0.35, 5.0))
+	rig._apply_manual_nudge(Vector3(0.02, -0.03, 0.01))
+	for i in range(3):
+		rig._apply_filtered_pose(pose)
+		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.03) < 1.0e-5)
+		assert(avatar.global_position.is_equal_approx(Vector3(4.02, 0.07, 5.01)))
+	rig._apply_manual_nudge(Vector3(-0.02, 0.03, -0.01))
+	rig._apply_filtered_pose(pose)
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+	# The real rig maps local Z to world down: test that coordinate frame too.
+	pose.basis = Basis(Vector3.RIGHT, Vector3.BACK, Vector3.DOWN)
+	rig._mesh_floor_offset_ready = false
+	rig._apply_filtered_pose(pose)
+	rig._apply_manual_nudge(Vector3(0, 0, 0.04))
+	for i in range(3):
+		rig._apply_filtered_pose(pose)
+		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.04) < 1.0e-5)
 	rig.free()
 
 

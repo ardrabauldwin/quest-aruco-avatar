@@ -57,12 +57,21 @@ font_size = 64
 outline_size = 16
 horizontal_alignment = 1
 
-[node name="ArucoCsvLogger" type="Node" parent="." node_paths=PackedStringArray("detection_source", "right_controller", "left_controller")]
+[node name="RecordingStatus" type="Label3D" parent="XROrigin3D/XRCamera3D"]
+position = Vector3(0, 0.24, -1.2)
+shaded = false
+no_depth_test = true
+font_size = 24
+outline_size = 5
+modulate = Color(0.4, 1, 0.4, 1)
+
+[node name="ArucoCsvLogger" type="Node" parent="." node_paths=PackedStringArray("detection_source", "right_controller", "left_controller", "status_label")]
 process_priority = 100
 script = ExtResource("7_csv")
 detection_source = NodePath("..")
 right_controller = NodePath("../XROrigin3D/RightHand")
 left_controller = NodePath("../XROrigin3D/LeftHand")
+status_label = NodePath("../XROrigin3D/XRCamera3D/RecordingStatus")
 
 [node name="aruco_patch0" type="Node3D" parent="XROrigin3D/XRCamera3D" unique_id=1968016531]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
@@ -95,9 +104,11 @@ xr_controller_right = NodePath("../XROrigin3D/RightHand")
 target = NodePath("mannequin")
 xr_controller_left = NodePath("../XROrigin3D/LeftHand")
 floor_provider = NodePath("../XROrigin3D")
+enable_nudge = true
+default_nudge = Vector3(-0.008518, -0.022917, 0.048966)
 
 [node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
-transform = Transform3D(0.77, 0, 0, 0, -3.36578e-08, 0.77, 0, -0.77, -3.36578e-08, 0.065894, -0.023727, 0.530701)
+transform = Transform3D(0.6872449, 0, 0, 0, -3.082737e-08, 0.7052474, 0, -0.6681291, -2.920488e-08, 0.065894, -0.023727, 0.530701)
 
 [node name="CPRHandZone" parent="AvatarRig/mannequin" node_paths=PackedStringArray("xr_origin", "start_controller") instance=ExtResource("8_cpr")]
 position = Vector3(0, 0.127, 0.12)

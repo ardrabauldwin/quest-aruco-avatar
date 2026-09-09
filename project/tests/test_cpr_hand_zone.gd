@@ -46,6 +46,65 @@ func pair(left_offset: Vector3, right_offset: Vector3) -> void:
 	set_hand(right, centre + right_offset, -normal)
 	zone._process(0.016)
 
+func motion_pair(upper_left: bool, gap: float, travel: float) -> void:
+	var units: float = zone._units_per_metre()
+	var lower := centre - normal * travel * units
+	var upper := lower + normal * gap * units
+	set_hand(left, upper if upper_left else lower, -normal)
+	set_hand(right, lower if upper_left else upper, -normal)
+	zone._process(1.0 / 72.0)
+
+func check_upper_hand_motion() -> void:
+	var original_scale := XRServer.world_scale
+	for world_scale in [1.0, 1.5]:
+		XRServer.world_scale = world_scale
+		for upper_left in [true, false]:
+			for gap in [0.025, 0.055]:
+				zone.reset_placement()
+				motion_pair(upper_left, gap, 0.0)
+				var expected: StringName = zone.left_tracker if upper_left else zone.right_tracker
+				check(zone._motion_tracker == expected, "Select upper palm for either stack order and XR scale")
+				for cycle in 3:
+					for sample in 41:
+						var travel := 0.055 * (1.0 - cos(TAU * float(sample) / 40.0)) * 0.5
+						motion_pair(upper_left, gap, travel)
+				check(zone.motion_session.count == 3, "Upper palm counts three complete strokes")
+				check(absf(zone.motion_session.last_stroke_travel_m - 0.055) < 0.0001, "Hand spacing and XR scale do not add to 55 mm travel")
+				# Switch references automatically without adding the hand gap to travel.
+				motion_pair(upper_left, gap, 0.02)
+				var upper_tracker := left if upper_left else right
+				upper_tracker.has_tracking_data = false
+				zone._process(1.0 / 72.0)
+				var fallback: StringName = zone.right_tracker if upper_left else zone.left_tracker
+				check(zone._motion_tracker == fallback and zone.motion_session.tracking_available, "Occlusion automatically selects the other tracked palm")
+				check(is_zero_approx(zone.motion_session.travel_m), "Hand switch establishes a fresh baseline")
+				check(zone.motion_session.count == 3, "Occlusion preserves completed counts")
+				upper_tracker.has_tracking_data = true
+				motion_pair(upper_left, gap, 0.0)
+				check(zone._motion_tracker == fallback, "Returning upper hand does not interrupt the usable fallback")
+				check(zone.motion_session.count == 3, "Reappearance cannot complete the discarded stroke")
+				for sample in 41:
+					motion_pair(upper_left, gap, 0.055 * (1.0 - cos(TAU * float(sample) / 40.0)) * 0.5)
+				check(zone.motion_session.count == 4, "Fresh stroke continues automatically on the fallback hand")
+				var fallback_tracker := right if upper_left else left
+				fallback_tracker.has_tracking_data = false
+				zone._process(1.0 / 72.0)
+				check(zone._motion_tracker == expected and zone.motion_session.count == 4, "Switch back preserves counts without a manual reset")
+				fallback_tracker.has_tracking_data = true
+	XRServer.world_scale = original_scale
+	zone.reset_placement()
+	left.has_tracking_data = false
+	motion_pair(false, 0.035, 0.0)
+	check(zone._motion_tracker == zone.right_tracker, "One visible palm can start motion tracking")
+	left.has_tracking_data = true
+	motion_pair(false, 0.0, 0.0)
+	check(zone._motion_tracker == zone.right_tracker, "Same-height palms keep the already selected hand")
+	motion_pair(true, 0.035, 0.0)
+	check(zone._motion_tracker == zone.right_tracker, "Visible selected palm remains continuous if hand order changes")
+	zone.reset_placement()
+	motion_pair(false, 0.035, 0.0)
+	check(zone._motion_tracker == zone.right_tracker, "Reset allows selecting a different upper hand")
+
 func _run() -> void:
 	origin = XROrigin3D.new()
 	root.add_child(origin)
@@ -142,15 +201,19 @@ func _run() -> void:
 	# Exercise the actual XR joint reader through automatic start and continued counting.
 	for cycle in 3:
 		for sample in 41:
-			var travel := 0.035 * (1.0 - cos(TAU * float(sample) / 40.0)) * 0.5
+			var travel := 0.055 * (1.0 - cos(TAU * float(sample) / 40.0)) * 0.5
 			set_hand(left, centre - normal * travel, -normal)
 			set_hand(right, centre + normal * (0.035 - travel), -normal)
 			zone._process(1.0 / 72.0)
 		if cycle == 0:
-			check(not zone.is_cpr_started, "Guide remains after first stroke")
+			check(zone.is_cpr_started, "First complete stroke hides guide")
 	check(zone.is_cpr_started and zone.motion_session.count == 3, "Joint tracking auto-starts and keeps counting after start")
 	check(not zone._highlight.visible, "Automatic motion start hides guide")
 	check(zone._metronome.stream is AudioStreamWAV and zone._metronome.stream.data.size() > 1000, "Actual PCM beep generated")
+	zone.motion_session._beat_remaining = 0.0
+	zone._process(1.0 / 72.0)
+	check(zone._metronome.playing, "Session beat reaches audio playback")
+	check(zone._metronome.bus == &"Master" and zone._metronome.volume_db == -3.0, "Beep uses audible master output level")
 	var hud := Node3D.new()
 	hud.set_script(preload("res://cpr_feedback_hud.gd"))
 	hud.zone = zone
@@ -163,6 +226,7 @@ func _run() -> void:
 	hud._process(0.016)
 	check(hud._title.text == "GIVE 2 BREATHS" and hud._counter.text == "4.2 s", "HUD displays breathing countdown")
 	hud.free()
+	check_upper_hand_motion()
 	zone.reset_placement()
 	avatar.hide()
 	zone._process(0.016)

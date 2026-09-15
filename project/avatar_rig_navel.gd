@@ -44,10 +44,14 @@ const FILTER_PRIOR_TIME_S := 2.0
 const ENDPOINT_STABLE_POSITION_M := 0.0015
 const ENDPOINT_STABLE_ROTATION_DEG := 1.0
 const ENDPOINT_STABLE_DETECTIONS := 3
-# The floor comes from the same grid run; the small-move band (10-30 mm) has no direct
-# labelled evidence yet, so 40 mm is the safest value the data could not distinguish.
-const REANCHOR_MIN_POSITION_M := 0.040
-const REANCHOR_MIN_ROTATION_DEG := 3.0
+# Re-anchoring adopts a stable measurement as the new rest, i.e. "the mannequin was moved".
+# Viewpoint-dependent bias must stay below these floors or walking around the mannequin gets
+# mistaken for moving it: on the headset (2026-09-15) side views rotated the avatar a few
+# degrees "at times" and the far view crept toward the viewer -- both re-anchor events on the
+# ~4-6 cm / few-degree residual that remains after the fx scale fix. Real slides in the recorded
+# tests were 105-300 mm and mannequin rotations tens of degrees, so 80 mm / 8 deg keeps those.
+const REANCHOR_MIN_POSITION_M := 0.080
+const REANCHOR_MIN_ROTATION_DEG := 8.0
 
 var _common_provider := CommonPoseProvider.new()
 var _filter := SimplePoseStabilizer.new()
@@ -61,7 +65,6 @@ var _runtime_initialized := false
 var _mesh_floor_offset_ready := false
 var _lowest_mesh_vertex_offset_y := 0.0
 var _manual_nudge := Vector3.ZERO
-var _locked_pose := Transform3D.IDENTITY
 
 
 func _ready() -> void:
@@ -180,14 +183,8 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 		reanchor_rotation
 	):
 		_filter.complete_rest_reanchor(reanchor_position, reanchor_rotation)
-
 	if _filter.is_ready() and _common_provider.has_rest_pose():
-		# Lock logic: only update locked position when all 3 markers detected
-		if markers.size() == 3:
-			_locked_pose = filtered_pose
-
-		# Always output locked position (avatar follows lock, not raw measurement)
-		_apply_filtered_pose(_locked_pose)
+		_apply_filtered_pose(filtered_pose)
 
 
 ## Place the rig at the ArUco pose, then treat the Quest floor as a boundary: if the avatar's

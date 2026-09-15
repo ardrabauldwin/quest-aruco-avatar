@@ -17,6 +17,9 @@ signal placement_restarted
 @export_group("Heel estimate")
 ## Fraction from wrist centre toward palm centre; no heel joint exists in OpenXR.
 @export_range(0.0, 1.0, 0.05) var heel_wrist_to_palm_fraction := 0.3
+## Used when the wrist joint is not tracked (the Quest loses it first, under the other hand or at
+## the edge of view): the heel is this far behind the palm centre along the finger axis.
+@export_range(0.0, 0.08, 0.001) var palm_to_heel_fallback_m := 0.042
 ## Approximate joint-centre to skin offset toward the palm-facing side, in metres.
 @export_range(0.0, 0.025, 0.001) var heel_surface_offset_m := 0.008
 @export_group("Stack tolerances")
@@ -84,6 +87,15 @@ func _process(delta: float) -> void:
 		lower_hand = &"left"
 	elif right_hand_inside and _is_stacked(right, left):
 		lower_hand = &"right"
+	elif not guide_only and left.is_empty() != right.is_empty():
+		# Only one hand is tracked. During real CPR the lower hand is hidden under the upper one,
+		# so the headset normally sees the upper hand alone (2026-09-15 log: the left hand was
+		# "not_tracked" in every status line). Accept that hand anywhere between the contact slab
+		# and the stack height above the target footprint. With both hands visible the strict
+		# heel-plus-stack check above still applies.
+		var visible_hand := left if not left.is_empty() else right
+		if _single_hand_on_target(visible_hand):
+			lower_hand = &"left" if not left.is_empty() else &"right"
 	_placement_correct = lower_hand != &""
 	if correct_placement != was_correct:
 		placement_changed.emit(correct_placement)
@@ -150,7 +162,16 @@ func _update_hand_motion(delta: float, available: bool, left: Dictionary, right:
 	if available and hand_tracking_status != _last_tracking_status:
 		_last_tracking_status = hand_tracking_status
 		print("CPR hands: ", hand_tracking_status, " | ", _motion_reasons)
+	var count_before: int = motion_session.total_count
 	motion_session.update(delta, valid, height, not available)
+	if motion_session.total_count != count_before:
+		# One line per counted press: proves on the headset log that the counter fires and shows
+		# what it measured. ~2 lines/s at most, only while pressing.
+		print("CPR press #%d  travel=%.1f cm  %s  interval=%.2f s  hand=%s" % [
+			motion_session.total_count, motion_session.last_stroke_travel_m * 100.0,
+			motion_session.last_stroke_quality,
+			motion_session.last_interval_s,
+			"left" if _motion_tracker == left_tracker else "right"])
 	if motion_session.active and not is_cpr_started:
 		is_cpr_started = true
 		cpr_started.emit()
@@ -204,6 +225,10 @@ func _read_motion_hand(tracker_name: StringName) -> Dictionary:
 	return {"point": position_world}
 
 
+## Only a tracked palm POSITION is required. The wrist joint and the palm orientation improve
+## the heel estimate when they are tracked, but their loss must not make a real hand "disappear":
+## on the Quest the wrist is the first joint lost during placement (under the other hand, or at
+## the edge of view), and orientation can settle a frame or two after position.
 func _read_hand(tracker_name: StringName) -> Dictionary:
 	if xr_origin == null:
 		return {}
@@ -213,34 +238,65 @@ func _read_hand(tracker_name: StringName) -> Dictionary:
 	if hand.hand_tracking_source in [XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER, XRHandTracker.HAND_TRACKING_SOURCE_NOT_TRACKED]:
 		return {}
 	var position_flags := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
-	var palm_flags := position_flags | XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_VALID | XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_TRACKED
-	if (hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM) & palm_flags) != palm_flags:
-		return {}
-	if (hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) & position_flags) != position_flags:
+	var orientation_flags := XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_VALID | XRHandTracker.HAND_JOINT_FLAG_ORIENTATION_TRACKED
+	var palm_joint_flags := hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM)
+	if (palm_joint_flags & position_flags) != position_flags:
 		return {}
 	var palm := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM)
+	if not palm.origin.is_finite():
+		return {}
+	var orientation_ok := (
+		(palm_joint_flags & orientation_flags) == orientation_flags
+		and palm.basis.is_finite() and absf(palm.basis.determinant()) > 0.001
+	)
 	var wrist := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_WRIST)
-	if not palm.is_finite() or not wrist.origin.is_finite() or absf(palm.basis.determinant()) < 0.001:
-		return {}
-	var wrist_to_palm := wrist.origin.distance_to(palm.origin)
-	if wrist_to_palm < 0.010 or wrist_to_palm > 0.150:
-		return {}
-	# Godot's OpenXR Humanoid conversion makes -Z face out the back of the hand:
-	# +Z therefore points toward the palm skin/contact surface (both left and right).
-	var heel := wrist.origin.lerp(palm.origin, heel_wrist_to_palm_fraction)
-	heel += palm.basis.z.normalized() * heel_surface_offset_m
+	var wrist_to_palm := wrist.origin.distance_to(palm.origin) if wrist.origin.is_finite() else 0.0
+	var wrist_ok := (
+		(hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST) & position_flags) == position_flags
+		and wrist_to_palm >= 0.010 and wrist_to_palm <= 0.150
+	)
+	# Godot's OpenXR Humanoid conversion: +Y runs along the fingers, -Z faces out the back of the
+	# hand, so +Z points toward the palm skin/contact surface (both left and right).
+	var heel := palm.origin
+	if wrist_ok:
+		heel = wrist.origin.lerp(palm.origin, heel_wrist_to_palm_fraction)
+	elif orientation_ok:
+		heel = palm.origin - palm.basis.y.normalized() * palm_to_heel_fallback_m
+	if orientation_ok:
+		heel += palm.basis.z.normalized() * heel_surface_offset_m
 	var pose := XRPose.new()
-	pose.transform = Transform3D(palm.basis.orthonormalized(), heel)
+	pose.transform = Transform3D(palm.basis.orthonormalized() if orientation_ok else Basis.IDENTITY, heel)
 	# Apply the same reference frame and world scale as XRNode3D, then the scene origin.
 	var world := xr_origin.global_transform * pose.get_adjusted_transform()
-	return {"heel": world.origin, "palm_normal": world.basis.z.normalized()}
+	var result := {"heel": world.origin, "wrist_tracked": wrist_ok}
+	if orientation_ok:
+		result["palm_normal"] = world.basis.z.normalized()
+	return result
 
 
 func _heel_on_target(hand: Dictionary) -> bool:
 	return not hand.is_empty() and contains_world_point(hand.heel) and _faces_chest(hand)
 
 
+## Unknown orientation is not evidence of a wrong orientation: a palm whose rotation the runtime
+## has not settled yet still counts as facing the chest.
+## The one visible hand counts when its heel is over the target footprint, from the contact slab
+## up to the maximum stack height, and it faces the chest (if its orientation is known).
+func _single_hand_on_target(hand: Dictionary) -> bool:
+	if hand.is_empty() or not _faces_chest(hand):
+		return false
+	var box := _shape.shape as BoxShape3D
+	if box == null or _shape.disabled or not hand.heel.is_finite():
+		return false
+	var local := _shape.to_local(hand.heel)
+	var half := box.size * 0.5
+	var top := stack_max_height_m * _units_per_metre()
+	return absf(local.x) <= half.x and absf(local.z) <= half.z and local.y >= -half.y and local.y <= top
+
+
 func _faces_chest(hand: Dictionary) -> bool:
+	if not hand.has("palm_normal"):
+		return true
 	var chest_normal := _shape.global_basis.y.normalized()
 	return hand.palm_normal.dot(-chest_normal) >= cos(deg_to_rad(max_palm_tilt_degrees))
 
@@ -306,7 +362,9 @@ func _update_feedback() -> void:
 	_highlight.visible = not is_cpr_started and not _paused
 	_instruction.visible = _highlight.visible
 	if not guide_only:
-		_material.albedo_color = Color(0.1, 0.9, 0.25, 0.75) if correct_placement else Color(1.0, 0.35, 0.05, 0.75)
+		# Green is the instruction colour ("put your hands here"), brighter once the hands are on it.
+		# Never orange: an orange box read as an error, not as a target (headset review 2026-09-15).
+		_material.albedo_color = Color(0.10, 0.95, 0.30, 0.90) if correct_placement else Color(0.15, 0.80, 0.35, 0.60)
 
 
 func _on_start_button(button: StringName) -> void:

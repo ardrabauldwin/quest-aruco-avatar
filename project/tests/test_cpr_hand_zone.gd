@@ -157,22 +157,46 @@ func _run() -> void:
 	zone._process(0.016)
 	check(not zone.correct_placement, "Upper hand facing away fails")
 	pair(Vector3.ZERO, normal * 0.035)
+	# During real CPR the lower hand is hidden under the upper one, so losing it must not clear
+	# the placement: the one visible hand over the target footprint (slab .. stack height) counts.
 	left.has_tracking_data = false
 	zone._process(0.016)
-	check(not zone.correct_placement and zone.lower_hand == &"", "Tracking loss clears stale placement")
-	check(zone._material.albedo_color.r > zone._material.albedo_color.g, "Loss turns orange")
+	check(zone.correct_placement and zone.lower_hand == &"right", "Lower hand hidden: the visible upper hand alone keeps placement")
+	check(zone._material.albedo_color.g > zone._material.albedo_color.r, "Target stays green: it is an instruction colour, never orange")
+	set_hand(right, centre + normal * 0.10, -normal)
+	zone._process(0.016)
+	check(not zone.correct_placement, "A single hand hovering above the stack height fails")
+	set_hand(right, centre + sideways * 0.06 + normal * 0.03, -normal)
+	zone._process(0.016)
+	check(not zone.correct_placement, "A single hand beside the target fails")
+	set_hand(right, centre + normal * 0.035, normal)
+	zone._process(0.016)
+	check(not zone.correct_placement, "A single hand facing away fails")
+	set_hand(right, centre + normal * 0.035, -normal)
+	right.has_tracking_data = false
+	zone._process(0.016)
+	check(not zone.correct_placement and zone.lower_hand == &"", "Both hands lost clears placement")
+	right.has_tracking_data = true
 	left.has_tracking_data = true
 	left.hand_tracking_source = XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER
 	zone._process(0.016)
-	check(not zone.correct_placement, "Controller-inferred joints rejected")
+	check(zone._read_hand(zone.left_tracker).is_empty() and zone.lower_hand == &"right", "Controller-inferred joints rejected; the tracked hand still counts")
 	left.hand_tracking_source = XRHandTracker.HAND_TRACKING_SOURCE_UNOBSTRUCTED
+	# The Quest loses the wrist first during placement. A stale or missing wrist must not make a
+	# tracked hand disappear: the heel is estimated from the palm along the finger axis instead.
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID)
 	zone._process(0.016)
-	check(not zone.correct_placement, "Stale wrist rejected")
+	check(zone.correct_placement, "Stale wrist falls back to the palm-only heel and still passes")
+	check(not zone._read_hand(zone.left_tracker).wrist_tracked, "Fallback reports the wrist as untracked")
+	check(zone._read_hand(zone.left_tracker).heel.distance_to(centre) < 0.00001, "Palm-only heel lands on the synthetic heel")
+	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, 0)
+	zone._process(0.016)
+	check(zone.correct_placement, "Missing wrist joint with a fully tracked palm still passes")
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, POS)
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM, POS)
 	zone._process(0.016)
-	check(not zone.correct_placement, "Missing orientation rejected")
+	check(zone.correct_placement, "Missing palm orientation still passes on position alone")
+	check(not zone._read_hand(zone.left_tracker).has("palm_normal"), "No orientation means no palm normal is claimed")
 	check(not zone._read_motion_hand(zone.left_tracker).is_empty(), "Motion accepts tracked palm without orientation")
 	left.set_hand_joint_flags(XRHandTracker.HAND_JOINT_WRIST, 0)
 	check(not zone._read_motion_hand(zone.left_tracker).is_empty(), "Motion does not require a wrist joint")
@@ -220,7 +244,9 @@ func _run() -> void:
 	root.add_child(hud)
 	hud._process(0.016)
 	check(hud._counter.text == "3 / 30", "HUD displays compression count")
-	check("Estimated hand travel" in hud._detail.text, "HUD labels motion estimate honestly")
+	check("Estimated hand travel" in hud._depth["name"].text, "HUD labels motion estimate honestly")
+	check(hud._coach.text == "Good press", "Three good 55 mm presses coach Good press (got %s)" % hud._coach.text)
+	check(hud._depth["marker"].visible and "cm" in hud._depth["value"].text, "Depth gauge shows the completed press")
 	zone.motion_session.phase = "breathing"
 	zone.motion_session.breathing_remaining_s = 4.2
 	hud._process(0.016)

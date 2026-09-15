@@ -81,8 +81,9 @@ physics layers and overlap signals are intentionally unused.
 - `start_cpr()` can also be called explicitly; entering the zone alone does not start CPR.
 
 The source is the OpenXR left/right hand tracker, not the existing controller grip nodes.
-Controller-inferred joints are rejected. Unknown tracking sources are accepted only with
-valid, actively tracked wrist/palm positions and palm orientation. Tracking loss clears
+Controller-inferred joints are rejected. Only a tracked palm POSITION is required (2026-09-15):
+the wrist joint and the palm orientation refine the heel estimate when tracked, but their loss
+no longer hides a real hand - on the Quest the wrist is the first joint lost during placement. Tracking loss clears
 placement immediately. Overlapping hands can occlude the lower hand; this needs headset testing.
 
 ## Heel estimate and stack check
@@ -96,7 +97,8 @@ transformed through `XROrigin3D` into scene coordinates.
 
 The 30% fraction and 8 mm skin offset are tunable estimates; they have not been fitted
 to measured hand anatomy. They are exposed under `Heel estimate` on the zone instance.
-The wrist-to-palm length must be 10–150 mm; missing/invalid data fails the check.
+With a tracked wrist (10–150 mm from the palm) the heel is 30% along wrist→palm; without one it is
+42 mm behind the palm centre along the finger axis; without orientation it is the palm centre.
 
 Either hand can be lower. Its estimated heel must be in the thin contact slab.
 The upper estimated heel must be 8–80 mm above it along the chest normal, with at most

@@ -97,6 +97,35 @@ func run() -> void:
 	first.invalidate_tracking()
 	stroke(first)
 	check(first._bpm_samples.is_empty() and first.count == 2, "Timing restarts after tracking loss without resetting counts")
+	# A short hand dropout (every 2-3 presses on the headset) must not wipe the measured pace;
+	# only stopping does.
+	var dropout = Session.new()
+	for i in 6:
+		stroke(dropout)
+	dropout.update(0.016, false, 0.0)
+	stroke(dropout)
+	check(dropout._bpm_samples.size() == 4 and dropout.count == 7, "Pace window survives a tracking dropout (got %d samples)" % dropout._bpm_samples.size())
+	check(dropout.last_interval_s == 0.0, "Press after a dropout adds no interval")
+	for i in 300:
+		dropout.update(1.0 / 72, true, 0.0)
+	check(dropout._bpm_samples.is_empty(), "Pace window cleared after 3 s without a press")
+	# A 1.8 s pause after a press is a stop, not a slow pace: it must not be averaged in.
+	var paused = Session.new()
+	for i in 4:
+		stroke(paused)
+	for i in 130:
+		paused.update(1.0 / 72, true, 0.0)
+	stroke(paused)
+	check(paused._bpm_samples.is_empty() and paused.count == 5, "Press after a 1.8 s pause restarts the pace window (got %d samples)" % paused._bpm_samples.size())
+	stroke(paused)
+	check(paused._bpm_samples.size() == 1 and paused._bpm_samples[0] < 0.7, "Next press adds a real interval")
+	# Dips under 2 cm are wobble, not compressions; 2.5 cm counts as a shallow press.
+	var tiny = Session.new()
+	for i in 5:
+		stroke(tiny, 72, 0.015)
+	check(tiny.count == 0, "1.5 cm dips must not count (got %d)" % tiny.count)
+	stroke(tiny, 72, 0.025)
+	check(tiny.count == 1 and tiny.last_stroke_quality == "shallow", "2.5 cm press counts as shallow")
 	var lost = Session.new()
 	stroke(lost)
 	for i in 100:
@@ -111,5 +140,40 @@ func run() -> void:
 	pacing.breathing_remaining_s = 5.0
 	pacing.update(1.0, false, 0.0)
 	check(beats == before, "Metronome silent during breathing")
+	# --- Regressions found by audit_cpr_motion_edges.gd ---
+	# A first press that overshoots leaves _top above where the hands actually rest. Every
+	# later press recoils to the real resting height, 20 mm below that top, and used to be
+	# ignored forever ("the count stops").
+	var drifted = Session.new()
+	for height in [0.0, -0.02, -0.055, -0.02, -0.055, -0.02]:
+		drifted.update(0.1, true, height)
+	check(drifted.count == 2, "Presses recoiling 20 mm below the original top still count (got %d)" % drifted.count)
+	check(absf(drifted.last_stroke_travel_m - 0.035) < 0.002, "Second drifted press measured from its own top")
+	# Resting height creeping lower by 5 mm every press (leaning in) must not lose any press.
+	var creep = Session.new()
+	var base := 0.0
+	for press in 9:
+		var frames := int(round(72.0 * 60.0 / 110.0))
+		for i in range(frames + 1):
+			var dip := 0.055 * (1.0 - cos(TAU * float(i) / frames)) * 0.5
+			creep.update(1.0 / 72.0, true, base - dip)
+		base -= 0.005
+	check(creep.count == 9, "Slowly sinking resting height keeps every press (got %d)" % creep.count)
+	# A one-frame 55 mm tracking spike is not a compression.
+	var spike = Session.new()
+	for height in [0.0, -0.055, 0.0]:
+		spike.update(1.0 / 72.0, true, height)
+	check(spike.count == 0, "One-frame 55 mm spike must not count")
+	for i in 20:
+		spike.update(1.0 / 72.0, true, 0.0)
+	stroke(spike)
+	check(spike.count == 1, "Real press after a spike counts once")
+	# A 5 mm upward wobble mid-descent is not a recoil; the press still counts exactly once.
+	# (A dip that recoils to within 1 cm of the top is a legitimate shallow press and counts.)
+	var wobble = Session.new()
+	for height in [0.0, -0.01, -0.025, -0.02, -0.03, -0.04, -0.055, -0.04, -0.02, 0.0]:
+		wobble.update(1.0 / 30.0, true, height)
+	check(wobble.count == 1, "Mid-descent wobble does not split a press (got %d)" % wobble.count)
+	check(absf(wobble.last_stroke_travel_m - 0.055) < 0.001, "Wobbled press keeps full excursion")
 	print("CPR motion session tests: ", "PASS" if failures == 0 else "FAIL")
 	quit(0 if failures == 0 else 1)

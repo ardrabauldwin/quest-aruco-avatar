@@ -28,19 +28,48 @@ var _rest_previous_estimate := Transform3D.IDENTITY
 var _rest_has_previous_estimate := false
 var _rest_stable_checks := 0
 var _rest_reanchor_last_detection_ms := -1
+## Estimates whose down axis tilts more than this from world down are mirror solutions (see
+## _is_flipped). Good markers on the mannequin measure 5-25 deg, flipped ones 85-95 deg.
+var max_flip_tilt_deg := 45.0
+var rejected_flips := 0
+## Optional per-marker fusion weight (marker node -> weight, default 1). The common marker is the
+## most consistent of the three across viewpoints (2026-09-15 recordings), so the rig may weight it up.
+var marker_weights := {}
+## How long a flipped marker may be replaced by its own last good pose (ms). The mannequin is
+## static, so a one-second-old good pose is a better measurement than none; on the 2026-09-15
+## recordings this halved the far-left wobble (6 -> 4 cm) and changed nothing at 1.7 m.
+var flip_hold_ms := 1000
+var held_flips := 0
+var _last_good := {}
 
 
 ## Each independent detection contributes one estimate of the same common point.
 ## Inferred missing markers contain no new measurement and must not be fused again.
 func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
 	var estimates: Array[Transform3D] = []
+	var weights: Array[float] = []
 	for marker in markers:
 		if marker != null and _offsets.has(marker):
 			var marker_to_common: Transform3D = _offsets[marker]
-			estimates.append(marker.global_transform * marker_to_common)
+			var estimate: Transform3D = marker.global_transform * marker_to_common
+			if _is_flipped(estimate):
+				rejected_flips += 1
+				# The mannequin does not move: this marker's last good pose is still a valid
+				# measurement for a short while, and keeping it stops the average from collapsing
+				# onto whichever single marker happens not to flip from this viewpoint.
+				var last: Dictionary = _last_good.get(marker, {})
+				if not last.is_empty() and detection_ms >= 0 and detection_ms - int(last["ms"]) <= flip_hold_ms:
+					estimates.append(last["pose"])
+					weights.append(float(marker_weights.get(marker, 1.0)))
+					held_flips += 1
+				continue
+			if detection_ms >= 0:
+				_last_good[marker] = {"pose": estimate, "ms": detection_ms}
+			estimates.append(estimate)
+			weights.append(float(marker_weights.get(marker, 1.0)))
 	if estimates.is_empty():
 		return _common_pose
-	_common_pose = _floor_lock(_fuse(estimates))
+	_common_pose = _floor_lock(_fuse(estimates, weights))
 	_has_common_pose = true
 	_update_rest(_common_pose, detection_ms)
 	return _common_pose
@@ -220,6 +249,18 @@ func _rotation_medoid(poses: Array[Transform3D]) -> Quaternion:
 	return best
 
 
+## Planar-marker pose ambiguity: seen at a glancing angle (side views, 1.5 m+) solvePnP sometimes
+## returns the mirror solution. Its normal is then ~90 deg from where a marker lying on the
+## mannequin can point, its heading 30-40 deg off and its position 12-14 cm off (viewpoint
+## recording 2026-09-15: common flipped in 33% of left-view samples, chest in 86% of right-view
+## samples). Averaged in, one flipped marker moves the avatar by a third of that, which was the
+## side-view slide and the occasional turn. A mannequin marker always faces up, so an estimate
+## whose down axis is more than max_flip_tilt_deg from world down is not a measurement.
+func _is_flipped(estimate: Transform3D) -> bool:
+	var down := estimate.basis.z.normalized()
+	return down.angle_to(Vector3.DOWN) > deg_to_rad(max_flip_tilt_deg)
+
+
 ## Enforce the CPR domain rule: the marker/common local Y axis lies along the mannequin on the
 ## floor and local Z points down. The down sign matches the mannequin child's fixed -90 degree
 ## import correction so the avatar lies face-up. Only measured horizontal heading is retained.
@@ -239,7 +280,7 @@ func _floor_lock(pose: Transform3D) -> Transform3D:
 
 
 ## Fuse the common-pose estimates produced by same-frame markers.
-func _fuse(poses: Array[Transform3D]) -> Transform3D:
+func _fuse(poses: Array[Transform3D], weights: Array[float] = []) -> Transform3D:
 	# Symmetric sign-aligned mean for every marker count: steadier than median/medoid while all
 	# markers are good, at the cost of absorbing 1/3 of a corrupted marker's error. The robust
 	# alternative stays in _robust_estimate (still used for rest collection) until the labelled
@@ -247,15 +288,19 @@ func _fuse(poses: Array[Transform3D]) -> Transform3D:
 	var position := Vector3.ZERO
 	var rotation := Quaternion(0, 0, 0, 0)
 	var first_rotation := poses[0].basis.get_rotation_quaternion()
+	var total_weight := 0.0
 
-	for pose in poses:
-		position += pose.origin
+	for i in poses.size():
+		var pose := poses[i]
+		var w: float = weights[i] if i < weights.size() else 1.0
+		position += pose.origin * w
 		var pose_rotation := pose.basis.get_rotation_quaternion()
 		if first_rotation.dot(pose_rotation) < 0.0:
 			pose_rotation = -pose_rotation
-		rotation += pose_rotation
+		rotation += pose_rotation * w
+		total_weight += w
 
-	return Transform3D(Basis(rotation.normalized()), position / poses.size())
+	return Transform3D(Basis(rotation.normalized()), position / total_weight)
 
 
 ## Persist marker-local offsets only. World-space rest is relearned every XR session.

@@ -46,7 +46,10 @@ var _has_result := false
 const CAMERA_LATENCY_MS := 50.0
 var _pose_history: Array = []   # [t_usec, head Transform3D] pairs, newest last; main thread only
 
-#stream image of quest to laptop via tcp
+# Debug only: stream the camera image to a laptop viewer over adb reverse. Off in normal use --
+# on the Quest nothing listens, so an always-on stream just reconnects every second, polls the
+# socket every frame and spams logcat. Enable from the scene when you actually want the viewer.
+@export var stream_camera_to_laptop := false
 const TCP_HOST := "127.0.0.1"
 const TCP_PORT := 7007			#view available ports with adb reverse --list
 
@@ -108,9 +111,9 @@ func _ready() -> void:
 	CameraServer.camera_feeds_updated.connect(_on_camera_feeds_updated)
 	_on_camera_feeds_updated()                          # in case a feed is already present
 
-	
-	_connect_tcp()
-	
+	if stream_camera_to_laptop:
+		_connect_tcp()
+
 func _on_camera_feeds_updated() -> void:
 	if cam_texture != null:
 		return                                          # already initialised
@@ -154,8 +157,9 @@ func _on_camera_feeds_updated() -> void:
 ####################################################################################################
 
 func _process(_delta: float) -> void:
-	_poll_tcp(_delta)
-	
+	if stream_camera_to_laptop:
+		_poll_tcp(_delta)
+
 	if cam_texture == null:
 		return
 
@@ -187,17 +191,13 @@ func _process(_delta: float) -> void:
 	var img := cam_texture.get_image()
 	if img == null:
 		return
-	#print("image format: ",img.get_format()) #format lookup table https://docs.godotengine.org/en/stable/classes/class_image.html#enum-image-format
-	
-	
-	
-	_tcp_send_timer += _delta
-	if _tcp_send_timer >= TCP_SEND_INTERVAL:
-		_tcp_send_timer = 0.0
-		if stream_peer != null and stream_peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
-			_send_frame_tcp(img)
-	
-		
+	if stream_camera_to_laptop:
+		_tcp_send_timer += _delta
+		if _tcp_send_timer >= TCP_SEND_INTERVAL:
+			_tcp_send_timer = 0.0
+			if stream_peer != null and stream_peer.get_status() == StreamPeerTCP.STATUS_CONNECTED:
+				_send_frame_tcp(img)
+
 	# Head pose AT capture time: NOT the live pose -- the pixels in img are ~CAMERA_LATENCY_MS old
 	# (passthrough pipeline), so look that far back in the pose history (see _head_pose_at).
 	var now_usec := Time.get_ticks_usec()
@@ -231,10 +231,14 @@ func _detection_loop() -> void:
 		if img == null:
 			continue
 		# No conversion: the C++ side handles 1ch (Quest Y-plane), 3ch (RGB), and 4ch (RGBA).
-		var t0 := Time.get_ticks_usec()
 		var image_downscale_factor=0.5 #1 is original image, 0.5 means half width and half height
-		var fx=877.06583568*image_downscale_factor
-		var fy=878.33004836*image_downscale_factor
+		# fx/fy = original calibration (877.07 / 878.33) x 0.937. Seven recorded sessions (Sep 3 + Sep 9,
+		# three markers each) all fit a constant 0.937 scale between the ArUco range and the Quest
+		# tracking frame; the error was along the viewing ray (depth), lateral error ~1 cm, so cx/cy
+		# and distortion are left alone. Whether fx or head-tracking scale is physically wrong is
+		# undecided; this makes ArUco agree with the frame the avatar is drawn in either way.
+		var fx=821.8*image_downscale_factor
+		var fy=823.0*image_downscale_factor
 		var cx=645.36226952*image_downscale_factor #approxiamte cx is fx/2
 		var cy=642.24557861*image_downscale_factor #approxiamte cy is fy/2
 		# Physical passthrough-camera pose relative to the gyro/IMU reference, from the Quest's
@@ -250,7 +254,6 @@ func _detection_loop() -> void:
 		var lens_translation := Vector3(-0.03237725794315, -0.01770938560367, -0.06345107406378) # raw LENS_POSE_TRANSLATION
 
 		var markers: Dictionary = processor.get_6dof_of_all_aruco_patches_from_godot_image(img, aruco_patch_size,image_downscale_factor,fx,fy,cx,cy,lens_rotation,lens_translation)
-		print("(worker thread) detect=", (Time.get_ticks_usec() - t0) / 1000.0, "ms  fps=", Engine.get_frames_per_second(), " FPSOfTracking:=", (1000/((Time.get_ticks_usec() - t0) / 1000.0)) )
 		_detect_mutex.lock()
 		_result_markers = markers
 		_result_cam_xform = cam_xform

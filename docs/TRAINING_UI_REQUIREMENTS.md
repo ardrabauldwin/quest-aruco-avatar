@@ -1,6 +1,6 @@
 # Training display requirements
 
-Recorded from the user's instructions on 2026-09-08. These are requirements for the next UI revision; the current APK does not implement these gauges yet.
+Recorded from the user's instructions on 2026-09-08. Implemented in `project/cpr_feedback_hud.gd` on 2026-09-14: two side-by-side panels: LEFT a speed half-dial (60-160 per minute, green 100-120, needle + number, `--` below two measured intervals); RIGHT the phase title (PLACE HANDS / PRESS WITH THE BEEP / COMPRESS / GIVE 2 BREATHS), the count out of 30, one instruction per press (Press deeper / Too deep, ease off / Good depth, press faster|slower / Good press / Keep your hands in view; depth outranks pace) and a depth bar (0-8 cm, green 5-6 cm, marker = last completed press, `--` while tracking is unreliable); the 30:2 pause reads '30 compressions done - give 2 breaths'. Feedback is visual only by decision (2026-09-14): the metronome beep stays the single sound so the rhythm is never masked. Tests: `project/tests/test_cpr_feedback_hud.gd`. The placement ring/text at the chest is unchanged.
 
 ## Hand placement
 

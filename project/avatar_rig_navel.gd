@@ -107,6 +107,7 @@ func _notification(what: int) -> void:
 		_tracking_was_available = false
 		_common_provider.recalibrate_orientation()
 		_filter.reset()
+		_has_held_height = false
 		visible = false
 		print("Common pose: app resumed; collecting a fresh session rest pose.")
 
@@ -192,6 +193,20 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 ## lowest mesh point would sink below the floor, raise the rig by exactly the penetration depth.
 ## An avatar above the floor is left untouched, preserving the marker-to-mannequin alignment.
 func _apply_filtered_pose(pose: Transform3D) -> void:
+	# The mannequin lies on the floor: its height never changes unless it is lifted, and a lift
+	# re-anchors the rest pose anyway. The live marker height varies by ~5 cm with the viewpoint
+	# (oblique range error has a vertical part; 2026-09-16 log), and a height change seen from
+	# standing height reads as the avatar sliding towards or away from the viewer. So the height
+	# is the rest anchor's, learned at placement from the front where the error is smallest.
+	if _common_provider.has_rest_pose():
+		# Learned once, when the session rest pose settles (front view, close, ~1 cm error).
+		# Later re-anchors are ignored for the height: a far-view re-anchor carried that view's
+		# 8-17 cm range error into the height (replay 2026-09-16). If the mannequin is lifted onto
+		# a table mid-session, re-level (controller button) or restart; both relearn the height.
+		if not _has_held_height:
+			_held_height = _common_provider.rest_pose().origin.y
+			_has_held_height = true
+		pose.origin.y = _held_height
 	global_transform = pose
 	if floor_provider == null or target == null:
 		return
@@ -253,6 +268,7 @@ func _on_button(button_name: String) -> void:
 	_common_provider.recalibrate_orientation()
 	visible = false
 	_filter.reset()
+	_has_held_height = false
 	print("Common pose: re-levelling; collecting 30+3 detection checkpoints.")
 
 
@@ -316,6 +332,8 @@ const CHEST_ZONE_NODE := "CPRHandZone"
 ## Sink allowed below the reported floor before the safety lift acts: the floor estimate is
 ## that uncertain, and the scanned mesh is ~1.5 cm thicker below the chest than the mannequin.
 const FLOOR_TOLERANCE_M := 0.05
+var _held_height := 0.0
+var _has_held_height := false
 
 
 func _align_chest_to_markers() -> void:

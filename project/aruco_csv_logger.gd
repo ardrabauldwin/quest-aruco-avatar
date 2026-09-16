@@ -44,8 +44,16 @@ const POSE_SUFFIXES := ["x", "y", "z", "qx", "qy", "qz", "qw"]
 # state invisible while wearing it. A Label3D parented to the camera always renders in VR.
 # Both node types expose .text, so _update_status works either way.
 @export var status_label: Node
+## Optional: the avatar rig. When set, every recording also writes a per-frame avatar trace
+## (user://avatar_trace_<id>.csv): head pose and speed, frame rate, avatar pose. The marker
+## rows above only exist ~10x per second, which cannot show a shake; this runs every frame.
+@export var avatar_rig: Node3D
 
 var _file: FileAccess
+var _trace: FileAccess
+var _trace_prev_head := Transform3D.IDENTITY
+var _trace_have_prev := false
+var _last_new_result_ms := 0
 var _recording := false
 var _sample_id := 0
 var _test_index := 0
@@ -98,6 +106,8 @@ func _select_next_test() -> void:
 
 
 func _process(_delta: float) -> void:
+	if _recording and _trace != null:
+		_write_trace(_delta)
 	var result := _copy_latest_result()
 	if result.is_empty():
 		return
@@ -108,6 +118,7 @@ func _process(_delta: float) -> void:
 		return
 	_have_result = true
 	_last_result_hash = result_hash
+	_last_new_result_ms = Time.get_ticks_msec()
 
 	if _recording:
 		_write_row(result.markers, result.camera_pose)
@@ -148,6 +159,11 @@ func _start_recording() -> void:
 	_file.store_line(",".join(_make_header()))
 	_file.flush()
 	_sample_id = 0
+	if avatar_rig != null:
+		_trace = FileAccess.open(path.replace("aruco_", "avatar_trace_"), FileAccess.WRITE)
+		if _trace != null:
+			_trace.store_line("recording_ms,phase_label,fps,delta_ms,result_age_ms,head_x,head_y,head_z,head_yaw_deg,head_speed_mps,head_turn_dps,avatar_visible,avatar_x,avatar_y,avatar_z,avatar_yaw_deg")
+			_trace_have_prev = false
 	# Always begin at phase 1, whatever X was pressed beforehand while stopped.
 	_phase_index = 0
 	_recording_start_ms = Time.get_ticks_msec()
@@ -161,6 +177,10 @@ func _stop_recording() -> void:
 	_file.flush()
 	_file.close()
 	_file = null
+	if _trace != null:
+		_trace.flush()
+		_trace.close()
+		_trace = null
 	print("ArUco logger stopped after ", _sample_id, " samples.")
 	# The test type deliberately does NOT advance here. It used to, which meant the name a file
 	# got depended on how many recordings preceded it rather than on what was in it - every file
@@ -272,3 +292,32 @@ func _update_status() -> void:
 func _exit_tree() -> void:
 	if _recording:
 		_stop_recording()
+
+
+## One line per rendered frame: what the head did and what the avatar did, so a shake can be
+## measured (amplitude, rate) and tied to head speed, frame rate or detection arrivals.
+func _write_trace(delta: float) -> void:
+	var camera: Node3D = detection_source.get("xr_camera") if detection_source != null else null
+	if camera == null:
+		return
+	var head: Transform3D = camera.global_transform
+	var speed := 0.0
+	var turn := 0.0
+	if _trace_have_prev and delta > 0.0:
+		speed = head.origin.distance_to(_trace_prev_head.origin) / delta
+		turn = rad_to_deg(head.basis.get_rotation_quaternion().angle_to(_trace_prev_head.basis.get_rotation_quaternion())) / delta
+	_trace_prev_head = head
+	_trace_have_prev = true
+	var avatar: Transform3D = avatar_rig.global_transform
+	var row := PackedStringArray([
+		str(Time.get_ticks_msec() - _recording_start_ms), _current_phase(),
+		str(Engine.get_frames_per_second()), "%.2f" % (delta * 1000.0),
+		str(Time.get_ticks_msec() - _last_new_result_ms),
+		"%.4f" % head.origin.x, "%.4f" % head.origin.y, "%.4f" % head.origin.z,
+		"%.2f" % rad_to_deg(atan2(-head.basis.z.x, -head.basis.z.z)),
+		"%.3f" % speed, "%.1f" % turn,
+		str(int(avatar_rig.visible)),
+		"%.4f" % avatar.origin.x, "%.4f" % avatar.origin.y, "%.4f" % avatar.origin.z,
+		"%.2f" % rad_to_deg(atan2(avatar.basis.y.x, avatar.basis.y.z)),
+	])
+	_trace.store_line(",".join(row))

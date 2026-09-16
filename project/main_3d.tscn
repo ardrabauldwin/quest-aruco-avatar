@@ -77,10 +77,11 @@ font_size = 28
 outline_size = 12
 horizontal_alignment = 1
 
-[node name="ArucoCsvLogger" type="Node" parent="." node_paths=PackedStringArray("detection_source", "right_controller", "left_controller", "status_label")]
+[node name="ArucoCsvLogger" type="Node" parent="." node_paths=PackedStringArray("detection_source", "right_controller", "left_controller", "status_label", "avatar_rig")]
 process_priority = 100
 script = ExtResource("7_csv")
 detection_source = NodePath("..")
+avatar_rig = NodePath("../AvatarRig")
 right_controller = NodePath("../XROrigin3D/RightHand")
 left_controller = NodePath("../XROrigin3D/LeftHand")
 status_label = NodePath("../XROrigin3D/XRCamera3D/RecordingStatus")

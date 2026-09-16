@@ -71,6 +71,7 @@ func _ready() -> void:
 	visible = false
 	if target != null:
 		_apply_manual_nudge(default_nudge)
+		_align_chest_to_markers()
 	_markers = [common_marker, chest_marker, torso_marker]
 	_filter.configure(
 		FILTER_WINDOW,
@@ -210,7 +211,7 @@ func _apply_filtered_pose(pose: Transform3D) -> void:
 			% _lowest_mesh_vertex_offset_y
 		)
 	var lowest := global_position.y + _lowest_mesh_vertex_offset_y
-	var floor_y: float = floor_provider.floor_height_world()
+	var floor_y: float = floor_provider.floor_height_world() - FLOOR_TOLERANCE_M
 	if lowest < floor_y:
 		global_position.y += floor_y - lowest
 
@@ -263,7 +264,32 @@ func _on_orientation_settled() -> void:
 	print("Common pose: session orientation settled; marker offsets saved.")
 
 
+var _diag_timer := 0.0
+
+
+## Once a second while placed: the numbers behind "is it below the floor" and "do the sticks
+## do anything". Read with: adb logcat -d | grep -E "Avatar diag|Nudge"
+func _print_diagnostics(delta: float) -> void:
+	_diag_timer += delta
+	if _diag_timer < 1.0 or not visible or target == null:
+		return
+	_diag_timer = 0.0
+	var floor_y: float = floor_provider.floor_height_world() if floor_provider != null and floor_provider.has_floor() else NAN
+	var lowest: float = global_position.y + _lowest_mesh_vertex_offset_y if _mesh_floor_offset_ready else NAN
+	var left: Vector2 = xr_controller_left.get_vector2("primary") if xr_controller_left != null else Vector2.ZERO
+	var right: Vector2 = xr_controller_right.get_vector2("primary") if xr_controller_right != null else Vector2.ZERO
+	# Vertical truth check: the hand target lies on the avatar's chest surface, the common marker
+	# node on the real chest. Same frame, so zone_y - marker_y is the avatar's height error.
+	var zone: Node3D = target.get_node_or_null("CPRHandZone")
+	var zone_y: float = zone.global_position.y if zone != null else NAN
+	var marker_y: float = common_marker.global_position.y if common_marker != null else NAN
+	print("Avatar diag: floor_y=%.3f avatar_y=%.3f lowest_y=%.3f (lowest-floor=%.1f cm) chest_zone_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s sticks L=%s R=%s"
+		% [floor_y, global_position.y, lowest, (lowest - floor_y) * 100.0, zone_y, marker_y, (zone_y - marker_y) * 100.0,
+		   str(target.position), str(left), str(right)])
+
+
 func _update_nudge(delta: float) -> void:
+	_print_diagnostics(delta)
 	if not enable_nudge or target == null:
 		return
 
@@ -276,20 +302,53 @@ func _update_nudge(delta: float) -> void:
 		_was_nudging = false
 
 
+const MANUAL_NUDGE_LIMIT_M := 0.15
+
+
+## Vertical placement from the markers, not from the floor. The markers are glued to the
+## real chest; the hand target lies on the avatar's chest surface. Shift the mesh along the
+## rig's down axis so the hand target sits exactly in the marker plane. Until 2026-09-16 the
+## mesh was baked ~50 cm below the common point and the floor rule lifted it back onto the
+## headset's floor, so the avatar's height came from the floor estimate - which moved by
+## 5-10 cm between sessions (markers read 12 cm above it one day, 17-22 cm the next), putting
+## the avatar's chest first 2 cm above, then 4-7 cm below the real chest.
+const CHEST_ZONE_NODE := "CPRHandZone"
+## Sink allowed below the reported floor before the safety lift acts: the floor estimate is
+## that uncertain, and the scanned mesh is ~1.5 cm thicker below the chest than the mannequin.
+const FLOOR_TOLERANCE_M := 0.05
+
+
+func _align_chest_to_markers() -> void:
+	if target == null:
+		return
+	var zone: Node3D = target.get_node_or_null(CHEST_ZONE_NODE)
+	if zone == null:
+		return
+	var zone_in_rig: Vector3 = target.transform * zone.position
+	target.position.z -= zone_in_rig.z
+	_mesh_floor_offset_ready = false
+	print("Avatar vertical: chest surface aligned to the marker plane (mesh shifted %.3f m)." % -zone_in_rig.z)
+
+
 func _apply_manual_nudge(nudge: Vector3) -> void:
+	# A manual alignment is a few centimetres; anything larger is a stuck stick, not intent.
+	var limited := (_manual_nudge + nudge).limit_length(MANUAL_NUDGE_LIMIT_M)
+	nudge = limited - _manual_nudge
 	target.position += nudge
-	_manual_nudge += nudge
+	_manual_nudge = limited
 	_mesh_floor_offset_ready = false
 
 
+## Left stick only: x = across the body, y = along the body (head <-> feet). The avatar's local
+## z is DOWN (floor lock), so a z nudge only pushes the mesh into the floor, where the floor rule
+## lifts it straight back - invisible, and on 2026-09-16 it silently accumulated 58 cm while the
+## user held the right stick believing nothing happened. Height is the floor rule's job.
 func _read_nudge(delta: float) -> Vector3:
 	var direction := Vector3.ZERO
 	if xr_controller_left != null:
 		var left_stick: Vector2 = xr_controller_left.get_vector2("primary")
 		direction.x += left_stick.x
 		direction.y += left_stick.y
-	if xr_controller_right != null:
-		direction.z += -xr_controller_right.get_vector2("primary").y
 	return direction * nudge_speed * delta
 
 

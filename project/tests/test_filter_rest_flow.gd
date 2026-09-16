@@ -66,7 +66,7 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 
 	# Start 35 cm below the floor. A 20 cm-tall mesh has its bottom 10 cm below its rig origin.
 	rig._apply_filtered_pose(Transform3D(Basis.IDENTITY, Vector3(4.0, -0.35, 5.0)))
-	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+	assert(absf(rig._lowest_mesh_world_y(avatar) + rig.FLOOR_TOLERANCE_M) < 1.0e-5)  # rests FLOOR_TOLERANCE_M below the reported floor
 	assert(is_equal_approx(rig.global_position.x, 4.0))
 	assert(is_equal_approx(rig.global_position.z, 5.0))
 	# A downward manual correction must survive repeated marker updates, even below
@@ -75,11 +75,11 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 	rig._apply_manual_nudge(Vector3(0.02, -0.03, 0.01))
 	for i in range(3):
 		rig._apply_filtered_pose(pose)
-		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.03) < 1.0e-5)
-		assert(avatar.global_position.is_equal_approx(Vector3(4.02, 0.07, 5.01)))
+		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.03 + rig.FLOOR_TOLERANCE_M) < 1.0e-5)
+		assert(avatar.global_position.is_equal_approx(Vector3(4.02, 0.07 - rig.FLOOR_TOLERANCE_M, 5.01)))
 	rig._apply_manual_nudge(Vector3(-0.02, 0.03, -0.01))
 	rig._apply_filtered_pose(pose)
-	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+	assert(absf(rig._lowest_mesh_world_y(avatar) + rig.FLOOR_TOLERANCE_M) < 1.0e-5)  # rests FLOOR_TOLERANCE_M below the reported floor
 	# The real rig maps local Z to world down: test that coordinate frame too.
 	pose.basis = Basis(Vector3.RIGHT, Vector3.BACK, Vector3.DOWN)
 	rig._mesh_floor_offset_ready = false
@@ -87,7 +87,7 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 	rig._apply_manual_nudge(Vector3(0, 0, 0.04))
 	for i in range(3):
 		rig._apply_filtered_pose(pose)
-		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.04) < 1.0e-5)
+		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.04 + rig.FLOOR_TOLERANCE_M) < 1.0e-5)
 	rig.free()
 
 

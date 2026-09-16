@@ -124,7 +124,7 @@ target = NodePath("mannequin")
 xr_controller_left = NodePath("../XROrigin3D/LeftHand")
 floor_provider = NodePath("../XROrigin3D")
 enable_nudge = true
-default_nudge = Vector3(-0.008518, -0.022917, 0.048966)
+default_nudge = Vector3(-0.008518, -0.022917, 0)
 
 [node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
 transform = Transform3D(0.6872449, 0, 0, 0, -3.082737e-08, 0.7052474, 0, -0.6681291, -2.920488e-08, 0.065894, -0.023727, 0.530701)

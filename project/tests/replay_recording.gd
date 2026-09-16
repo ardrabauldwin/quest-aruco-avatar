@@ -72,7 +72,9 @@ func run() -> void:
 		for i in range(3):
 			var col := 12 + i * 7
 			if row[col] != "":
-				markers[i].global_transform = camera * read_pose(row, col)
+				var marker_cam := read_pose(row, col)
+				marker_cam.origin = CommonPoseProvider.range_correct(marker_cam.origin)
+				markers[i].global_transform = camera * marker_cam
 				seen.append(markers[i])
 		if not seen.is_empty():
 			selected = seen

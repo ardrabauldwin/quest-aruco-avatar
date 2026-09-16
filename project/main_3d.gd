@@ -183,7 +183,9 @@ func _process(_delta: float) -> void:
 				# markers[id] is the marker pose in CAMERA space; cam_xform is the head pose at
 				# capture time. Bake to world space and freeze it there, so the head can move
 				# between detections without dragging the patch along.
-				marker_nodes[id].global_transform = cam_xform * markers[id]
+				var marker_cam: Transform3D = markers[id]
+				marker_cam.origin = CommonPoseProvider.range_correct(marker_cam.origin)
+				marker_nodes[id].global_transform = cam_xform * marker_cam
 				marker_nodes[id].set_meta("last_detected_ms", result_timestamp_ms)
 
 	# (b) Hand the newest camera frame to the worker. get_image() (the GPU->CPU readback) and the

@@ -10,7 +10,10 @@ def main(path):
     def P(rs, k): return np.array([[float(r[k+"_x"]), float(r[k+"_y"]), float(r[k+"_z"])] for r in rs])
     def Y(rs, k): return np.array([float(r[k+"_yaw"]) for r in rs])
     front = [r for r in rows if r["phase"] == "front"]
-    if not front: print("no ready front rows"); return
+    if not front:
+        # short or unsettled front phase: use the return-to-front phase as the reference instead
+        front = [r for r in rows if r["phase"] == "front_return"] or rows[:50]
+        print("(reference: front_return, no ready front rows)")
     ref = np.median(P(front, "avatar"), axis=0); refy = np.median(Y(front, "avatar"))
     # jumps: consecutive avatar rows further apart than 1.5 cm
     A = P(rows, "avatar"); jumps = np.linalg.norm(np.diff(A, axis=0), axis=1) > 0.015

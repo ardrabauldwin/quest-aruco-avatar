@@ -249,6 +249,24 @@ func _rotation_medoid(poses: Array[Transform3D]) -> Quaternion:
 	return best
 
 
+## Residual range error after the constant fx scale: the marker range reads right at ~1.2 m and
+## too LONG beyond it, by RANGE_CORRECTION_K per metre of extra range (viewpoint recordings
+## 2026-09-15, both sessions, common and navel: +5.8..+5.9 cm per m; joint fit k = 0.064,
+## zero at 1.20 m). That is the "avatar retreats when I step back". Applied to the camera-space
+## marker translation before it is baked to world (main_3d.gd and the replay), it leaves the
+## common and navel markers within 1 cm of their close-range position out to 2.2 m. The chest
+## marker keeps an extra, steeper error beyond 1.6 m that this does not model.
+const RANGE_CORRECTION_K := 0.064
+const RANGE_CORRECTION_R0 := 1.20
+
+
+static func range_correct(ray_cam: Vector3) -> Vector3:
+	var r := ray_cam.length()
+	if r <= RANGE_CORRECTION_R0:
+		return ray_cam
+	return ray_cam * (1.0 - RANGE_CORRECTION_K * (r - RANGE_CORRECTION_R0) / r)
+
+
 ## Planar-marker pose ambiguity: seen at a glancing angle (side views, 1.5 m+) solvePnP sometimes
 ## returns the mirror solution. Its normal is then ~90 deg from where a marker lying on the
 ## mannequin can point, its heading 30-40 deg off and its position 12-14 cm off (viewpoint

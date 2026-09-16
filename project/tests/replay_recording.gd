@@ -45,6 +45,11 @@ func run() -> void:
 	rig.common_marker = markers[0]
 	rig.chest_marker = markers[1]
 	rig.torso_marker = markers[2]
+	var head := Node3D.new()
+	head.name = "Head"
+	root.add_child(head)
+	if not ("nogate" in args):
+		rig.head = head
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
 	root.add_child(rig)
 	if args.size() > 2:
@@ -53,7 +58,7 @@ func run() -> void:
 		rig._common_provider.flip_hold_ms = int(args[3])
 	var output := FileAccess.open(out_path, FileAccess.WRITE)
 	assert(output != null)
-	output.store_line("time_s,phase,ready,n_markers,raw_x,raw_y,raw_z,raw_yaw,avatar_x,avatar_y,avatar_z,avatar_yaw,rejected_flips")
+	output.store_line("time_s,phase,ready,n_markers,raw_x,raw_y,raw_z,raw_yaw,avatar_x,avatar_y,avatar_z,avatar_yaw,rejected_flips,gate")
 	var hz := 72.0
 	var tick := float(rows[0][1])
 	var start := tick
@@ -69,6 +74,7 @@ func run() -> void:
 			tick += 1000.0 / hz
 		var seen: Array = []
 		var camera := read_pose(row, 5)
+		head.global_transform = camera
 		for i in range(3):
 			var col := 12 + i * 7
 			if row[col] != "":
@@ -87,10 +93,12 @@ func run() -> void:
 				values.append(str(v))
 			values.append(str(rad_to_deg(atan2(p.basis.y.x, p.basis.y.z))))
 		values.append(str(rig._common_provider.rejected_flips))
+		values.append(rig.gate_state)
 		output.store_line(",".join(values))
 	output.close()
 	print("Replay written: ", out_path, "  rows=", rows.size(), "  rejected flips=", rig._common_provider.rejected_flips)
 	rig.free()
+	head.free()
 	for marker in markers:
 		marker.free()
 	quit()

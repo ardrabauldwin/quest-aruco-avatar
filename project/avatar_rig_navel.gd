@@ -26,6 +26,13 @@ extends Node3D
 ## Supplies the Quest floor height (has_floor / floor_height_world). The floor is a one-sided
 ## boundary only: it prevents penetration but never replaces the marker-measured height.
 @export var floor_provider: Node
+## The viewer's head (XRCamera3D). Drives the viewer-motion gate: the marker error changes only
+## while the head moves, the mannequin can move at any time. So while the head moves the avatar
+## holds; once the head has settled, the difference between what the markers read from here and
+## where the avatar stands is measured. A small difference (viewpoint bias) is subtracted from
+## every measurement while the viewer stays there, so the avatar neither drifts nor jumps; a
+## large one means the mannequin was moved, and the avatar follows. Null disables the gate.
+@export var head: Node3D
 
 # Version the writable copy so this build starts from the validated previous calibration instead
 # of silently loading either of the older on-device calibration files.
@@ -166,6 +173,11 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 	var raw_pose := _common_provider.get_pose(markers, detection_ms)
 	if not _common_provider.is_ready():
 		return
+	if head != null and _filter.is_ready() and _common_provider.has_rest_pose():
+		var gated := _gate_measurement(raw_pose, detection_ms, delta)
+		if gated.is_empty():
+			return
+		raw_pose = gated["pose"]
 
 	var filtered_pose := _filter.update(
 		raw_pose,
@@ -187,6 +199,108 @@ func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 		_filter.complete_rest_reanchor(reanchor_position, reanchor_rotation)
 	if _filter.is_ready() and _common_provider.has_rest_pose():
 		_apply_filtered_pose(filtered_pose)
+
+
+static func _yaw_of(basis: Basis) -> float:
+	return atan2(basis.y.x, basis.y.z)
+
+
+static func _head_yaw(basis: Basis) -> float:
+	return atan2(-basis.z.x, -basis.z.z)
+
+
+## True while the head is moving or has been still for less than HEAD_SETTLE_S. Speed and turn
+## are taken over a HEAD_WINDOW_S window, so a head updated only ~10x per second (replay) and a
+## head updated every frame (device) read the same.
+func _head_moving(delta: float) -> bool:
+	_head_time_s += delta
+	var t: Transform3D = head.global_transform
+	var yaw := _head_yaw(t.basis)
+	_head_samples.append([_head_time_s, t.origin, yaw])
+	while _head_samples.size() > 1 and float(_head_samples[0][0]) < _head_time_s - HEAD_WINDOW_S:
+		_head_samples.pop_front()
+	var first: Array = _head_samples[0]
+	var span := _head_time_s - float(first[0])
+	var moving := false
+	if span > 0.05:
+		var speed := t.origin.distance_to(first[1]) / span
+		var turn := rad_to_deg(absf(wrapf(yaw - float(first[2]), -PI, PI))) / span
+		moving = speed > HEAD_STILL_SPEED_MPS or turn > HEAD_STILL_TURN_DPS
+	if moving:
+		_head_still_s = 0.0
+	else:
+		_head_still_s += delta
+	return _head_still_s < HEAD_SETTLE_S
+
+
+## Returns {} to hold the avatar this frame, or {"pose": measurement to feed the stabilizer}.
+func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float) -> Dictionary:
+	var moving := _head_moving(delta)
+	var display := global_transform
+	var offset := raw_pose.origin - display.origin
+	offset.y = 0.0   # height is held separately
+	var offset_deg := rad_to_deg(absf(wrapf(_yaw_of(raw_pose.basis) - _yaw_of(display.basis), -PI, PI)))
+	if offset.length() > FOLLOW_ANYWAY_M or offset_deg > FOLLOW_ANYWAY_DEG:
+		# A single far-range spike must not count: the move has to persist over detections.
+		if detection_ms != _follow_big_last_ms:
+			_follow_big_last_ms = detection_ms
+			_follow_big_count += 1
+		if _follow_big_count >= FOLLOW_ANYWAY_DETECTIONS:
+			_view_bias_ready = false
+			_view_bias_samples.clear()
+			gate_state = "follow_big"
+			return {"pose": raw_pose}
+	else:
+		_follow_big_count = 0
+	if moving:
+		_view_bias_ready = false
+		_view_bias_samples.clear()
+		gate_state = "hold_moving"
+		return {}
+	if head.global_position.distance_to(display.origin) > JUDGE_MOVE_MAX_RANGE_M:
+		# Too far to trust the markers for anything but a big move: hold. Smaller moves are
+		# picked up when the viewer comes closer (the near settle then reads them as a move).
+		_view_bias_ready = false
+		_view_bias_samples.clear()
+		gate_state = "hold_far"
+		return {}
+	if not _view_bias_ready:
+		if detection_ms != _view_bias_last_ms:
+			_view_bias_last_ms = detection_ms
+			_view_bias_samples.append(raw_pose)
+		if _view_bias_samples.size() < VIEW_BIAS_SAMPLES:
+			gate_state = "settling"
+			return {}
+		var xs: Array[float] = []
+		var zs: Array[float] = []
+		var yaws: Array[float] = []
+		var display_yaw := _yaw_of(display.basis)
+		for sample in _view_bias_samples:
+			xs.append((sample as Transform3D).origin.x - display.origin.x)
+			zs.append((sample as Transform3D).origin.z - display.origin.z)
+			yaws.append(wrapf(_yaw_of((sample as Transform3D).basis) - display_yaw, -PI, PI))
+		xs.sort()
+		zs.sort()
+		yaws.sort()
+		var mid := VIEW_BIAS_SAMPLES / 2
+		var bias := Vector3(xs[mid], 0.0, zs[mid])
+		var bias_yaw: float = yaws[mid]
+		_view_bias_samples.clear()
+		_view_bias_ready = true
+		if bias.length() <= VIEW_BIAS_MAX_M and rad_to_deg(absf(bias_yaw)) <= VIEW_BIAS_MAX_DEG:
+			_view_bias_position = bias
+			_view_bias_yaw = bias_yaw
+			gate_state = "biased"
+			print("Viewer gate: settled; viewpoint bias %.1f cm / %.1f deg absorbed." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
+		else:
+			_view_bias_position = Vector3.ZERO
+			_view_bias_yaw = 0.0
+			gate_state = "follow_moved"
+			print("Viewer gate: settled; markers moved %.1f cm / %.1f deg while the head was still - following." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
+	var corrected := raw_pose
+	corrected.origin -= _view_bias_position
+	corrected.basis = Basis(Vector3.UP, -_view_bias_yaw) * corrected.basis
+	return {"pose": corrected}
 
 
 ## Place the rig at the ArUco pose, then treat the Quest floor as a boundary: if the avatar's
@@ -299,8 +413,8 @@ func _print_diagnostics(delta: float) -> void:
 	var zone: Node3D = target.get_node_or_null("CPRHandZone")
 	var zone_y: float = zone.global_position.y if zone != null else NAN
 	var marker_y: float = common_marker.global_position.y if common_marker != null else NAN
-	print("Avatar diag: floor_y=%.3f avatar_y=%.3f lowest_y=%.3f (lowest-floor=%.1f cm) chest_zone_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s sticks L=%s R=%s"
-		% [floor_y, global_position.y, lowest, (lowest - floor_y) * 100.0, zone_y, marker_y, (zone_y - marker_y) * 100.0,
+	print("Avatar diag: gate=%s floor_y=%.3f avatar_y=%.3f lowest_y=%.3f (lowest-floor=%.1f cm) chest_zone_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s sticks L=%s R=%s"
+		% [gate_state, floor_y, global_position.y, lowest, (lowest - floor_y) * 100.0, zone_y, marker_y, (zone_y - marker_y) * 100.0,
 		   str(target.position), str(left), str(right)])
 
 
@@ -332,6 +446,37 @@ const CHEST_ZONE_NODE := "CPRHandZone"
 ## Sink allowed below the reported floor before the safety lift acts: the floor estimate is
 ## that uncertain, and the scanned mesh is ~1.5 cm thicker below the chest than the mannequin.
 const FLOOR_TOLERANCE_M := 0.05
+
+# --- Viewer-motion gate (see `head`) ---
+const HEAD_STILL_SPEED_MPS := 0.15
+const HEAD_STILL_TURN_DPS := 20.0
+const HEAD_WINDOW_S := 0.3
+const HEAD_SETTLE_S := 0.5
+## Largest marker-vs-avatar difference still read as viewpoint bias (recordings 2026-09-15:
+## <= 5 cm / <= 3 deg at working distance after the flip gate and range correction).
+const VIEW_BIAS_MAX_M := 0.06
+const VIEW_BIAS_MAX_DEG := 6.0
+const VIEW_BIAS_SAMPLES := 5
+## A difference this large is followed even while the head moves: no viewpoint bias is that big.
+const FOLLOW_ANYWAY_M := 0.15
+const FOLLOW_ANYWAY_DEG := 15.0
+## From farther than this the marker error can exceed VIEW_BIAS_MAX_M (chest marker 9.5 cm at
+## 2.2 m in the replay), so a small move is not judged from there: it is absorbed as bias and
+## followed once the viewer is closer, or at once when it exceeds FOLLOW_ANYWAY_M.
+const JUDGE_MOVE_MAX_RANGE_M := 1.8
+
+var _head_samples: Array = []      # [time_s, position, yaw]
+var _head_time_s := 0.0
+var _head_still_s := 0.0
+var _view_bias_ready := false
+var _view_bias_position := Vector3.ZERO
+var _view_bias_yaw := 0.0
+var _view_bias_samples: Array = []
+var _view_bias_last_ms := -1
+var _follow_big_count := 0
+var _follow_big_last_ms := -1
+const FOLLOW_ANYWAY_DETECTIONS := 3
+var gate_state := "off"
 var _held_height := 0.0
 var _has_held_height := false
 

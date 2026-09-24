@@ -4,12 +4,13 @@ how far it sat from its front position (drift, cm / deg), and how often it jumpe
 import csv, sys, numpy as np
 STILL = ["front", "left", "right", "far_front", "far_left", "far_right", "front_return"]
 def wrap(d): return (d + 180.0) % 360.0 - 180.0
+REF = "front"
 def main(path):
     rows = list(csv.DictReader(open(path, newline="")))
     rows = [r for r in rows if r["ready"] == "1"]
     def P(rs, k): return np.array([[float(r[k+"_x"]), float(r[k+"_y"]), float(r[k+"_z"])] for r in rs])
     def Y(rs, k): return np.array([float(r[k+"_yaw"]) for r in rs])
-    front = [r for r in rows if r["phase"] == "front"]
+    front = [r for r in rows if r["phase"] == REF]
     if not front:
         # short or unsettled front phase: use the return-to-front phase as the reference instead
         front = [r for r in rows if r["phase"] == "front_return"] or rows[:50]
@@ -32,4 +33,7 @@ def main(path):
         print(f"{ph:13s}{len(rs):5d}{wob:22.1f}{ywob:13.1f}{np.linalg.norm(med-ref)*100:10.1f}{wrap(np.median(ya)-refy):11.1f}{rwob:15.1f}{nj:7d}")
     print(f"total rows {len(rows)}, avatar jumps > 1.5 cm between rows: {int(jumps.sum())}, rejected flips: {rows[-1]['rejected_flips']}")
 if __name__ == "__main__":
-    for p in sys.argv[1:]: main(p)
+    args = sys.argv[1:]
+    if args and args[0].startswith("--ref="):
+        REF = args.pop(0)[6:]
+    for p in args: main(p)

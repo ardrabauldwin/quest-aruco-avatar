@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://avatar_placement_status.gd" id="9_status"]
 [ext_resource type="Script" path="res://cpr_feedback_hud.gd" id="10_cpr_hud"]
 [ext_resource type="Script" path="res://depth_probe.gd" id="11_depth_probe"]
+[ext_resource type="Script" uid="uid://bowhoc6sk1l2c" path="res://addons/opencv_aruco/aruco_marker_tracking.gd" id="12_aruco"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_wiwsh"]
 
@@ -24,6 +25,18 @@ height = 0.04
 
 [node name="main3d" type="Node3D" unique_id=327546220]
 script = ExtResource("1_wiwsh")
+
+[node name="ArucoMarkerTracking" type="Node" parent="."]
+script = ExtResource("12_aruco")
+default_marker_size = 0.1
+marker_sizes = Array[float]([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+marker_dictionary = 1
+camera_preview_enabled = true
+camera_intrinsics = Vector4(821.8, 823, 645.36226952, 642.24557861)
+camera_distortion = PackedFloat64Array(0, 0, 0, 0, 0)
+image_downscale_factor = 0.5
+lens_rotation_raw = Quaternion(-0.99519097805023, 0.00269138417207, 0.00294101587497, 0.09787271916866)
+lens_translation = Vector3(-0.03237725794315, -0.01770938560367, -0.06345107406378)
 
 [node name="XROrigin3D" type="XROrigin3D" parent="." unique_id=1743576496]
 script = ExtResource("2_xr")

@@ -37,7 +37,7 @@ tracker = &"right_hand"
 [node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D" unique_id=1388799716]
 
 [node name="CPRFeedbackHUD" type="Node3D" parent="XROrigin3D/XRCamera3D" node_paths=PackedStringArray("zone")]
-position = Vector3(0, 0.06, -0.8)
+position = Vector3(0, -0.22, -0.8)
 process_priority = 30
 script = ExtResource("10_cpr_hud")
 zone = NodePath("../../../AvatarRig/mannequin/CPRHandZone")
@@ -114,6 +114,7 @@ transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.01, 0, 0, 0)
 mesh = SubResource("BoxMesh_wiwsh")
 
 [node name="AvatarRig" type="Node3D" parent="." unique_id=98577932 node_paths=PackedStringArray("common_marker", "chest_marker", "torso_marker", "xr_controller_right", "target", "xr_controller_left", "floor_provider", "head")]
+head = NodePath("../XROrigin3D/XRCamera3D")
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, 0, 0, 0)
 script = ExtResource("6_navel")
 common_marker = NodePath("../XROrigin3D/XRCamera3D/aruco_patch0")
@@ -123,9 +124,9 @@ xr_controller_right = NodePath("../XROrigin3D/RightHand")
 target = NodePath("mannequin")
 xr_controller_left = NodePath("../XROrigin3D/LeftHand")
 floor_provider = NodePath("../XROrigin3D")
-head = NodePath("../XROrigin3D/XRCamera3D")
 enable_nudge = true
-default_nudge = Vector3(-0.008518, -0.022917, 0)
+default_nudge = Vector3(-0.018649, -0.056927, 0.056819)
+default_yaw_deg = 6.79
 
 [node name="mannequin" parent="AvatarRig" unique_id=580496068 instance=ExtResource("4_mann")]
 transform = Transform3D(0.6872449, 0, 0, 0, -3.082737e-08, 0.7052474, 0, -0.6681291, -2.920488e-08, 0.065894, -0.023727, 0.530701)

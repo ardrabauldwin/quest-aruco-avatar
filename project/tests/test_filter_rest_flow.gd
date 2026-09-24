@@ -66,28 +66,49 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 
 	# Start 35 cm below the floor. A 20 cm-tall mesh has its bottom 10 cm below its rig origin.
 	rig._apply_filtered_pose(Transform3D(Basis.IDENTITY, Vector3(4.0, -0.35, 5.0)))
-	assert(absf(rig._lowest_mesh_world_y(avatar) + rig.FLOOR_TOLERANCE_M) < 1.0e-5)  # rests FLOOR_TOLERANCE_M below the reported floor
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
 	assert(is_equal_approx(rig.global_position.x, 4.0))
 	assert(is_equal_approx(rig.global_position.z, 5.0))
-	# A downward manual correction must survive repeated marker updates, even below
-	# the detected floor. Returning the stick offset to zero restores floor contact.
+	# A floating mesh must also land; cached geometry includes the current manual offset.
+	rig._apply_filtered_pose(Transform3D(Basis.IDENTITY, Vector3(4.0, 0.8, 5.0)))
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5, "Floating avatar must land")
+	# Manual nudging may touch the floor but must not pass through it, including
+	# the same frame and while marker updates are held.
 	var pose := Transform3D(Basis.IDENTITY, Vector3(4.0, -0.35, 5.0))
 	rig._apply_manual_nudge(Vector3(0.02, -0.03, 0.01))
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
 	for i in range(3):
 		rig._apply_filtered_pose(pose)
-		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.03 + rig.FLOOR_TOLERANCE_M) < 1.0e-5)
-		assert(avatar.global_position.is_equal_approx(Vector3(4.02, 0.07 - rig.FLOOR_TOLERANCE_M, 5.01)))
+		assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+		assert(avatar.global_position.is_equal_approx(Vector3(4.02, 0.1, 5.01)))
+	for i in 20:
+		rig._apply_manual_nudge(Vector3(0, -0.01, 0))
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5, "Manual offsets cannot move the mesh below the floor")
 	rig._apply_manual_nudge(Vector3(-0.02, 0.03, -0.01))
-	rig._apply_filtered_pose(pose)
-	assert(absf(rig._lowest_mesh_world_y(avatar) + rig.FLOOR_TOLERANCE_M) < 1.0e-5)  # rests FLOOR_TOLERANCE_M below the reported floor
+	for i in 3:
+		rig._apply_filtered_pose(pose)
+		assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5, "Floor contact includes upward manual offsets")
+	rig._apply_manual_nudge(Vector3(0, -0.03, 0))
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
 	# The real rig maps local Z to world down: test that coordinate frame too.
 	pose.basis = Basis(Vector3.RIGHT, Vector3.BACK, Vector3.DOWN)
 	rig._mesh_floor_offset_ready = false
 	rig._apply_filtered_pose(pose)
 	rig._apply_manual_nudge(Vector3(0, 0, 0.04))
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
 	for i in range(3):
 		rig._apply_filtered_pose(pose)
-		assert(absf(rig._lowest_mesh_world_y(avatar) + 0.04 + rig.FLOOR_TOLERANCE_M) < 1.0e-5)
+		assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+	rig._apply_manual_nudge(Vector3(0, 0, -0.02))
+	rig._apply_filtered_pose(pose)
+	assert(absf(rig._lowest_mesh_world_y(avatar)) < 1.0e-5)
+	# A changing floor estimate must still bound the actual mesh.
+	floor_provider.height = 0.05
+	rig._apply_filtered_pose(pose)
+	assert(rig._lowest_mesh_world_y(avatar) >= 0.05 - 1.0e-5)
+	floor_provider.height = -0.12
+	rig._apply_filtered_pose(pose)
+	assert(absf(rig._lowest_mesh_world_y(avatar) + 0.12) < 1.0e-5, "Lower floor must lower the actual mesh")
 	rig.free()
 
 

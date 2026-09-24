@@ -22,9 +22,12 @@ extends Node3D
 @export var nudge_speed := 0.05
 ## Saved manual alignment relative to the scene's original placement, in rig-local metres.
 @export var default_nudge := Vector3.ZERO
+## Rotation about the chest, in degrees around world up after floor locking.
+@export var default_yaw_deg := 0.0
+@export var nudge_yaw_speed_dps := 10.0
 @export var xr_controller_left: XRController3D
-## Supplies the Quest floor height (has_floor / floor_height_world). The floor is a one-sided
-## boundary only: it prevents penetration but never replaces the marker-measured height.
+## Supplies the Quest floor height (has_floor / floor_height_world).
+## The actual mesh bottom, including manual translation, is placed on this floor.
 @export var floor_provider: Node
 ## The viewer's head (XRCamera3D). Drives the viewer-motion gate: the marker error changes only
 ## while the head moves, the mannequin can move at any time. So while the head moves the avatar
@@ -38,6 +41,8 @@ extends Node3D
 # of silently loading either of the older on-device calibration files.
 const SAVE_PATH := "user://navel_calibration_20260905.cfg"
 const DEFAULT_CALIBRATION_PATH := "res://default_navel_calibration.cfg"
+const YAW_ALIGNMENT_PATH := "user://avatar_yaw_alignment.cfg"
+const YAW_STICK_DEAD_ZONE := 0.2
 
 # Runtime filter values selected by tune_filter.py on the 2026-09-04 labelled session
 # (calibration 1788433311 + stationary 1788430472 + moving 1788431407 at 617.5 mm):
@@ -70,15 +75,67 @@ var _tracking_was_available := false
 var _application_paused := false
 var _runtime_initialized := false
 var _mesh_floor_offset_ready := false
+var _floor_placement_active := false
 var _lowest_mesh_vertex_offset_y := 0.0
 var _manual_nudge := Vector3.ZERO
+var _manual_yaw := 0.0
+var _held_height := 0.0
+var _has_held_height := false
+var _held_samples: Array[float] = []
+var _held_last_ms := -1
+var _common_seen_ms := -1
+var _full_evidence_now := true
+const HELD_HEIGHT_DETECTIONS := 12
+const HELD_HEIGHT_MINIMUM := 5
+const HELD_HEIGHT_TIMEOUT_S := 8.0
+var _held_learning_s := 0.0
+var _yaw_dirty := false
+
+# --- Viewer-motion gate (see `head`) ---
+const HEAD_STILL_SPEED_MPS := 0.15
+const HEAD_STILL_TURN_DPS := 20.0
+const HEAD_WINDOW_S := 0.3
+const HEAD_SETTLE_S := 0.5
+## Largest marker-vs-avatar difference still read as viewpoint bias. The 2026-09-15 recordings
+## gave <= 5 cm / <= 3 deg at working distance, so this was 6 cm. On the headset it is bigger:
+## 2026-09-24 11:34, mannequin untouched, the raw common-marker height alone swept 12.1 -> 18.2 cm
+## as the user moved round, and the gate twice called that a 14-15 cm "move" and jumped the avatar
+## from a side view. Set above the measured sweep so walking round is absorbed, not followed.
+const VIEW_BIAS_MAX_M := 0.10
+const VIEW_BIAS_MAX_DEG := 10.0
+const VIEW_BIAS_SAMPLES := 5
+## A difference this large is followed even while the head moves: no viewpoint bias is that big.
+## Raised with VIEW_BIAS_MAX_M: a far side view can throw the raw pose 15 cm on its own, and on
+## 2026-09-24 that fired "follow_big" with the mannequin untouched.
+const FOLLOW_ANYWAY_M := 0.30
+const FOLLOW_ANYWAY_DEG := 25.0
+## From farther than this the marker error can exceed VIEW_BIAS_MAX_M (chest marker 9.5 cm at
+## 2.2 m in the replay), so a small move is not judged from there: it is absorbed as bias and
+## followed once the viewer is closer, or at once when it exceeds FOLLOW_ANYWAY_M.
+const JUDGE_MOVE_MAX_RANGE_M := 1.8
+
+var _head_samples: Array = []      # [time_s, position, yaw]
+var _head_time_s := 0.0
+var _head_still_s := 0.0
+var _view_bias_ready := false
+var _view_bias_position := Vector3.ZERO
+var _view_bias_yaw := 0.0
+var _view_bias_samples: Array = []
+var _view_bias_last_ms := -1
+var _follow_big_count := 0
+var _window_partial := false   # a settle window that saw hidden markers or a hand on the chest
+var _follow_big_last_ms := -1
+const FOLLOW_ANYWAY_DETECTIONS := 3
+var gate_state := "off"
+var _diag_timer := 0.0
 
 
 func _ready() -> void:
 	visible = false
 	if target != null:
-		_apply_manual_nudge(default_nudge)
 		_align_chest_to_markers()
+		_apply_manual_nudge(default_nudge)
+		_apply_manual_yaw(deg_to_rad(_load_manual_yaw()))
 	_markers = [common_marker, chest_marker, torso_marker]
 	_filter.configure(
 		FILTER_WINDOW,
@@ -115,6 +172,8 @@ func _notification(what: int) -> void:
 		_common_provider.recalibrate_orientation()
 		_filter.reset()
 		_has_held_height = false
+		_held_samples.clear()
+		_held_learning_s = 0.0
 		visible = false
 		print("Common pose: app resumed; collecting a fresh session rest pose.")
 
@@ -127,6 +186,9 @@ func _process(delta: float) -> void:
 		_hold_after_tracking_loss()
 	else:
 		_update_tracking(result_markers, result_timestamp_ms, delta)
+	if _common_provider.has_rest_pose() and not _has_held_height:
+		_held_learning_s += delta
+	_print_diagnostics(delta)
 
 	# Once a pose is confirmed, keep it visible through marker loss and reacquisition.
 	# Startup, app resume, and re-levelling still require a newly confirmed rest pose.
@@ -171,10 +233,12 @@ func _newest_marker_result() -> Dictionary:
 func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
 	_tracking_was_available = true
 	var raw_pose := _common_provider.get_pose(markers, detection_ms)
+	_common_seen_ms = detection_ms if common_marker in markers else -1
 	if not _common_provider.is_ready():
 		return
 	if head != null and _filter.is_ready() and _common_provider.has_rest_pose():
-		var gated := _gate_measurement(raw_pose, detection_ms, delta)
+		_full_evidence_now = markers.size() >= 3 and not _hand_over_chest()
+		var gated := _gate_measurement(raw_pose, detection_ms, delta, _full_evidence_now)
 		if gated.is_empty():
 			return
 		raw_pose = gated["pose"]
@@ -234,13 +298,26 @@ func _head_moving(delta: float) -> bool:
 
 
 ## Returns {} to hold the avatar this frame, or {"pose": measurement to feed the stabilizer}.
-func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float) -> Dictionary:
+## A hand over the chest hides markers; the zone reports it (see CPRHandZone.hand_over_chest).
+func _hand_over_chest() -> bool:
+	if target == null:
+		return false
+	var zone := target.get_node_or_null("CPRHandZone")
+	return zone != null and bool(zone.get("hand_over_chest"))
+
+
+## full_evidence: all markers visible and no hand over the chest. Only then may a difference be
+## read as the mannequin having moved (device log 2026-09-22: partial marker sets shifted the
+## fused pose 9-15 cm while hands were being placed, and the avatar followed five times).
+func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float, full_evidence: bool = true) -> Dictionary:
 	var moving := _head_moving(delta)
+	if not full_evidence:
+		_window_partial = true
 	var display := global_transform
 	var offset := raw_pose.origin - display.origin
 	offset.y = 0.0   # height is held separately
 	var offset_deg := rad_to_deg(absf(wrapf(_yaw_of(raw_pose.basis) - _yaw_of(display.basis), -PI, PI)))
-	if offset.length() > FOLLOW_ANYWAY_M or offset_deg > FOLLOW_ANYWAY_DEG:
+	if (offset.length() > FOLLOW_ANYWAY_M or offset_deg > FOLLOW_ANYWAY_DEG) and full_evidence:
 		# A single far-range spike must not count: the move has to persist over detections.
 		if detection_ms != _follow_big_last_ms:
 			_follow_big_last_ms = detection_ms
@@ -255,6 +332,7 @@ func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float) -
 	if moving:
 		_view_bias_ready = false
 		_view_bias_samples.clear()
+		_window_partial = false
 		gate_state = "hold_moving"
 		return {}
 	if head.global_position.distance_to(display.origin) > JUDGE_MOVE_MAX_RANGE_M:
@@ -292,6 +370,14 @@ func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float) -
 			_view_bias_yaw = bias_yaw
 			gate_state = "biased"
 			print("Viewer gate: settled; viewpoint bias %.1f cm / %.1f deg absorbed." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
+		elif _window_partial:
+			# Not enough evidence for a move: markers were hidden or a hand was on the chest during
+			# the window. Hold the avatar and judge again from the next full window.
+			_view_bias_ready = false
+			_window_partial = false
+			gate_state = "hold_partial"
+			print("Viewer gate: %.1f cm / %.1f deg difference with markers hidden or hands on the chest - holding." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
+			return {}
 		else:
 			_view_bias_position = Vector3.ZERO
 			_view_bias_yaw = 0.0
@@ -303,25 +389,51 @@ func _gate_measurement(raw_pose: Transform3D, detection_ms: int, delta: float) -
 	return {"pose": corrected}
 
 
-## Place the rig at the ArUco pose, then treat the Quest floor as a boundary: if the avatar's
-## lowest mesh point would sink below the floor, raise the rig by exactly the penetration depth.
-## An avatar above the floor is left untouched, preserving the marker-to-mannequin alignment.
+## Markers supply horizontal placement and heading; a valid floor supplies mesh-bottom height.
+## Marker height remains the fallback when a floor-based XR reference space is unavailable.
 func _apply_filtered_pose(pose: Transform3D) -> void:
 	# The mannequin lies on the floor: its height never changes unless it is lifted, and a lift
 	# re-anchors the rest pose anyway. The live marker height varies by ~5 cm with the viewpoint
-	# (oblique range error has a vertical part; 2026-09-16 log), and a height change seen from
-	# standing height reads as the avatar sliding towards or away from the viewer. So the height
-	# is the rest anchor's, learned at placement from the front where the error is smallest.
+	# (the oblique range error has a vertical part), and a height change seen from standing
+	# height reads as the avatar sliding towards or away from the viewer. So the height is the
+	# rest anchor's, learned once at placement from the front where the error is smallest.
+	# Learned from the common marker's OWN detections, not from the fused rest pose: the fused
+	# y carries the chest/navel calibration error (2026-09-22 22:55: rest pose 0.129 m, common
+	# marker 0.162-0.176 m, avatar chest 5-6 cm below the real chest). Median of the first
+	# HELD_HEIGHT_DETECTIONS detections after placement; the live marker y until then.
 	if _common_provider.has_rest_pose():
-		# Learned once, when the session rest pose settles (front view, close, ~1 cm error).
-		# Later re-anchors are ignored for the height: a far-view re-anchor carried that view's
-		# 8-17 cm range error into the height (replay 2026-09-16). If the mannequin is lifted onto
-		# a table mid-session, re-level (controller button) or restart; both relearn the height.
-		if not _has_held_height:
-			_held_height = _common_provider.rest_pose().origin.y
-			_has_held_height = true
-		pose.origin.y = _held_height
+		# Only clean detections teach the height: 2026-09-24 09:59 a marker half covered by hands
+		# read 7-8 cm instead of 17 and the height was held there. The guard is "no hand over the
+		# chest", NOT "all three markers": the height is read from the common marker's own node, so
+		# the other two are irrelevant, and requiring them made clean samples so rare (23 % of
+		# frames carry three markers) that learning never finished - every session after v44 sat at
+		# learning(1..15) and the avatar's height stayed a median of a handful of noisy samples.
+		if not _has_held_height and _common_seen_ms >= 0 and _common_seen_ms != _held_last_ms and not _hand_over_chest():
+			_held_last_ms = _common_seen_ms
+			_held_samples.append(common_marker.global_position.y)
+			# Finish on enough samples, or on the timeout with at least a usable few, so the height
+			# can never stay half-learned while the user is already compressing.
+			if _held_samples.size() >= HELD_HEIGHT_DETECTIONS or (
+				_held_learning_s >= HELD_HEIGHT_TIMEOUT_S and _held_samples.size() >= HELD_HEIGHT_MINIMUM):
+				_held_samples.sort()
+				_held_height = _held_samples[_held_samples.size() / 2]
+				_has_held_height = true
+				print("Avatar vertical: height held at %.3f m from %d common-marker detections." % [_held_height, _held_samples.size()])
+		if _has_held_height:
+			pose.origin.y = _held_height
+		elif not _held_samples.is_empty():
+			# Running median while learning, so the height converges instead of stepping.
+			var sorted := _held_samples.duplicate()
+			sorted.sort()
+			pose.origin.y = sorted[sorted.size() / 2]
+	if not global_basis.is_equal_approx(pose.basis):
+		_mesh_floor_offset_ready = false
 	global_transform = pose
+	_floor_placement_active = true
+	_enforce_floor_boundary()
+
+
+func _enforce_floor_boundary() -> void:
 	if floor_provider == null or target == null:
 		return
 	if not floor_provider.has_floor():
@@ -330,8 +442,7 @@ func _apply_filtered_pose(pose: Transform3D) -> void:
 		var measured_lowest := _lowest_mesh_world_y(target)
 		if not is_finite(measured_lowest):
 			return
-		# Floor placement uses the original mesh position. Manual alignment is an
-		# explicit offset from that placement and must not be cancelled by the floor.
+		# Cache geometry without manual translation; add its current world-space value below.
 		var manual_world_offset := global_basis * _manual_nudge
 		_lowest_mesh_vertex_offset_y = measured_lowest - manual_world_offset.y - global_position.y
 		_mesh_floor_offset_ready = true
@@ -339,10 +450,12 @@ func _apply_filtered_pose(pose: Transform3D) -> void:
 			"Floor boundary: exact lowest-vertex offset %.3f m."
 			% _lowest_mesh_vertex_offset_y
 		)
-	var lowest := global_position.y + _lowest_mesh_vertex_offset_y
-	var floor_y: float = floor_provider.floor_height_world() - FLOOR_TOLERANCE_M
-	if lowest < floor_y:
-		global_position.y += floor_y - lowest
+	var floor_y: float = floor_provider.floor_height_world()
+	if not is_finite(floor_y):
+		return
+	var actual_lowest := global_position.y + _lowest_mesh_vertex_offset_y + (global_basis * _manual_nudge).y
+	# Correct either sign: a boundary-only clamp left floating meshes untouched.
+	global_position.y += floor_y - actual_lowest
 
 
 ## World-space bottom from actual triangle vertices. Transforming an AABB's eight corners is
@@ -383,6 +496,8 @@ func _on_button(button_name: String) -> void:
 	visible = false
 	_filter.reset()
 	_has_held_height = false
+	_held_samples.clear()
+	_held_learning_s = 0.0
 	print("Common pose: re-levelling; collecting 30+3 detection checkpoints.")
 
 
@@ -394,124 +509,146 @@ func _on_orientation_settled() -> void:
 	print("Common pose: session orientation settled; marker offsets saved.")
 
 
-var _diag_timer := 0.0
-
-
-## Once a second while placed: the numbers behind "is it below the floor" and "do the sticks
-## do anything". Read with: adb logcat -d | grep -E "Avatar diag|Nudge"
-func _print_diagnostics(delta: float) -> void:
-	_diag_timer += delta
-	if _diag_timer < 1.0 or not visible or target == null:
-		return
-	_diag_timer = 0.0
-	var floor_y: float = floor_provider.floor_height_world() if floor_provider != null and floor_provider.has_floor() else NAN
-	var lowest: float = global_position.y + _lowest_mesh_vertex_offset_y if _mesh_floor_offset_ready else NAN
-	var left: Vector2 = xr_controller_left.get_vector2("primary") if xr_controller_left != null else Vector2.ZERO
-	var right: Vector2 = xr_controller_right.get_vector2("primary") if xr_controller_right != null else Vector2.ZERO
-	# Vertical truth check: the hand target lies on the avatar's chest surface, the common marker
-	# node on the real chest. Same frame, so zone_y - marker_y is the avatar's height error.
-	var zone: Node3D = target.get_node_or_null("CPRHandZone")
-	var zone_y: float = zone.global_position.y if zone != null else NAN
-	var marker_y: float = common_marker.global_position.y if common_marker != null else NAN
-	print("Avatar diag: gate=%s floor_y=%.3f avatar_y=%.3f lowest_y=%.3f (lowest-floor=%.1f cm) chest_zone_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s sticks L=%s R=%s"
-		% [gate_state, floor_y, global_position.y, lowest, (lowest - floor_y) * 100.0, zone_y, marker_y, (zone_y - marker_y) * 100.0,
-		   str(target.position), str(left), str(right)])
-
-
 func _update_nudge(delta: float) -> void:
-	_print_diagnostics(delta)
 	if not enable_nudge or target == null:
 		return
 
 	var nudge := _read_nudge(delta)
-	if nudge != Vector3.ZERO:
-		_apply_manual_nudge(nudge)
+	var yaw := _read_yaw(delta)
+	if nudge != Vector3.ZERO or not is_zero_approx(yaw):
+		if nudge != Vector3.ZERO:
+			_apply_manual_nudge(nudge)
+		if not is_zero_approx(yaw):
+			_apply_manual_yaw(yaw)
+			_yaw_dirty = true
 		_was_nudging = true
 	elif _was_nudging:
 		print("Final mannequin offset: ", target.position)
+		if _yaw_dirty:
+			var error := _save_manual_yaw()
+			if error != OK:
+				push_warning("Could not save avatar angle: %s" % error_string(error))
+			print("Final mannequin yaw: %.2f deg (saved=%s)" % [manual_yaw_degrees(), error == OK])
+			_yaw_dirty = false
 		_was_nudging = false
 
 
-const MANUAL_NUDGE_LIMIT_M := 0.15
+func _apply_manual_nudge(nudge: Vector3) -> void:
+	target.position += nudge
+	_manual_nudge += nudge
+	# The cached baseline excludes this translation, so it remains valid.
+	if _floor_placement_active:
+		_enforce_floor_boundary()
 
 
-## Vertical placement from the markers, not from the floor. The markers are glued to the
-## real chest; the hand target lies on the avatar's chest surface. Shift the mesh along the
-## rig's down axis so the hand target sits exactly in the marker plane. Until 2026-09-16 the
-## mesh was baked ~50 cm below the common point and the floor rule lifted it back onto the
-## headset's floor, so the avatar's height came from the floor estimate - which moved by
-## 5-10 cm between sessions (markers read 12 cm above it one day, 17-22 cm the next), putting
-## the avatar's chest first 2 cm above, then 4-7 cm below the real chest.
-const CHEST_ZONE_NODE := "CPRHandZone"
-## Sink allowed below the reported floor before the safety lift acts: the floor estimate is
-## that uncertain, and the scanned mesh is ~1.5 cm thicker below the chest than the mannequin.
-const FLOOR_TOLERANCE_M := 0.05
-
-# --- Viewer-motion gate (see `head`) ---
-const HEAD_STILL_SPEED_MPS := 0.15
-const HEAD_STILL_TURN_DPS := 20.0
-const HEAD_WINDOW_S := 0.3
-const HEAD_SETTLE_S := 0.5
-## Largest marker-vs-avatar difference still read as viewpoint bias (recordings 2026-09-15:
-## <= 5 cm / <= 3 deg at working distance after the flip gate and range correction).
-const VIEW_BIAS_MAX_M := 0.06
-const VIEW_BIAS_MAX_DEG := 6.0
-const VIEW_BIAS_SAMPLES := 5
-## A difference this large is followed even while the head moves: no viewpoint bias is that big.
-const FOLLOW_ANYWAY_M := 0.15
-const FOLLOW_ANYWAY_DEG := 15.0
-## From farther than this the marker error can exceed VIEW_BIAS_MAX_M (chest marker 9.5 cm at
-## 2.2 m in the replay), so a small move is not judged from there: it is absorbed as bias and
-## followed once the viewer is closer, or at once when it exceeds FOLLOW_ANYWAY_M.
-const JUDGE_MOVE_MAX_RANGE_M := 1.8
-
-var _head_samples: Array = []      # [time_s, position, yaw]
-var _head_time_s := 0.0
-var _head_still_s := 0.0
-var _view_bias_ready := false
-var _view_bias_position := Vector3.ZERO
-var _view_bias_yaw := 0.0
-var _view_bias_samples: Array = []
-var _view_bias_last_ms := -1
-var _follow_big_count := 0
-var _follow_big_last_ms := -1
-const FOLLOW_ANYWAY_DETECTIONS := 3
-var gate_state := "off"
-var _held_height := 0.0
-var _has_held_height := false
-
-
+## Vertical placement from the markers, not from the floor. The markers are glued to the real
+## chest; the hand target's contact slab lies on the avatar's chest surface. Shift the mesh
+## along the rig's down axis so that slab sits exactly in the marker plane. The slab, not the
+## zone origin: the origin is ~6.8 zone units (~4.5 cm) above the slab, and aligning it on
+## 2026-09-16 put the slab inside the mannequin, where a resting heel fell outside the +-0.9 cm
+## box and placement, count, depth and rate all failed (2026-09-17).
 func _align_chest_to_markers() -> void:
 	if target == null:
 		return
-	var zone: Node3D = target.get_node_or_null(CHEST_ZONE_NODE)
+	var zone: Node3D = target.get_node_or_null("CPRHandZone")
 	if zone == null:
 		return
-	var zone_in_rig: Vector3 = target.transform * zone.position
-	target.position.z -= zone_in_rig.z
+	var contact: Node3D = zone.get_node_or_null("CollisionShape3D")
+	var contact_in_zone: Vector3 = contact.position if contact != null else Vector3.ZERO
+	var contact_in_rig: Vector3 = target.transform * (zone.transform * contact_in_zone)
+	target.position.z -= contact_in_rig.z
 	_mesh_floor_offset_ready = false
-	print("Avatar vertical: chest surface aligned to the marker plane (mesh shifted %.3f m)." % -zone_in_rig.z)
+	print("Avatar vertical: hand target aligned to the marker plane (mesh shifted %.3f m)." % -contact_in_rig.z)
 
 
-func _apply_manual_nudge(nudge: Vector3) -> void:
-	# A manual alignment is a few centimetres; anything larger is a stuck stick, not intent.
-	var limited := (_manual_nudge + nudge).limit_length(MANUAL_NUDGE_LIMIT_M)
-	nudge = limited - _manual_nudge
-	target.position += nudge
-	_manual_nudge = limited
-	_mesh_floor_offset_ready = false
+## Once a second while placed: the numbers behind the height. zone_y - marker_y is the avatar's
+## chest above the real chest in the same frame. Read with: adb logcat -d | grep "Avatar diag"
+func _print_diagnostics(delta: float) -> void:
+	_diag_timer += delta
+	if _diag_timer < 1.0:
+		return
+	_diag_timer = 0.0
+	# Floor check: everything below is in the headset's LOCAL_FLOOR frame. A controller lying on
+	# the real floor should read ~0.03 m; anything more is the headset's floor sitting below the
+	# real one (tape: marker 10-11 cm above the floor; app read 18 cm on 22 Sep, 24 cm on 24 Sep).
+	var left_y: float = xr_controller_left.global_position.y if xr_controller_left != null and xr_controller_left.get_is_active() else NAN
+	var right_y: float = xr_controller_right.global_position.y if xr_controller_right != null and xr_controller_right.get_is_active() else NAN
+	var head_y: float = head.global_position.y if head != null else NAN
+	var common_y: float = common_marker.global_position.y if common_marker != null else NAN
+	print("Floor check: left controller y=%.3f right controller y=%.3f head y=%.3f common marker y=%.3f (headset floor = 0)" % [left_y, right_y, head_y, common_y])
+	if not visible or target == null:
+		return
+	var floor_y: float = floor_provider.floor_height_world() if floor_provider != null and floor_provider.has_floor() else NAN
+	var lowest: float = global_position.y + _lowest_mesh_vertex_offset_y + (global_basis * _manual_nudge).y if _mesh_floor_offset_ready else NAN
+	var zone: Node3D = target.get_node_or_null("CPRHandZone")
+	var contact: Node3D = zone.get_node_or_null("CollisionShape3D") if zone != null else null
+	var slab_y: float = contact.global_position.y if contact != null else NAN
+	var marker_y: float = common_marker.global_position.y if common_marker != null else NAN
+	print("Avatar diag: gate=%s floor_y=%.3f avatar_y=%.3f held=%s lowest_y=%.3f (lowest-floor=%.1f cm) slab_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s yaw=%.1f"
+		% [gate_state, floor_y, global_position.y, ("%.3f" % _held_height) if _has_held_height else "learning(%d)" % _held_samples.size(), lowest, (lowest - floor_y) * 100.0, slab_y, marker_y, (slab_y - marker_y) * 100.0,
+		   str(_manual_nudge), manual_yaw_degrees()])
 
 
-## Left stick only: x = across the body, y = along the body (head <-> feet). The avatar's local
-## z is DOWN (floor lock), so a z nudge only pushes the mesh into the floor, where the floor rule
-## lifts it straight back - invisible, and on 2026-09-16 it silently accumulated 58 cm while the
-## user held the right stick believing nothing happened. Height is the floor rule's job.
+func manual_yaw_degrees() -> float:
+	return rad_to_deg(_manual_yaw)
+
+
+## Rotate in the rig's horizontal plane: local -Z is world up. Pre-multiplication
+## preserves the mesh's authored import rotation and non-uniform scale. Keep the
+## chest contact point fixed, rather than swinging the chest around the mesh origin.
+func _apply_manual_yaw(angle: float) -> void:
+	if target == null or not is_finite(angle) or is_zero_approx(angle):
+		return
+	var pivot_local := Vector3.ZERO
+	var zone := target.get_node_or_null("CPRHandZone") as Node3D
+	if zone != null:
+		var contact := zone.get_node_or_null("CollisionShape3D") as Node3D
+		pivot_local = zone.transform * contact.position if contact != null else zone.position
+	var pivot := target.transform * pivot_local
+	var rotated := Basis(Vector3.FORWARD, angle) * target.basis
+	target.transform = Transform3D(rotated, pivot - rotated * pivot_local)
+	_manual_yaw = wrapf(_manual_yaw + angle, -PI, PI)
+	# Horizontal yaw leaves every vertex height unchanged. Avoid scanning the
+	# complete mesh every input frame while the floor-locked avatar is turning.
+	if not _floor_placement_active or not global_basis.z.normalized().is_equal_approx(Vector3.DOWN):
+		_mesh_floor_offset_ready = false
+	if _floor_placement_active:
+		_enforce_floor_boundary()
+
+
+func _read_yaw(delta: float) -> float:
+	if xr_controller_right == null or not visible or _application_paused:
+		return 0.0
+	var axis := xr_controller_right.get_vector2("primary").x
+	if absf(axis) <= YAW_STICK_DEAD_ZONE:
+		return 0.0
+	axis = signf(axis) * (absf(axis) - YAW_STICK_DEAD_ZONE) / (1.0 - YAW_STICK_DEAD_ZONE)
+	return -axis * deg_to_rad(nudge_yaw_speed_dps) * delta
+
+
+func _load_manual_yaw(path: String = YAW_ALIGNMENT_PATH) -> float:
+	var config := ConfigFile.new()
+	if config.load(path) == OK:
+		var value: Variant = config.get_value("alignment", "yaw_degrees", default_yaw_deg)
+		if (value is float or value is int) and is_finite(float(value)):
+			return wrapf(float(value), -180.0, 180.0)
+	return default_yaw_deg
+
+
+func _save_manual_yaw(path: String = YAW_ALIGNMENT_PATH) -> Error:
+	var config := ConfigFile.new()
+	config.set_value("alignment", "yaw_degrees", manual_yaw_degrees())
+	return config.save(path)
+
+
 func _read_nudge(delta: float) -> Vector3:
 	var direction := Vector3.ZERO
 	if xr_controller_left != null:
 		var left_stick: Vector2 = xr_controller_left.get_vector2("primary")
 		direction.x += left_stick.x
 		direction.y += left_stick.y
+	if xr_controller_right != null:
+		direction.z += -xr_controller_right.get_vector2("primary").y
 	return direction * nudge_speed * delta
 
 

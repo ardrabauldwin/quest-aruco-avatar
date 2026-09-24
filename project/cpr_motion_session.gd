@@ -12,14 +12,27 @@ var return_tolerance_m := 0.010
 ## the next press, provided it recovered at least this fraction of the excursion and this
 ## many metres. The recoil peak then becomes the new top, so a resting height that drifts
 ## lower over a cycle (leaning in, an overshot first press) cannot silently stop the count.
-var recoil_fraction := 0.5
+## 2026-09-22 device trace: three real presses of 3.6-5.2 cm were merged into one because the
+## hand came back up only ~1.7 cm between them, and the required recoil was half of an
+## excursion measured from a top that never moved down. Recoil is now a fixed distance.
+var recoil_fraction := 0.0
 var recoil_minimum_m := 0.015
+## A stroke that starts higher than this above the chest surface is the hand arriving on the
+## mannequin, not a press (device trace 2026-09-22: a hand coming down from 14 cm counted as
+## an 8 cm press). Heights are relative to the contact slab; a resting palm reads 0-2 cm, and a
+## hand lifted 9 cm between presses (same trace) is still pressing, so the limit is generous.
+var max_top_height_m := 0.20
 ## A real press keeps the hand more than 4 mm below the top for ~0.4 s at 110 BPM. A stroke
 ## that spends less than this below the top is a one-frame tracking spike and is discarded.
 var min_press_time_s := 0.04
 ## Dips shallower than this are hand wobble, not an attempted compression: on the headset
 ## (2026-09-15 log) 0.6-1.5 cm dips at 0.1 s spacing were being counted between real presses.
-var min_count_excursion_m := 0.02
+## 1.6 cm, not 2 cm: the palm joint under-reports a compression (a real 5 cm press reads 2.5-3.5 cm
+## of palm travel), so a 2 cm floor sits inside the real press band and drops roughly every third
+## press. Swept against three device traces with replay_cpr_trace.gd (2026-09-24): counted vs press
+## bottoms actually in the signal, 2.0 cm -> 16/21, 29/35, 7/6; 1.6 cm -> 21/21, 33/35, 7/6;
+## 1.3 cm starts over-counting (23/21). The 1.5 cm wobble test still rejects, as it must.
+var min_count_excursion_m := 0.016
 ## A gap longer than this is a pause, not a pace: the rolling pace window is dropped (dial back
 ## to "--") and the gap is never averaged in. 2026-09-15 log: a 1.85 s gap after press 3 alone
 ## read "32 per minute". Short tracking dropouts do not clear the window.
@@ -138,7 +151,7 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 	if _top - _bottom > 0.12:
 		invalidate_tracking()
 		return
-	var pressed_long_enough := _time_below_s >= min_press_time_s
+	var pressed_long_enough := _time_below_s >= min_press_time_s and _top <= max_top_height_m
 	# Completion A: a full return near the top, not merely a change of velocity at the bottom.
 	# Without enough time below the top it was a tracking spike: discard it, count nothing.
 	if height_m >= _top - return_tolerance_m and height_m - _bottom >= 0.006:

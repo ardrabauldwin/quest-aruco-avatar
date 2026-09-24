@@ -133,7 +133,8 @@ func _run() -> void:
 	check(zone.correct_placement and zone.lower_hand == &"left", "Left heel contact with right hand above passes")
 	check(zone.left_hand_inside and not zone.right_hand_inside, "Only lower heel requires chest contact")
 	check(zone._material.albedo_color.g > zone._material.albedo_color.r, "Valid stack green")
-	check(not zone.is_cpr_started and zone._highlight.visible, "Placement does not auto-start CPR")
+	check(not zone.is_cpr_started, "Placement does not auto-start CPR")
+	check(not zone._highlight.visible, "Hands on the target hide the ring (2026-09-22 rule)")
 	check(zone._read_hand(zone.left_tracker).heel.distance_to(centre) < 0.00001, "Estimated heel equals synthetic contact")
 	check(not zone.contains_world_point(centre + sideways * 0.042), "Correct heel can pass while palm is outside")
 	pair(-sideways * 0.042, -sideways * 0.042 + normal * 0.035)
@@ -163,9 +164,10 @@ func _run() -> void:
 	zone._process(0.016)
 	check(zone.correct_placement and zone.lower_hand == &"right", "Lower hand hidden: the visible upper hand alone keeps placement")
 	check(zone._material.albedo_color.g > zone._material.albedo_color.r, "Target stays green: it is an instruction colour, never orange")
-	set_hand(right, centre + normal * 0.10, -normal)
+	# The single-hand reach is 12 cm (single_hand_reach_m), wider than the two-hand stack limit.
+	set_hand(right, centre + normal * 0.15, -normal)
 	zone._process(0.016)
-	check(not zone.correct_placement, "A single hand hovering above the stack height fails")
+	check(not zone.correct_placement, "A single hand hovering above the single-hand reach fails")
 	set_hand(right, centre + sideways * 0.06 + normal * 0.03, -normal)
 	zone._process(0.016)
 	check(not zone.correct_placement, "A single hand beside the target fails")
@@ -209,6 +211,10 @@ func _run() -> void:
 	pair(Vector3.ZERO, normal * 0.035 * XRServer.world_scale)
 	check(zone.correct_placement, "XR origin and world scale preserve placement")
 	check(zone._read_hand(zone.left_tracker).heel.distance_to(centre) < 0.00001, "XR origin and world scale applied exactly once")
+	check(not zone._highlight.visible, "Correct placement hides guide under translated/rotated XR origin and world scale")
+	var palm_world: Vector3 = zone._read_motion_hand(zone.left_tracker).point
+	var expected_palm := centre + (sideways * 0.042 + normal * 0.008) * XRServer.world_scale
+	check(palm_world.distance_to(expected_palm) < 0.00001, "Motion palm and placement heel share the chest world frame")
 	XRServer.world_scale = saved_scale
 	pair(Vector3.ZERO, normal * 0.035)
 	zone._notification(Node.NOTIFICATION_APPLICATION_PAUSED)
@@ -217,7 +223,8 @@ func _run() -> void:
 	zone._process(0.016)
 	check(zone.correct_placement, "Fresh tracking restores placement")
 	zone._on_start_button(&"by_button")
-	check(zone.is_cpr_started and not zone._highlight.visible, "Start hides highlight")
+	zone._process(0.016)
+	check(zone.is_cpr_started and not zone._highlight.visible, "Start with hands on the target keeps the ring hidden")
 	zone._process(0.016)
 	check(not zone._highlight.visible, "Highlight stays hidden")
 	zone._on_start_button(&"by_button")
@@ -266,8 +273,10 @@ func _run() -> void:
 	check(guide._highlight.material_override is ShaderMaterial, "Default guide uses green target ring")
 	check(guide._highlight.visible, "Ring visible without tracking")
 	guide.start_cpr()
-	check(not guide._instruction.visible, "Start hides heel-placement label")
-	check(not guide._highlight.visible, "Start hides ring together")
+	check(guide._instruction.visible, "Start keeps the heel-placement label with the ring")
+	# 2026-09-22: the ring is the placement instruction and stays until the hands are on the
+	# target; starting the session no longer hides it.
+	check(guide._highlight.visible, "Start keeps the ring until hands are on the target")
 	guide.reset_placement()
 	check(guide._instruction.visible and "Place hand heel here" in guide._instruction.text, "Reset restores heel-placement label")
 	check(guide._highlight.visible, "Reset restores ring")

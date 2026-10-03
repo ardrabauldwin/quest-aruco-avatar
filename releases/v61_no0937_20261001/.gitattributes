@@ -1,0 +1,4 @@
+# Preserve extracted asset bytes across Windows/Linux checkouts.
+no0937_main.gd -text
+no0937_main.tscn -text
+main_3d.tscn.remap -text

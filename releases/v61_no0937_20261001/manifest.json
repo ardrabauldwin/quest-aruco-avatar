@@ -1,0 +1,12 @@
+{
+  "base_apk": "quest_v61_derived_placement_20260925.apk",
+  "base_sha256": "d7823684c4dfaec7cba35c27083efff9cf4991694535d8c50ceae4634cd28376",
+  "released_apk": "quest_v61_no0937_saved_nudge_20261001.apk",
+  "released_sha256": "8a2012cf0570b571a826278a527e6345dd5d4b50ec5b10f01c298c3d7d490b9d",
+  "changed_entries": [
+    "assets/main_3d.tscn.remap",
+    "assets/no0937_main.gd",
+    "assets/no0937_main.tscn"
+  ],
+  "removed_entries": []
+}

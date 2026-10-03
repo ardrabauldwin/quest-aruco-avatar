@@ -2,7 +2,7 @@
 
 This folder contains the **exact three source/text assets extracted from the working Thursday APK**, not the later stereo implementation currently in the development working tree.
 
-Download the signed APK and the original Friday base from the [release](https://github.com/ardrabauldwin/quest-aruco-avatar/releases/tag/apk-20261001-v61-no0937-saved-nudge).
+The [release](https://github.com/ardrabauldwin/quest-aruco-avatar/releases/tag/apk-20261001-v61-no0937-saved-nudge) provides the source overlay. **APK publication is pending:** upload attempts on 3 October stalled or were reset by the remote connection. Neither APK is included in this release. Both remain available locally in `builds/` under the filenames recorded in `manifest.json`.
 
 ## What changed
 
@@ -16,7 +16,7 @@ Comparing every uncompressed ZIP entry with the original Friday APK found exactl
 
 ## Reproduce the patch
 
-This is an APK overlay, **not a complete reconstruction of the original Friday source checkout**. The repository's current `project/` should not be assumed to export this exact APK. Download the original base APK from the release and run:
+This is an APK overlay, **not a complete reconstruction of the original Friday source checkout**. The repository's current `project/` should not be assumed to export this exact APK. Using the original base APK (currently available locally; remote upload pending), run:
 
 ```text
 python releases/v61_no0937_20261001/build_overlay.py path/to/quest_v61_derived_placement_20260925.apk path/to/unsigned.apk

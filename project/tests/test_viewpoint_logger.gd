@@ -5,6 +5,10 @@ func _init() -> void:
 
 func run() -> void:
 	var logger = preload("res://aruco_csv_logger.gd").new()
+	# Rows are written by hand below. The tracking node only gives _ready something to subscribe
+	# to; outside the tree it starts no camera and no OpenCV.
+	var tracking := ArucoMarkerTracking.new()
+	logger.marker_tracking = tracking
 	var label := Label.new()
 	logger.status_label = label
 	root.add_child(label)
@@ -36,5 +40,6 @@ func run() -> void:
 	assert(logger._current_phase() == "front")
 	logger.free()
 	label.free()
+	tracking.free()
 	print("viewpoint logger tests: PASS")
 	quit()

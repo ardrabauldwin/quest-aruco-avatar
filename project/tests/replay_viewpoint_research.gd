@@ -7,15 +7,15 @@ class ReplayRig extends "res://avatar_rig_navel.gd":
 		super._apply_filtered_pose(pose)
 		has_display_pose = true
 	func _load_calibration() -> void:
-		assert(_common_provider.load_from(DEFAULT_CALIBRATION_PATH, _markers))
+		assert(_common_provider.load_from(DEFAULT_CALIBRATION_PATH, _marker_ids))
 	func _on_orientation_settled() -> void:
 		_filter.anchor_at(_common_provider.rest_pose())
-	func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
+	func _update_tracking(marker_poses: Dictionary, detection_ms: int, delta: float) -> void:
 		if not freeze_rest:
-			super._update_tracking(markers, detection_ms, delta)
+			super._update_tracking(marker_poses, detection_ms, delta)
 			return
 		_tracking_was_available = true
-		var raw := _common_provider.get_pose(markers, detection_ms)
+		var raw := _common_provider.get_pose(marker_poses, detection_ms)
 		var filtered := _filter.update(raw, delta, detection_ms, _common_provider.rest_pose(), _common_provider.has_rest_pose())
 		if _filter.is_ready() and _common_provider.has_rest_pose():
 			_apply_filtered_pose(filtered)
@@ -42,15 +42,10 @@ func run() -> void:
 
 func replay(rows: Array[PackedStringArray], mode: String) -> void:
 	var rig := ReplayRig.new()
-	var markers: Array = []
-	for i in range(3):
-		var marker := Node3D.new()
-		marker.name = "aruco_patch%d" % i
-		root.add_child(marker)
-		markers.append(marker)
-	rig.common_marker = markers[0]
-	rig.chest_marker = markers[1]
-	rig.torso_marker = markers[2]
+	# Marker poses are fed straight into _update_tracking below. The tracking node only gives the
+	# rig's _ready something to subscribe to; outside the tree it starts no camera and no OpenCV.
+	var tracking := ArucoMarkerTracking.new()
+	rig.marker_tracking = tracking
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
 	root.add_child(rig)
 	rig.freeze_rest = mode == "fixed_rest72"
@@ -62,7 +57,7 @@ func replay(rows: Array[PackedStringArray], mode: String) -> void:
 	var hz := 90.0 if mode == "current90" else 72.0
 	var tick := float(rows[0][1])
 	var start := tick
-	var selected: Array = []
+	var selected := {}
 	var latest_ms := -1000000
 	for row in rows:
 		var now := int(row[1])
@@ -72,13 +67,12 @@ func replay(rows: Array[PackedStringArray], mode: String) -> void:
 			else:
 				rig._hold_after_tracking_loss()
 			tick += 1000.0 / hz
-		var seen: Array = []
+		var seen := {}   # marker id -> world pose
 		var camera := read_pose(row, 5)
 		for i in range(3):
 			var col := 12 + i * 7
 			if row[col] != "":
-				markers[i].global_transform = camera * read_pose(row, col)
-				seen.append(markers[i])
+				seen[i] = camera * read_pose(row, col)
 		if not seen.is_empty():
 			selected = seen
 			latest_ms = now
@@ -95,5 +89,4 @@ func replay(rows: Array[PackedStringArray], mode: String) -> void:
 			output.store_line(",".join(values))
 	output.close()
 	rig.free()
-	for marker in markers:
-		marker.free()
+	tracking.free()

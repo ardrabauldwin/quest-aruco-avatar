@@ -14,6 +14,7 @@ func _ready() -> void:
 		print("OpenXR initialised successfully; requested reference space: LOCAL_FLOOR")
 		print("OpenXR play-area mode: ", xr_interface.get_play_area_mode(),
 			" (ROOMSCALE means a floor-based space is active)")
+		xr_interface.session_begun.connect(_on_xr_session_begun)
 		xr_interface.play_area_changed.connect(_on_play_area_changed)
 		# The XR compositor drives frame pacing; disable the desktop v-sync. (dont wait
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -22,6 +23,15 @@ func _ready() -> void:
 	else:
 		print("OpenXR not initialised - running in flat (non-XR) mode")
 
+func _on_xr_session_begun() -> void:
+	if OpenXRMetaEnvironmentDepthExtension.is_environment_depth_supported():
+		OpenXRMetaEnvironmentDepthExtension.start_environment_depth()
+		print(
+			"Meta Environment Depth started: ",
+			OpenXRMetaEnvironmentDepthExtension.is_environment_depth_started()
+		)
+	else:
+		print("Meta Environment Depth is not supported on this device/runtime.")
 
 func _on_play_area_changed(mode: XRInterface.PlayAreaMode) -> void:
 	print("OpenXR play-area changed: ", mode)

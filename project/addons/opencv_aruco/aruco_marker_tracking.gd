@@ -962,6 +962,7 @@ func _poll_detection_task() -> void:
 	WorkerThreadPool.wait_for_task_completion(_detect_task_id)
 	_detect_task_id = -1
 	_apply_detection_result()
+	#print("corners IDs = ", _result_corners.keys()," | pose IDs = ", _result_markers.keys())
 	# Only now do the frame and its corners both exist, so this is the earliest point at which the
 	# overlay can be emitted as one consistent pair -- and it has to happen BEFORE the pending
 	# frame below is handed on, since that overwrites _detecting_img. Passing the image as a signal

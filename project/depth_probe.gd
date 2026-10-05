@@ -11,7 +11,7 @@ extends Node
 
 ## Experiment switch. Off = this node does nothing at all (no permission request, no depth).
 @export var enabled := true
-@export var detection_source: Node          # main_3d: owns _detect_mutex / _result_markers
+@export var marker_tracking: ArucoMarkerTracking
 @export var status_label: Label3D            # optional in-headset readout
 @export var marker_id := 0                   # common / ID0
 @export_range(0.25, 5.0, 0.25) var sample_interval_s := 1.0
@@ -32,6 +32,10 @@ var _focus_settle_s := 0.0
 var _started := false
 var _since_sample_s := 0.0
 var _pending := false
+# The newest detection, latched from detection_applied; a sample snapshots it.
+var _latest_has_marker := false
+var _latest_marker_world := Vector3.ZERO
+var _latest_head_world := Vector3.ZERO
 var _snap_marker_world := Vector3.ZERO
 var _snap_head := Vector3.ZERO
 var _ratios: Array[float] = []
@@ -42,6 +46,8 @@ var _reported_format := false
 func _ready() -> void:
 	if not enabled:
 		return
+	if marker_tracking != null:
+		marker_tracking.detection_applied.connect(_on_detection_applied)
 	if not Engine.has_singleton(EXTENSION):
 		_status("Depth probe: %s not available on this platform." % EXTENSION)
 		return
@@ -108,23 +114,27 @@ func _process(delta: float) -> void:
 	_ext.call("get_environment_depth_map_async", _on_depth_map)
 
 
-## Same copy protocol as aruco_csv_logger: lock the worker's mutex, copy, unlock.
+## Keeps only the newest detection: a marker missing from it means no sample, as before. The raw
+## ArUco pose, NOT range-corrected -- the uncorrected range is what this experiment measures.
+func _on_detection_applied(
+		_image: Image, _corners: Dictionary, poses: Dictionary, head_pose: Transform3D) -> void:
+	_latest_has_marker = poses.has(marker_id)
+	if not _latest_has_marker:
+		return
+	# World space, like the depth projection. get_marker_world_pose() is poses[marker_id] through
+	# the addon's own play->world conversion (it applied this result just before emitting); the head
+	# pose rides on the same transform, which is rigid while XRServer.world_scale is 1.
+	var marker_world := marker_tracking.get_marker_world_pose(marker_id)
+	var play_to_world := marker_world * (poses[marker_id] as Transform3D).affine_inverse()
+	_latest_marker_world = marker_world.origin
+	_latest_head_world = (play_to_world * head_pose).origin
+
+
 func _snapshot_marker() -> bool:
-	if detection_source == null:
+	if not _latest_has_marker:
 		return false
-	var mutex: Mutex = detection_source.get("_detect_mutex")
-	if mutex == null:
-		return false
-	mutex.lock()
-	var markers: Dictionary = detection_source.get("_result_markers")
-	var cam_xform: Transform3D = detection_source.get("_result_cam_xform")
-	var marker: Variant = markers.get(marker_id)
-	mutex.unlock()
-	if marker == null:
-		return false
-	# Marker pose is head-relative; the head transform sampled at capture bakes it to world.
-	_snap_marker_world = cam_xform * (marker as Transform3D).origin
-	_snap_head = cam_xform.origin
+	_snap_marker_world = _latest_marker_world
+	_snap_head = _latest_head_world
 	return true
 
 

@@ -2,22 +2,35 @@ extends Node3D
 # DEBUG: draws a coloured XYZ axis on each ArUco marker so you can see its full 6DOF pose live --
 # red = X, green = Y, blue = Z. A marker's gizmo is shown ONLY while that marker is actually being
 # detected; markers that are out of view (or not present at all, like a removed navel marker) have
-# their gizmo hidden, so no stray axis floats in front of you. Also hides the plain placeholder
-# cubes on the patches.
+# their gizmo hidden, so no stray axis floats in front of you.
+#
+# MARKER SOURCE: this took an array of aruco_patch Node3Ds and read their transforms and their
+# last_detected_ms metadata. Markers come from the opencv_aruco addon by ID now, so there are no
+# patch nodes to point at -- and nothing to hide either, which is why the old
+# hide_placeholder_boxes switch is gone. The gizmos are built here from marker_ids.
+#
+# The pose drawn is MarkerFreshness.world_pose(): WORLD space, because these gizmos are placed with
+# global_transform, and range-corrected, because that is the pose the rig fuses -- a gizmo showing
+# the addon's uncorrected get_marker_world_pose() would sit centimetres off the pose actually used
+# beyond 1.2 m.
 
-# Assign the patch nodes (aruco_patch0, aruco_patch1, aruco_patch2) in the inspector.
-@export var markers: Array[Node3D] = []
+## The addon node that publishes the markers.
+@export var marker_tracking: ArucoMarkerTracking
+## Which marker ids to draw an axis for. One gizmo is created per entry, in this order.
+@export var marker_ids: Array[int] = [0, 1, 2]
 @export var axis_length := 0.1        # metres
 @export var axis_thickness := 0.006   # metres
-@export var hide_placeholder_boxes := true
-# A marker counts as detected when its marker script stamped it recently.
+# A marker counts as detected when the addon reported it this recently.
 @export var fresh_ms := 300
 
+var _fresh := MarkerFreshness.new()
 var _gizmos: Array[Node3D] = []
 
 
 func _ready() -> void:
-	for i in markers.size():
+	_fresh.tracking_loss_timeout_ms = fresh_ms
+	_fresh.attach(marker_tracking, marker_ids)
+	for i in marker_ids.size():
 		var g := _make_axis()
 		g.visible = false
 		add_child(g)
@@ -25,43 +38,22 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	var now := Time.get_ticks_msec()
-	var newest_timestamp_ms := -1
-	for marker in markers:
-		if (
-			marker != null
-			and marker.has_meta("last_detected_ms")
-			and now - int(marker.get_meta("last_detected_ms")) <= fresh_ms
-		):
-			newest_timestamp_ms = maxi(
-				newest_timestamp_ms,
-				int(marker.get_meta("last_detected_ms"))
-			)
-
-	for i in markers.size():
-		var n := markers[i]
+	# Match AvatarRig's fusion set exactly: a marker can remain freshness-eligible on its own, but
+	# it is visualized only when it belongs to the single newest camera result. This prevents a
+	# remembered old gizmo from looking as though it participated in the current fusion. Both sides
+	# get that set from the same place now (MarkerFreshness) rather than each re-deriving it.
+	var shown := _fresh.result_ids()
+	#print("Gizmo newest-result IDs: ", shown)
+	
+	for i in marker_ids.size():
+		var id: int = marker_ids[i]
 		var g := _gizmos[i]
-		if n == null or g == null:
+		if g == null:
 			continue
-
-		# Match AvatarRig's fusion set exactly: a marker can remain freshness-eligible for 300 ms,
-		# but it is visualized only when it belongs to the single newest camera result. This prevents
-		# a remembered old gizmo from looking as though it participated in the current fusion.
-		var used_in_newest_result := (
-			n.has_meta("last_detected_ms")
-			and now - int(n.get_meta("last_detected_ms")) <= fresh_ms
-			and int(n.get_meta("last_detected_ms")) == newest_timestamp_ms
-		)
-		# Previously these meshes were forced invisible even during successful detections. Make the
-		# authored 10 cm cube an unmistakable marker indicator, but keep it hidden before the first
-		# detection and after the marker leaves view.
-		if hide_placeholder_boxes:
-			for c in n.get_children():
-				if c is MeshInstance3D:
-					c.visible = false
+		var used_in_newest_result := shown.has(id)
 		g.visible = used_in_newest_result
 		if used_in_newest_result:
-			g.global_transform = n.global_transform
+			g.global_transform = _fresh.world_pose(id)
 
 
 func _make_axis() -> Node3D:

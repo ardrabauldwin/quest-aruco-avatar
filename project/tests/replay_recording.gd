@@ -11,7 +11,7 @@ class ReplayRig extends "res://avatar_rig_navel.gd":
 		has_display_pose = true
 	var calibration_path := DEFAULT_CALIBRATION_PATH
 	func _load_calibration() -> void:
-		assert(_common_provider.load_from(calibration_path, _markers), "cannot load " + calibration_path)
+		assert(_common_provider.load_from(calibration_path, _marker_ids), "cannot load " + calibration_path)
 	func _on_orientation_settled() -> void:
 		_filter.anchor_at(_common_provider.rest_pose())
 
@@ -36,15 +36,10 @@ func run() -> void:
 	var rig := ReplayRig.new()
 	if args.size() > 4:
 		rig.calibration_path = args[4]
-	var markers: Array = []
-	for i in range(3):
-		var marker := Node3D.new()
-		marker.name = "aruco_patch%d" % i
-		root.add_child(marker)
-		markers.append(marker)
-	rig.common_marker = markers[0]
-	rig.chest_marker = markers[1]
-	rig.torso_marker = markers[2]
+	# Marker poses are fed straight into _update_tracking below. The tracking node only gives the
+	# rig's _ready something to subscribe to; outside the tree it starts no camera and no OpenCV.
+	var tracking := ArucoMarkerTracking.new()
+	rig.marker_tracking = tracking
 	var head := Node3D.new()
 	head.name = "Head"
 	root.add_child(head)
@@ -53,7 +48,7 @@ func run() -> void:
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
 	root.add_child(rig)
 	if args.size() > 2:
-		rig._common_provider.marker_weights[markers[0]] = float(args[2])
+		rig._common_provider.marker_weights[rig.common_marker_id] = float(args[2])
 	if args.size() > 3:
 		rig._common_provider.flip_hold_ms = int(args[3])
 	var output := FileAccess.open(out_path, FileAccess.WRITE)
@@ -62,7 +57,7 @@ func run() -> void:
 	var hz := 72.0
 	var tick := float(rows[0][1])
 	var start := tick
-	var selected: Array = []
+	var selected := {}
 	var latest_ms := -1000000
 	for row in rows:
 		var now := int(row[1])
@@ -72,7 +67,8 @@ func run() -> void:
 			else:
 				rig._hold_after_tracking_loss()
 			tick += 1000.0 / hz
-		var seen: Array = []
+		# marker id -> range-corrected world pose, exactly what MarkerFreshness hands the rig.
+		var seen := {}
 		var camera := read_pose(row, 5)
 		head.global_transform = camera
 		for i in range(3):
@@ -80,8 +76,7 @@ func run() -> void:
 			if row[col] != "":
 				var marker_cam := read_pose(row, col)
 				marker_cam.origin = CommonPoseProvider.range_correct(marker_cam.origin)
-				markers[i].global_transform = camera * marker_cam
-				seen.append(markers[i])
+				seen[i] = camera * marker_cam
 		if not seen.is_empty():
 			selected = seen
 			latest_ms = now
@@ -99,6 +94,5 @@ func run() -> void:
 	print("Replay written: ", out_path, "  rows=", rows.size(), "  rejected flips=", rig._common_provider.rejected_flips)
 	rig.free()
 	head.free()
-	for marker in markers:
-		marker.free()
+	tracking.free()
 	quit()

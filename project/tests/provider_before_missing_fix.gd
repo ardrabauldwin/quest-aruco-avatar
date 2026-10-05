@@ -2,15 +2,15 @@ extends CommonPoseProvider
 
 var _inverse_offsets := {}
 
-func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
+func get_pose(marker_poses: Dictionary, detection_ms: int = -1) -> Transform3D:
 	var estimates: Array[Transform3D] = []
 	var detected_markers: Dictionary = {}
 
 	# Convert all detected markers to common pose
-	for marker in markers:
-		if marker != null and _offsets.has(marker):
+	for marker in marker_poses:
+		if _offsets.has(marker):
 			var marker_to_common: Transform3D = _offsets[marker]
-			estimates.append(marker.global_transform * marker_to_common)
+			estimates.append(marker_poses[marker] * marker_to_common)
 			detected_markers[marker] = true
 
 	# Rigid-body reconstruction: for any missing marker, estimate it from detected ones
@@ -25,7 +25,7 @@ func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
 		for source_marker in _inverse_offsets[missing_marker].keys():
 			if detected_markers.has(source_marker):
 				var source_to_missing: Transform3D = _inverse_offsets[missing_marker][source_marker]
-				estimates.append(source_marker.global_transform * source_to_missing)
+				estimates.append(marker_poses[source_marker] * source_to_missing)
 				break  # Use first available source marker
 
 	if estimates.is_empty():
@@ -65,8 +65,8 @@ func _build_inverse_offsets() -> void:
 
 
 
-func load_from(path: String, markers: Array) -> bool:
-	if not super.load_from(path, markers):
+func load_from(path: String, ids: Array) -> bool:
+	if not super.load_from(path, ids):
 		return false
 	_build_inverse_offsets()
 	return true

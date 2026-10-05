@@ -1,6 +1,19 @@
 class_name CommonPoseProvider
 extends RefCounted
 ## Reconstructs one common 6DOF pose from any calibrated markers in the newest result.
+##
+## MARKER SOURCE: this used to hold references to the aruco_patch Node3Ds main_3d.gd wrote poses
+## into, and read marker.global_transform off them. The addon publishes markers by ID instead, so
+## offsets are keyed by marker id and the poses are handed in as a Dictionary. The calibration file
+## follows: its [common] keys are "marker_<id>" (offset_key_for) rather than node names. Files
+## written by the pre-addon build used the node names, and load_from still reads those -- see
+## _offset_key.
+##
+## SPACE: the poses passed to get_pose() must be WORLD space, because the rig applies the result
+## with global_transform -- and range-corrected (range_correct below), as the pre-addon main_3d.gd
+## baked them into the patch nodes. MarkerFreshness.world_pose() is exactly that. Neither of the
+## addon's getters is: get_marker_world_pose() lacks the correction, and get_marker_pose() is play
+## space on top, wrong by the XROrigin3D transform as well.
 
 signal orientation_settled
 
@@ -14,6 +27,7 @@ var rest_max_detections := 100
 var rest_stable_position_m := 0.0015
 var rest_stable_rotation_deg := 1.0
 
+## marker id (int) -> marker-local offset to the common pose.
 var _offsets := {}
 var _common_pose := Transform3D.IDENTITY
 var _has_common_pose := false
@@ -32,7 +46,7 @@ var _rest_reanchor_last_detection_ms := -1
 ## _is_flipped). Good markers on the mannequin measure 5-25 deg, flipped ones 85-95 deg.
 var max_flip_tilt_deg := 45.0
 var rejected_flips := 0
-## Optional per-marker fusion weight (marker node -> weight, default 1). The common marker is the
+## Optional per-marker fusion weight (marker id -> weight, default 1). The common marker is the
 ## most consistent of the three across viewpoints (2026-09-15 recordings), so the rig may weight it up.
 var marker_weights := {}
 ## How long a flipped marker may be replaced by its own last good pose (ms). The mannequin is
@@ -40,33 +54,36 @@ var marker_weights := {}
 ## recordings this halved the far-left wobble (6 -> 4 cm) and changed nothing at 1.7 m.
 var flip_hold_ms := 1000
 var held_flips := 0
+## marker id -> {"pose": last unflipped common-pose estimate, "ms": its detection}.
 var _last_good := {}
 
 
 ## Each independent detection contributes one estimate of the same common point.
 ## Inferred missing markers contain no new measurement and must not be fused again.
-func get_pose(markers: Array, detection_ms: int = -1) -> Transform3D:
+##
+## marker_poses: marker id -> WORLD-space pose, holding one detection's markers and no others.
+func get_pose(marker_poses: Dictionary, detection_ms: int = -1) -> Transform3D:
 	var estimates: Array[Transform3D] = []
 	var weights: Array[float] = []
-	for marker in markers:
-		if marker != null and _offsets.has(marker):
-			var marker_to_common: Transform3D = _offsets[marker]
-			var estimate: Transform3D = marker.global_transform * marker_to_common
+	for id in marker_poses:
+		if _offsets.has(id):
+			var marker_to_common: Transform3D = _offsets[id]
+			var estimate: Transform3D = marker_poses[id] * marker_to_common
 			if _is_flipped(estimate):
 				rejected_flips += 1
 				# The mannequin does not move: this marker's last good pose is still a valid
 				# measurement for a short while, and keeping it stops the average from collapsing
 				# onto whichever single marker happens not to flip from this viewpoint.
-				var last: Dictionary = _last_good.get(marker, {})
+				var last: Dictionary = _last_good.get(id, {})
 				if not last.is_empty() and detection_ms >= 0 and detection_ms - int(last["ms"]) <= flip_hold_ms:
 					estimates.append(last["pose"])
-					weights.append(float(marker_weights.get(marker, 1.0)))
+					weights.append(float(marker_weights.get(id, 1.0)))
 					held_flips += 1
 				continue
 			if detection_ms >= 0:
-				_last_good[marker] = {"pose": estimate, "ms": detection_ms}
+				_last_good[id] = {"pose": estimate, "ms": detection_ms}
 			estimates.append(estimate)
-			weights.append(float(marker_weights.get(marker, 1.0)))
+			weights.append(float(marker_weights.get(id, 1.0)))
 	if estimates.is_empty():
 		return _common_pose
 	_common_pose = _floor_lock(_fuse(estimates, weights))
@@ -253,7 +270,7 @@ func _rotation_medoid(poses: Array[Transform3D]) -> Quaternion:
 ## too LONG beyond it, by RANGE_CORRECTION_K per metre of extra range (viewpoint recordings
 ## 2026-09-15, both sessions, common and navel: +5.8..+5.9 cm per m; joint fit k = 0.064,
 ## zero at 1.20 m). That is the "avatar retreats when I step back". Applied to the camera-space
-## marker translation before it is baked to world (main_3d.gd and the replay), it leaves the
+## marker translation before it is baked to world (MarkerFreshness and the replay), it leaves the
 ## common and navel markers within 1 cm of their close-range position out to 2.2 m. The chest
 ## marker keeps an extra, steeper error beyond 1.6 m that this does not model.
 const RANGE_CORRECTION_K := 0.064
@@ -321,15 +338,24 @@ func _fuse(poses: Array[Transform3D], weights: Array[float] = []) -> Transform3D
 	return Transform3D(Basis(rotation.normalized()), position / total_weight)
 
 
+## The [common] key for one marker id. Spelled as an identifier rather than as the bare number:
+## a ConfigFile key starting with a digit is not something this project can verify round-trips
+## through Godot's parser without opening the editor, and a calibration that silently fails to
+## load falls back to a different one instead of reporting anything.
+static func offset_key_for(id: int) -> String:
+	return "marker_%d" % id
+
+
 ## Persist marker-local offsets only. World-space rest is relearned every XR session.
+## Always written under the id key; the legacy node-name key is read but never produced.
 func save_to(path: String) -> void:
 	var cfg := ConfigFile.new()
-	for marker in _offsets:
-		cfg.set_value("common", marker.name, _offsets[marker])
+	for id in _offsets:
+		cfg.set_value("common", offset_key_for(id), _offsets[id])
 	cfg.save(path)
 
 
-func load_from(path: String, markers: Array) -> bool:
+func load_from(path: String, ids: Array) -> bool:
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
 		return false
@@ -338,16 +364,15 @@ func load_from(path: String, markers: Array) -> bool:
 	# file must fail so the caller can fall back to the bundled complete calibration.
 	var loaded_offsets := {}
 	var required_markers := 0
-	for marker in markers:
-		if marker == null:
-			continue
+	for id in ids:
 		required_markers += 1
-		if not cfg.has_section_key("common", marker.name):
+		var key := _offset_key(cfg, id)
+		if key.is_empty():
 			return false
-		var value: Variant = cfg.get_value("common", marker.name)
+		var value: Variant = cfg.get_value("common", key)
 		if typeof(value) != TYPE_TRANSFORM3D:
 			return false
-		loaded_offsets[marker] = value
+		loaded_offsets[id] = value
 
 	if required_markers == 0 or loaded_offsets.size() != required_markers:
 		return false
@@ -355,3 +380,19 @@ func load_from(path: String, markers: Array) -> bool:
 	_offsets = loaded_offsets
 	_restart_rest_collection()
 	return true
+
+
+## The [common] key holding this marker's offset, or "" when the file has none.
+##
+## The pre-addon build keyed offsets by the scene node's name ("aruco_patch0"), because that is
+## what it had. Reading that spelling as well is what keeps a calibration already sitting in
+## user:// on a headset -- a measured artefact of a recording session -- from being silently
+## discarded on the first run of this build.
+func _offset_key(cfg: ConfigFile, id: int) -> String:
+	var key := offset_key_for(id)
+	if cfg.has_section_key("common", key):
+		return key
+	var legacy := "aruco_patch%d" % id
+	if cfg.has_section_key("common", legacy):
+		return legacy
+	return ""

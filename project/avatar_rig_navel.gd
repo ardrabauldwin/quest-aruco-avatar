@@ -2,13 +2,27 @@ extends Node3D
 ## Places the avatar from the newest fused ArUco result.
 ##
 ## Pipeline: newest markers -> common pose -> medoid/dead zones/smoothing/prior -> avatar.
+##
+## MARKER SOURCE. This rig used to hold three Node3D references (aruco_patch0/1/2) that main_3d.gd
+## wrote poses into, and it recovered "which markers belong to the newest result" by comparing
+## per-node last_detected_ms metadata for exact equality. Markers are addressed by ID now, through
+## the opencv_aruco addon's ArucoMarkerTracking; MarkerFreshness turns its detection_applied signal
+## into the newest result's ids and one range-corrected WORLD pose per marker. See its class comment.
 
-@export var common_marker: Node3D
-@export var chest_marker: Node3D
-@export var torso_marker: Node3D
+## The addon node that publishes the markers. Wired in the scene; nothing else here reaches into
+## the tree for tracking data.
+@export var marker_tracking: ArucoMarkerTracking
+
+@export_group("Markers")
+## ArUco ids of the three markers glued to the mannequin. These replace the old aruco_patch node
+## references -- the ids are what the calibration offsets are keyed by, so changing one here means
+## re-running the calibration for it.
+@export var common_marker_id := 0
+@export var chest_marker_id := 1
+@export var torso_marker_id := 2
 
 @export_group("Look")
-@export_range(0.0, 0.95, 0.05) var avatar_transparency := 0.6
+@export_range(0.0, 1, 0.05) var avatar_transparency := 0.6
 @export var avatar_tint := Color.WHITE
 
 @export_group("Calibration")
@@ -68,8 +82,7 @@ const REANCHOR_MIN_ROTATION_DEG := 8.0
 var _common_provider := CommonPoseProvider.new()
 var _filter := SimplePoseStabilizer.new()
 var _fresh := MarkerFreshness.new()
-var _markers: Array = []
-var _visible_now: Array = []
+var _marker_ids: Array = []
 var _was_nudging := false
 var _tracking_was_available := false
 var _application_paused := false
@@ -84,6 +97,9 @@ var _has_held_height := false
 var _held_samples: Array[float] = []
 var _held_last_ms := -1
 var _common_seen_ms := -1
+## World height of the common marker in the newest result that contained it. Stands in for the old
+## common patch node's global_position.y, which likewise only changed when that marker was detected.
+var _common_marker_y := NAN
 var _full_evidence_now := true
 const HELD_HEIGHT_DETECTIONS := 12
 const HELD_HEIGHT_MINIMUM := 5
@@ -136,7 +152,8 @@ func _ready() -> void:
 		_align_chest_to_markers()
 		_apply_manual_nudge(default_nudge)
 		_apply_manual_yaw(deg_to_rad(_load_manual_yaw()))
-	_markers = [common_marker, chest_marker, torso_marker]
+	_marker_ids = [common_marker_id, chest_marker_id, torso_marker_id]
+	_fresh.attach(marker_tracking, _marker_ids)
 	_filter.configure(
 		FILTER_WINDOW,
 		FILTER_POSITION_DEAD_ZONE_M,
@@ -166,8 +183,9 @@ func _notification(what: int) -> void:
 	elif what == NOTIFICATION_APPLICATION_RESUMED:
 		_application_paused = false
 		# The XR world frame and camera stream may have changed while the Quest menu owned focus.
-		# Never display or interpolate from the pre-pause world pose.
-		_visible_now.clear()
+		# Never display or interpolate from the pre-pause world pose. The newest detection result
+		# ages out on its own (MarkerFreshness stamps wall-clock time, which ran during the pause),
+		# so nothing here has to invalidate it by hand.
 		_tracking_was_available = false
 		_common_provider.recalibrate_orientation()
 		_filter.reset()
@@ -179,13 +197,16 @@ func _notification(what: int) -> void:
 
 
 func _process(delta: float) -> void:
-	var result := _newest_marker_result()
-	var result_markers: Array = result["markers"]
-	var result_timestamp_ms: int = result["timestamp_ms"]
-	if result_markers.is_empty():
+	# Ids from the single newest detection, already narrowed to this rig's markers and already
+	# emptied if that result has aged past the freshness window.
+	var result_ids := _fresh.result_ids()
+	if result_ids.is_empty():
 		_hold_after_tracking_loss()
 	else:
-		_update_tracking(result_markers, result_timestamp_ms, delta)
+		var marker_poses := {}
+		for id in result_ids:
+			marker_poses[id] = _fresh.world_pose(id)
+		_update_tracking(marker_poses, _fresh.result_ms(), delta)
 	if _common_provider.has_rest_pose() and not _has_held_height:
 		_held_learning_s += delta
 	_print_diagnostics(delta)
@@ -201,43 +222,28 @@ func _process(delta: float) -> void:
 
 
 func _load_calibration() -> void:
-	if _common_provider.load_from(SAVE_PATH, _markers):
+	if _common_provider.load_from(SAVE_PATH, _marker_ids):
 		print("Common pose: calibration loaded from disk.")
-	elif _common_provider.load_from(DEFAULT_CALIBRATION_PATH, _markers):
+	elif _common_provider.load_from(DEFAULT_CALIBRATION_PATH, _marker_ids):
 		print("Common pose: bundled default calibration loaded.")
 	else:
 		push_error("Common pose: no user or bundled marker calibration is available.")
 
 
-## Finds fresh markers, then keeps only those sharing the newest result timestamp.
-func _newest_marker_result() -> Dictionary:
-	_visible_now = []
-	var newest_timestamp_ms := -1
-
-	for marker in _markers:
-		if _fresh.age_ms(marker) <= _fresh.tracking_loss_timeout_ms:
-			_visible_now.append(marker)
-			newest_timestamp_ms = maxi(
-				newest_timestamp_ms,
-				int(marker.get_meta("last_detected_ms", -1))
-			)
-
-	var newest_markers: Array = []
-	for marker in _visible_now:
-		if int(marker.get_meta("last_detected_ms", -1)) == newest_timestamp_ms:
-			newest_markers.append(marker)
-
-	return {"markers": newest_markers, "timestamp_ms": newest_timestamp_ms}
-
-
-func _update_tracking(markers: Array, detection_ms: int, delta: float) -> void:
+## marker_poses: marker id -> range-corrected WORLD pose, one detection's markers and no others
+## (MarkerFreshness in the app, the recording in the replays).
+func _update_tracking(marker_poses: Dictionary, detection_ms: int, delta: float) -> void:
 	_tracking_was_available = true
-	var raw_pose := _common_provider.get_pose(markers, detection_ms)
-	_common_seen_ms = detection_ms if common_marker in markers else -1
+	var raw_pose := _common_provider.get_pose(marker_poses, detection_ms)
+	if marker_poses.has(common_marker_id):
+		_common_seen_ms = detection_ms
+		_common_marker_y = (marker_poses[common_marker_id] as Transform3D).origin.y
+	else:
+		_common_seen_ms = -1
 	if not _common_provider.is_ready():
 		return
 	if head != null and _filter.is_ready() and _common_provider.has_rest_pose():
-		_full_evidence_now = markers.size() >= 3 and not _hand_over_chest()
+		_full_evidence_now = marker_poses.size() >= 3 and not _hand_over_chest()
 		var gated := _gate_measurement(raw_pose, detection_ms, delta, _full_evidence_now)
 		if gated.is_empty():
 			return
@@ -404,13 +410,13 @@ func _apply_filtered_pose(pose: Transform3D) -> void:
 	if _common_provider.has_rest_pose():
 		# Only clean detections teach the height: 2026-09-24 09:59 a marker half covered by hands
 		# read 7-8 cm instead of 17 and the height was held there. The guard is "no hand over the
-		# chest", NOT "all three markers": the height is read from the common marker's own node, so
+		# chest", NOT "all three markers": the height is read from the common marker's own pose, so
 		# the other two are irrelevant, and requiring them made clean samples so rare (23 % of
 		# frames carry three markers) that learning never finished - every session after v44 sat at
 		# learning(1..15) and the avatar's height stayed a median of a handful of noisy samples.
 		if not _has_held_height and _common_seen_ms >= 0 and _common_seen_ms != _held_last_ms and not _hand_over_chest():
 			_held_last_ms = _common_seen_ms
-			_held_samples.append(common_marker.global_position.y)
+			_held_samples.append(_common_marker_y)
 			# Finish on enough samples, or on the timeout with at least a usable few, so the height
 			# can never stay half-learned while the user is already compressing.
 			if _held_samples.size() >= HELD_HEIGHT_DETECTIONS or (
@@ -488,7 +494,9 @@ func _on_button(button_name: String) -> void:
 	print("Right controller: ", button_name)
 	if button_name != relevel_button:
 		return
-	if not _visible_now.has(common_marker):
+	# Asked per marker rather than against the newest result: re-levelling only needs the common
+	# marker to be currently visible, not to have been part of the very last detection.
+	if not _fresh.is_fresh(common_marker_id):
 		print("Common pose: calibration needs common visibly.")
 		return
 
@@ -574,7 +582,7 @@ func _print_diagnostics(delta: float) -> void:
 	var left_y: float = xr_controller_left.global_position.y if xr_controller_left != null and xr_controller_left.get_is_active() else NAN
 	var right_y: float = xr_controller_right.global_position.y if xr_controller_right != null and xr_controller_right.get_is_active() else NAN
 	var head_y: float = head.global_position.y if head != null else NAN
-	var common_y: float = common_marker.global_position.y if common_marker != null else NAN
+	var common_y := _common_marker_y
 	print("Floor check: left controller y=%.3f right controller y=%.3f head y=%.3f common marker y=%.3f (headset floor = 0)" % [left_y, right_y, head_y, common_y])
 	if not visible or target == null:
 		return
@@ -583,7 +591,7 @@ func _print_diagnostics(delta: float) -> void:
 	var zone: Node3D = target.get_node_or_null("CPRHandZone")
 	var contact: Node3D = zone.get_node_or_null("CollisionShape3D") if zone != null else null
 	var slab_y: float = contact.global_position.y if contact != null else NAN
-	var marker_y: float = common_marker.global_position.y if common_marker != null else NAN
+	var marker_y := _common_marker_y
 	print("Avatar diag: gate=%s floor_y=%.3f avatar_y=%.3f held=%s lowest_y=%.3f (lowest-floor=%.1f cm) slab_y=%.3f marker_y=%.3f (avatar chest above real chest=%.1f cm) nudge=%s yaw=%.1f"
 		% [gate_state, floor_y, global_position.y, ("%.3f" % _held_height) if _has_held_height else "learning(%d)" % _held_samples.size(), lowest, (lowest - floor_y) * 100.0, slab_y, marker_y, (slab_y - marker_y) * 100.0,
 		   str(_manual_nudge), manual_yaw_degrees()])
@@ -653,7 +661,7 @@ func _read_nudge(delta: float) -> Vector3:
 
 
 func _apply_look() -> void:
-	var alpha := clampf(1.0 - avatar_transparency, 0.05, 1.0)
+	var alpha := clampf(1.0 - avatar_transparency, 0.0, 1.0)
 	for node in find_children("*", "MeshInstance3D", true, false):
 		var mesh_instance := node as MeshInstance3D
 		if mesh_instance.has_meta("cpr_feedback"):

@@ -1,5 +1,28 @@
 extends Node
-## Copy Paul's latest marker Dictionary and save each new result as one CSV row.
+## Save each ArUco detection result as one labelled CSV row.
+##
+## MARKER SOURCE. This used to reach into main_3d.gd's private detection slots -- it took that
+## script's _detect_mutex, copied _result_markers and _result_cam_xform under it, and de-duplicated
+## by hashing the result because Godot renders faster than OpenCV detects. None of that exists any
+## more: the opencv_aruco addon emits detection_applied(image, corners, poses, head_pose) exactly
+## once per finished detection, on the main thread, so the row is written from the signal and both
+## the lock and the hash are gone.
+##
+## THE CSV COLUMNS ARE UNCHANGED ON PURPOSE, because the analysis scripts (tune_filter.py and the
+## rest of the recording-instructions toolchain) parse them. That takes one conversion:
+##
+##   camera_*   the head pose at the frame's CAPTURE time. Was xr_camera.global_transform sampled
+##              by hand from a pose history; is now the addon's head_pose, which comes from
+##              xrLocateSpace at the frame's own timestamp -- the same quantity, measured better.
+##              Play space rather than world space, i.e. identical while the XROrigin3D sits at
+##              identity (it does; see main_3d.tscn).
+##   <marker>_* the marker pose in CAMERA space, as before. The addon hands out poses with
+##              head_pose * lens_pose already applied, so the camera-space value the old pipeline
+##              logged is recovered exactly by undoing the head pose: head_pose^-1 * play_pose
+##              leaves lens_pose * marker_optical, which is what the old C++ returned.
+##
+## Logging the addon's poses raw instead would silently change what every existing CSV column
+## means, and nothing downstream would report it.
 
 const MARKER_IDS := [0, 1, 2]
 const MARKER_NAMES := ["common", "chest", "navel"]
@@ -36,7 +59,8 @@ const HIDING_PHASES := [
 const COMPRESSION_PHASES := ["still_before", "compressions", "still_after"]
 const POSE_SUFFIXES := ["x", "y", "z", "qx", "qy", "qz", "qw"]
 
-@export var detection_source: Node
+## The addon node whose detections are logged.
+@export var marker_tracking: ArucoMarkerTracking
 @export var right_controller: XRController3D
 @export var left_controller: XRController3D
 # Typed as Node, not Label, so this accepts a Label3D. A CanvasLayer Label does not render
@@ -48,6 +72,8 @@ const POSE_SUFFIXES := ["x", "y", "z", "qx", "qy", "qz", "qw"]
 ## (user://avatar_trace_<id>.csv): head pose and speed, frame rate, avatar pose. The marker
 ## rows above only exist ~10x per second, which cannot show a shake; this runs every frame.
 @export var avatar_rig: Node3D
+## The viewer's head (XRCamera3D) the avatar trace samples. Was read off main_3d.gd's xr_camera.
+@export var xr_camera: Node3D
 
 var _file: FileAccess
 var _trace: FileAccess
@@ -59,8 +85,6 @@ var _sample_id := 0
 var _test_index := 0
 var _phase_index := 0
 var _recording_start_ms := 0
-var _last_result_hash := 0
-var _have_result := false
 
 
 func _ready() -> void:
@@ -69,6 +93,10 @@ func _ready() -> void:
 		right_controller.button_pressed.connect(_on_right_button)
 	if left_controller != null:
 		left_controller.button_pressed.connect(_on_left_button)
+	if marker_tracking != null:
+		marker_tracking.detection_applied.connect(_on_detection_applied)
+	else:
+		push_error("ArUco logger: no ArucoMarkerTracking assigned; nothing will be recorded.")
 	_update_status()
 
 
@@ -105,45 +133,26 @@ func _select_next_test() -> void:
 	print("ArUco test type: ", _current_test())
 
 
-func _process(_delta: float) -> void:
+## Per rendered frame there is only the avatar trace left to write; marker rows come from the signal.
+func _process(delta: float) -> void:
 	if _recording and _trace != null:
-		_write_trace(_delta)
-	var result := _copy_latest_result()
-	if result.is_empty():
-		return
+		_write_trace(delta)
 
-	# Godot runs faster than OpenCV. Do not write the same stored result twice.
-	var result_hash := hash(result)
-	if _have_result and result_hash == _last_result_hash:
-		return
-	_have_result = true
-	_last_result_hash = result_hash
+
+## One finished detection, one row. A detection that found no markers still gets a row, with the
+## marker columns empty -- that is what the `hiding` test is made of.
+func _on_detection_applied(
+		_image: Image,
+		_corners: Dictionary,
+		poses: Dictionary,
+		head_pose: Transform3D
+) -> void:
+	# The trace's result_age_ms counts from here, recording or not -- the same moment the old hash
+	# check noticed a new result.
 	_last_new_result_ms = Time.get_ticks_msec()
-
-	if _recording:
-		_write_row(result.markers, result.camera_pose)
-
-
-func _copy_latest_result() -> Dictionary:
-	if detection_source == null:
-		return {}
-
-	# Get the same mutex used by the detection worker in main_3d.gd.
-	var result_mutex: Mutex = detection_source.get("_detect_mutex")
-	if result_mutex == null:
-		return {}
-
-	# Lock the result so the worker cannot change it while we copy it.
-	result_mutex.lock()
-	# Dictionary is reference-based, so make an independent deep copy.
-	var markers: Dictionary = detection_source.get("_result_markers").duplicate(true)
-	# Transform3D is a value type, so assigning it already makes a copy.
-	var camera_pose: Transform3D = detection_source.get("_result_cam_xform")
-	result_mutex.unlock()
-
-	if markers.is_empty() and camera_pose == Transform3D.IDENTITY:
-		return {}
-	return {"markers": markers, "camera_pose": camera_pose}
+	if not _recording:
+		return
+	_write_row(poses, head_pose)
 
 
 func _start_recording() -> void:
@@ -189,7 +198,7 @@ func _stop_recording() -> void:
 	_update_status()
 
 
-func _write_row(markers: Dictionary, camera_pose: Transform3D) -> void:
+func _write_row(poses: Dictionary, head_pose: Transform3D) -> void:
 	var row := PackedStringArray([
 		str(_sample_id),
 		str(Time.get_ticks_msec()),
@@ -197,10 +206,17 @@ func _write_row(markers: Dictionary, camera_pose: Transform3D) -> void:
 		_current_test(),
 		_current_phase(),
 	])
-	_add_pose(row, camera_pose)
+	_add_pose(row, head_pose)
+	# Undo the head pose to get back to the camera-space columns the format has always carried.
+	# Inverted once per row rather than once per marker: it is the same matrix for all three.
+	var to_camera := head_pose.affine_inverse()
 	for marker_id in MARKER_IDS:
-		# get() gives null when the marker was not seen in this frame.
-		_add_pose(row, markers.get(marker_id))
+		# has() rather than get(): a missing marker means "not seen in this frame" and must leave
+		# its columns empty, and a Transform3D cannot be null to signal that on its own.
+		if poses.has(marker_id):
+			_add_pose(row, to_camera * (poses[marker_id] as Transform3D))
+		else:
+			_add_pose(row, null)
 
 	_file.store_line(",".join(row))
 	_file.flush()
@@ -297,10 +313,9 @@ func _exit_tree() -> void:
 ## One line per rendered frame: what the head did and what the avatar did, so a shake can be
 ## measured (amplitude, rate) and tied to head speed, frame rate or detection arrivals.
 func _write_trace(delta: float) -> void:
-	var camera: Node3D = detection_source.get("xr_camera") if detection_source != null else null
-	if camera == null:
+	if xr_camera == null:
 		return
-	var head: Transform3D = camera.global_transform
+	var head: Transform3D = xr_camera.global_transform
 	var speed := 0.0
 	var turn := 0.0
 	if _trace_have_prev and delta > 0.0:

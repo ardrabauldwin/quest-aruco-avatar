@@ -44,18 +44,12 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 	floor_provider.height = 0.0
 	rig.add_child(floor_provider)
 	rig.floor_provider = floor_provider
-	var common_marker := Node3D.new()
-	var chest_marker := Node3D.new()
-	var torso_marker := Node3D.new()
-	common_marker.name = "aruco_patch0"
-	chest_marker.name = "aruco_patch1"
-	torso_marker.name = "aruco_patch2"
-	rig.add_child(common_marker)
-	rig.add_child(chest_marker)
-	rig.add_child(torso_marker)
-	rig.common_marker = common_marker
-	rig.chest_marker = chest_marker
-	rig.torso_marker = torso_marker
+	# The rig takes its markers from the addon by ID now, so there are no aruco_patch stand-ins to
+	# build. It still needs a tracking node to subscribe to: an ArucoMarkerTracking that never
+	# enters the tree builds no OpenCVProcessor and starts no camera, so it costs nothing here and
+	# keeps the rig's _ready off its "no marker source" error path.
+	var tracking := ArucoMarkerTracking.new()
+	rig.marker_tracking = tracking
 	# Enter the tree so Node3D global transforms are valid, but do not run the tracking loop.
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
 	rig.default_nudge = Vector3(-0.008518, -0.022917, 0.048966)
@@ -110,6 +104,7 @@ func _test_avatar_lowest_point_snaps_to_quest_floor() -> void:
 	rig._apply_filtered_pose(pose)
 	assert(absf(rig._lowest_mesh_world_y(avatar) + 0.12) < 1.0e-5, "Lower floor must lower the actual mesh")
 	rig.free()
+	tracking.free()
 
 
 func _test_floor_lock_discards_marker_tilt() -> void:

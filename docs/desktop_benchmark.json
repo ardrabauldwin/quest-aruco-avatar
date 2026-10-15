@@ -1,0 +1,151 @@
+{
+  "adapter": "Apple M5 Pro",
+  "engine": "4.7.2-stable (official)",
+  "mean_fps": 499.058823529412,
+  "min_fps": 444,
+  "peak_draw_calls": 119,
+  "platform": "macOS",
+  "quest_measurement": false,
+  "renderer": "gl_compatibility",
+  "sample_count": 17,
+  "samples": [
+    {
+      "draw_calls": 112,
+      "fps": 557.0,
+      "frame_ms": 8.371,
+      "memory_mb": 56.9147138595581,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 101,
+      "fps": 454.0,
+      "frame_ms": 6.827,
+      "memory_mb": 56.9151945114136,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 491.0,
+      "frame_ms": 6.779,
+      "memory_mb": 56.9026098251343,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 103,
+      "fps": 493.0,
+      "frame_ms": 6.761,
+      "memory_mb": 56.9095411300659,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 109,
+      "fps": 495.0,
+      "frame_ms": 7.344,
+      "memory_mb": 56.9141263961792,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 117,
+      "fps": 451.0,
+      "frame_ms": 6.96,
+      "memory_mb": 56.9229421615601,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 102,
+      "fps": 449.0,
+      "frame_ms": 7.358,
+      "memory_mb": 56.9226636886597,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 492.0,
+      "frame_ms": 6.932,
+      "memory_mb": 56.9260091781616,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 510.0,
+      "frame_ms": 6.623,
+      "memory_mb": 56.9299802780151,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 510.0,
+      "frame_ms": 6.735,
+      "memory_mb": 56.9367742538452,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 526.0,
+      "frame_ms": 7.257,
+      "memory_mb": 56.9405393600464,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 527.0,
+      "frame_ms": 6.386,
+      "memory_mb": 56.944167137146,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 521.0,
+      "frame_ms": 7.498,
+      "memory_mb": 56.9440031051636,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 100,
+      "fps": 533.0,
+      "frame_ms": 6.776,
+      "memory_mb": 56.9477300643921,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 111,
+      "fps": 525.0,
+      "frame_ms": 6.858,
+      "memory_mb": 56.9519529342651,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 115,
+      "fps": 506.0,
+      "frame_ms": 6.583,
+      "memory_mb": 56.9575109481812,
+      "platform": "macOS",
+      "xr": false
+    },
+    {
+      "draw_calls": 119,
+      "fps": 444.0,
+      "frame_ms": 7.173,
+      "memory_mb": 56.9565382003784,
+      "platform": "macOS",
+      "xr": false
+    }
+  ],
+  "viewport": "(1440, 900)",
+  "xr": false
+}

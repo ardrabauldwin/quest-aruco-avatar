@@ -1,0 +1,23 @@
+{
+  "model": "Qwen/Qwen3-0.6B",
+  "metrics": {
+    "train_runtime": 107.2651,
+    "train_samples_per_second": 6.712,
+    "train_steps_per_second": 1.678,
+    "total_flos": 360434139070464.0,
+    "train_loss": 0.02620861164501144,
+    "epoch": 3.0
+  },
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "torch_version": "2.14.1+cu130",
+  "seed": 42,
+  "examples": {
+    "train": 240,
+    "validation": 102
+  },
+  "dataset_sha256": {
+    "train": "e46b74765bdc85a93598976906617342711e71ea558088f1501d6d77ae00a66c",
+    "validation": "049eb9a812916f44e93aae42e003f4286a5a6bb90563a3d6cc7500d676fac984"
+  },
+  "status": "experimental_unreviewed_not_deployed"
+}

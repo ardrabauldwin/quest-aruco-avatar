@@ -1,0 +1,55 @@
+extends "res://tests/suite.gd"
+const Coach = preload("res://scripts/ai/training_coach.gd")
+const Scenario = preload("res://scripts/scenario/scenario_controller.gd")
+
+func run() -> Array[String]:
+	var scenario := Scenario.new()
+	scenario.cpr_witness_only = true
+	check(Coach.step(scenario) == "setup", "Setup before starting")
+	scenario.start()
+	check(Coach.step(scenario) == "safety", "Safety first")
+	scenario.submit_action("begin_check")
+	check(Coach.step(scenario) == "response", "Responsiveness next")
+	var explanation := Coach.feedback(scenario, "The scene is safe.", "ccbm_out_of_order", "en")
+	check("already reported" in explanation and "responds" in explanation, "Repeated safety report explains current responsiveness task")
+	scenario.submit_action("check_responsiveness")
+	check(Coach.step(scenario) == "call", "Call before breathing")
+	scenario.submit_action("call_emergency")
+	check(Coach.step(scenario) == "breathing", "Airway and breathing guidance")
+	scenario.submit_action("check_breathing")
+	check(Coach.step(scenario) == "compressions", "Compressions next")
+	for index in range(30): scenario.submit_action("compression")
+	check(Coach.step(scenario) == "breaths", "Combined breath prompt at thirty")
+	scenario.submit_action("ventilation")
+	check(Coach.step(scenario) == "breaths", "First accepted breath does not trigger a second voice prompt")
+	scenario.submit_action("ventilation")
+	check(Coach.step(scenario) == "compressions", "Repeat cycle")
+	for language in ["en", "de", "pl"]:
+		for key in ["setup", "safety", "response", "call", "breathing", "compressions", "breaths", "breath_one", "breath_two", "compression_only", "finish", "handover", "aed"]:
+			check(not Coach.instruction(key, language).is_empty(), language + " instruction " + key)
+	check(Coach.asks_for_help("What should I do next?"), "Help routes to instructor")
+	check(Coach.asks_for_help("What shall I do?"), "Natural next-step wording routes to instructor")
+	check(Coach.asks_witness("Anna, what happened?"), "Background question routes to Anna")
+	var fact := NaretLLMOrchestrator.witness_fact_reply("What happened, Anna?", "en")
+	check("collapsed" in str(fact.get("text", "")) and fact.get("action") == "none", "Anna gives established incident fact without clinical action")
+	check(not Coach.asks_witness("Anna, please call 112."), "Emergency request remains an observation")
+	check(Coach.asks_for_help("How deep should I press?"), "Technique question routes to instructor")
+	check(Coach.asks_for_help("How many compressions?"), "Count question routes to instructor")
+	check(not Coach.asks_for_help("Anna, how can you help me?"), "Named Anna routes to witness")
+	check(not Coach.asks_for_help("He is not responding."), "Finding is not a help question")
+	# Ambient sound while TTS is in flight must not start a microphone recording
+	# and invalidate the reply before its audio is ready.
+	var audio := NaretAudioManager.new()
+	var speech = preload("res://scripts/scenario/spoken_observation.gd")
+	check(speech.reports_breath_pair("I have given him two breaths."), "Explicit completed pair is recognised")
+	check(not speech.reports_breath_pair("I will give two breaths."), "A plan cannot count breaths")
+	check(not speech.reports_breath_pair("I have not given two breaths."), "Negated pair cannot count")
+	check(not speech.reports_breath_pair("Have I given two breaths?"), "A question cannot count")
+	audio._preparing = true
+	audio._pending.append({"text": "Give the second breath."})
+	audio.update_voice_activity(0.5, 1000)
+	check(not audio.recording and audio._generation == 0, "Preparing reply suppresses automatic recording and cancellation")
+	check(audio._pending.size() == 1, "Pending guidance survives ambient sound")
+	audio.free()
+	scenario.free()
+	return failures

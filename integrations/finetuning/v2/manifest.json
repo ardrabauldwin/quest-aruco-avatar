@@ -1,0 +1,22 @@
+{
+  "counts": {
+    "train": 168,
+    "validation": 84
+  },
+  "languages": [
+    "en",
+    "de",
+    "pl"
+  ],
+  "independent_base_sentences": 126,
+  "human_reviewed": false,
+  "old_test_status": "inspected_development_only",
+  "fresh_test_status": "new_synthetic_challenge_frozen_before_training",
+  "note": "Translations and prefix variants share a family and stay in the same split. No claimed real-user accuracy.",
+  "training_status": "completed",
+  "adapter": "/opt/naret-training/v2-adapter",
+  "challenge_cases": 24,
+  "challenge_sha256": "a9b25cc68685d4fa8df122a9e892eff558e41e74b32790dc9fb0fb8eb1a728d9",
+  "evaluation_status": "complete_not_deployed",
+  "challenge_status": "now_inspected_development_data"
+}

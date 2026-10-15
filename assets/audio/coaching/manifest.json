@@ -1,0 +1,184 @@
+{
+  "clips": [
+    {
+      "text": "Place the patient, save your controller adjustment with A, then start training.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/setup.wav"
+    },
+    {
+      "text": "First check that it is safe to approach. Tell me what you find.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/safety.wav"
+    },
+    {
+      "text": "Speak to him and gently tap his shoulders. Tell me whether he responds.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/response.wav"
+    },
+    {
+      "text": "Ask Anna to call 112 and put the phone on speaker.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/call.wav"
+    },
+    {
+      "text": "Open his airway with head tilt and chin lift. Check for normal breathing for no more than ten seconds, then tell me what you find. Gasping is not normal breathing.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/breathing.wav"
+    },
+    {
+      "text": "Give 30 compressions in the centre of the chest, on the lower half of the breastbone. Aim for 100 to 120 a minute and 5 to 6 centimetres depth. Allow full recoil and minimise pauses.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/compressions.wav"
+    },
+    {
+      "text": "If trained and able, open the airway, pinch the nose and seal your mouth over his. Give one breath over about one second, enough to make the chest rise. Report it only after you have done it. If unable to give breaths, continue compression-only CPR.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/breath_one.wav"
+    },
+    {
+      "text": "Give the second breath, watching for chest rise, then report that completed breath. Keep the interruption for both breaths under ten seconds. Resume compressions promptly.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/breath_two.wav"
+    },
+    {
+      "text": "Continue compressions at 100 to 120 a minute, allowing full recoil and minimising pauses.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/compression_only.wav"
+    },
+    {
+      "text": "Training has ended. Review your sequence, timing and communication in the results.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/finish.wav"
+    },
+    {
+      "text": "Use an AED as soon as it is available and follow its prompts. AED interaction is outside this selected exercise.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed.wav"
+    },
+    {
+      "text": "Continue CPR until professional help takes over, the person shows signs of life, or you cannot continue. In this simulation, request handover when the trainer confirms help has arrived.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/handover.wav"
+    },
+    {
+      "text": "Patient platzieren, die Controller-Anpassung mit A speichern und das Training starten.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/setup.wav"
+    },
+    {
+      "text": "Prüfen Sie zuerst, ob Sie sich gefahrlos nähern können. Sagen Sie, was Sie feststellen.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/safety.wav"
+    },
+    {
+      "text": "Sprechen Sie ihn an und tippen Sie vorsichtig an seine Schultern. Sagen Sie mir, ob er reagiert.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/response.wav"
+    },
+    {
+      "text": "Bitten Sie Anna, 112 anzurufen und den Lautsprecher einzuschalten.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/call.wav"
+    },
+    {
+      "text": "Öffnen Sie die Atemwege durch Überstrecken des Kopfes und Anheben des Kinns. Prüfen Sie die normale Atmung höchstens zehn Sekunden und berichten Sie das Ergebnis. Schnappatmung ist nicht normal.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/breathing.wav"
+    },
+    {
+      "text": "Geben Sie 30 Kompressionen in der Brustmitte auf der unteren Hälfte des Brustbeins: 100 bis 120 pro Minute und 5 bis 6 Zentimeter tief. Vollständig entlasten und Pausen minimieren.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/compressions.wav"
+    },
+    {
+      "text": "Wenn Sie geschult und dazu in der Lage sind: Atemwege öffnen, Nase zuhalten, Mund dicht umschließen und etwa eine Sekunde beatmen, bis sich der Brustkorb hebt. Erst danach berichten. Wenn Beatmung nicht möglich ist, kontinuierlich komprimieren.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/breath_one.wav"
+    },
+    {
+      "text": "Geben Sie die zweite Beatmung und beobachten Sie die Brusthebung. Berichten Sie danach. Beide Beatmungen sollen die Kompressionen weniger als zehn Sekunden unterbrechen. Sofort weiterdrücken.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/breath_two.wav"
+    },
+    {
+      "text": "Komprimieren Sie weiter mit 100 bis 120 pro Minute, vollständiger Entlastung und möglichst kurzen Pausen.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/compression_only.wav"
+    },
+    {
+      "text": "Das Training ist beendet. Prüfen Sie Ablauf, Zeit und Kommunikation in den Ergebnissen.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/finish.wav"
+    },
+    {
+      "text": "Einen AED sobald verfügbar benutzen und seinen Anweisungen folgen. Die AED-Bedienung liegt außerhalb dieser Übung.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed.wav"
+    },
+    {
+      "text": "CPR fortsetzen, bis professionelle Hilfe übernimmt, Lebenszeichen auftreten oder Sie nicht mehr können. In der Simulation die Übergabe anfordern, wenn die Lehrperson das Eintreffen der Hilfe bestätigt.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/handover.wav"
+    },
+    {
+      "text": "Ustaw pacjenta, zapisz dopasowanie przyciskiem A i rozpocznij trening.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/setup.wav"
+    },
+    {
+      "text": "Najpierw sprawdź, czy możesz bezpiecznie podejść. Powiedz, co stwierdzasz.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/safety.wav"
+    },
+    {
+      "text": "Zwróć się do niego i delikatnie dotknij jego ramion. Powiedz, czy reaguje.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/response.wav"
+    },
+    {
+      "text": "Poproś Annę, żeby zadzwoniła pod 112 i włączyła głośnik.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/call.wav"
+    },
+    {
+      "text": "Udrożnij drogi oddechowe, odchylając głowę i unosząc brodę. Sprawdzaj prawidłowy oddech przez najwyżej dziesięć sekund, potem zgłoś wynik. Pojedyncze westchnienia nie są prawidłowym oddechem.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/breathing.wav"
+    },
+    {
+      "text": "Wykonaj 30 uciśnięć pośrodku klatki piersiowej, na dolnej połowie mostka. Tempo 100 do 120 na minutę, głębokość 5 do 6 centymetrów. Pozwól klatce całkowicie się rozprężyć i ogranicz przerwy.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/compressions.wav"
+    },
+    {
+      "text": "Jeśli masz przeszkolenie i możesz: udrożnij drogi oddechowe, zatkaj nos, obejmij szczelnie usta i wykonaj oddech przez około sekundę, obserwując uniesienie klatki. Zgłoś go dopiero po wykonaniu. Jeśli nie możesz wentylować, kontynuuj same uciśnięcia.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/breath_one.wav"
+    },
+    {
+      "text": "Wykonaj drugi oddech, obserwuj uniesienie klatki i zgłoś wykonanie. Przerwa na oba oddechy powinna trwać mniej niż dziesięć sekund. Szybko wróć do uciskania.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/breath_two.wav"
+    },
+    {
+      "text": "Kontynuuj uciskanie w tempie 100 do 120 na minutę. Pozwól klatce całkowicie się rozprężyć i ogranicz przerwy.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/compression_only.wav"
+    },
+    {
+      "text": "Ćwiczenie zakończone. Sprawdź kolejność, czas i komunikację w wynikach.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/finish.wav"
+    },
+    {
+      "text": "Użyj AED, gdy jest dostępny, i wykonuj jego polecenia. Obsługa AED jest poza zakresem tego ćwiczenia.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed.wav"
+    },
+    {
+      "text": "Kontynuuj RKO do przejęcia przez ratowników, pojawienia się oznak życia lub wyczerpania. W symulacji poproś o przekazanie, gdy instruktor potwierdzi przybycie pomocy.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/handover.wav"
+    }
+  ]
+}

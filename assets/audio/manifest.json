@@ -1,0 +1,922 @@
+﻿{
+    "generator":  "fish-audio-s2-pro (local, Fish Audio Research License)",
+    "languages":  [
+                      "de",
+                      "pl",
+                      "en"
+                  ],
+    "voices":  {
+                   "anna":  "data/voices/anna.wav",
+                   "marek":  "data/voices/marek.wav",
+                   "aed":  "data/voices/aed.wav",
+                   "instructor":  "data/voices/instructor.wav"
+               },
+    "clips":  [
+                  {
+                      "key":  "calm",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Ich bleibe ruhig. Bitte sagen Sie mir, wie ich helfen kann.",
+                      "file":  "tts_de/calm.wav",
+                      "duration_s":  3.019,
+                      "sha256":  "7ddfb687961674068bc7b5e30ebcdd930176a088826d8888088b5836f4157341"
+                  },
+                  {
+                      "key":  "help",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Ich rufe den Rettungsdienst unter hundertzwÃ¶lf an.",
+                      "file":  "tts_de/help.wav",
+                      "duration_s":  2.74,
+                      "sha256":  "d00a3165acde7613f7ca50e0e10bf0960068414cca7366f0bab29b51a22506f6"
+                  },
+                  {
+                      "key":  "aed",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Ich hole den automatisierten Defibrillator.",
+                      "file":  "tts_de/aed.wav",
+                      "duration_s":  2.461,
+                      "sha256":  "72749110e55fddffb1c7d9349a65debf07da5904fe7e7006f1963ee3a90f4b1f"
+                  },
+                  {
+                      "key":  "thanks",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Danke, dass Sie helfen. Ich bleibe hier.",
+                      "file":  "tts_de/thanks.wav",
+                      "duration_s":  2.183,
+                      "sha256":  "13857cb431c1a01fabb66956b880d1e4cb7918ed98a1090a43097d1cefc8a5e8"
+                  },
+                  {
+                      "key":  "start",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Wir beginnen die Ãœbung. PrÃ¼fen Sie zuerst, ob die Person reagiert.",
+                      "file":  "tts_de/start.wav",
+                      "duration_s":  4.505,
+                      "sha256":  "188ff03ce563a09f1f57d9e3991fc0e765a67819894d8a53b1c69bba213d7f9f"
+                  },
+                  {
+                      "key":  "cpr",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Beginnen Sie die Herzdruckmassage: dreiÃŸig Kompressionen und zwei Beatmungen.",
+                      "file":  "tts_de/cpr.wav",
+                      "duration_s":  5.201,
+                      "sha256":  "9edaf589394e1f5bbdda961138ce4cb6a08eb28a02933f7b0df5a6e83c410e65"
+                  },
+                  {
+                      "key":  "aed_instruction",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Schalten Sie den Defibrillator ein und folgen Sie seinen Anweisungen.",
+                      "file":  "tts_de/aed_instruction.wav",
+                      "duration_s":  4.226,
+                      "sha256":  "955693de258287b8c38acb1e0497358e95d8b1527763bb1b778fb57443295c55"
+                  },
+                  {
+                      "key":  "recovery",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Die Ãœbung ist beendet. Besprechen Sie jetzt Ihr Vorgehen.",
+                      "file":  "tts_de/recovery.wav",
+                      "duration_s":  3.669,
+                      "sha256":  "e6e6662fef2aa1386d3fcdd6e8cec09e37b188a37a6ff83e02c8a861eefb6a02"
+                  },
+                  {
+                      "key":  "anna_arrive",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Hilfe! Mein Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
+                      "file":  "tts_de/anna_arrive.wav",
+                      "duration_s":  3.437,
+                      "sha256":  "c710a8d67570e284972f7fab2846dd1c976ebb189a86aa3093ea38cbf4e5d3c0"
+                  },
+                  {
+                      "key":  "anna_urge",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Bitte, tun Sie doch etwas!",
+                      "file":  "tts_de/anna_urge.wav",
+                      "duration_s":  1.95,
+                      "sha256":  "54d48b38e7f8cc7c3fd7b106c6c03cd5b4304e948691ffb92af88427b421a5f2"
+                  },
+                  {
+                      "key":  "anna_name",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Jan! Jan, hÃ¶rst du mich?",
+                      "file":  "tts_de/anna_name.wav",
+                      "duration_s":  2.136,
+                      "sha256":  "48ea7182e4e6ec49394cece0a5759b8ed303b671f9288ebf2105c5495795e011"
+                  },
+                  {
+                      "key":  "anna_breathing",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Atmet er? Sagen Sie doch etwas!",
+                      "file":  "tts_de/anna_breathing.wav",
+                      "duration_s":  2.368,
+                      "sha256":  "ba2a892a0d0696e180bfecbf0a5f54fac56507ec66e19cbdd1da6874d0b5f94d"
+                  },
+                  {
+                      "key":  "anna_good",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Ja â€¦ Sie machen das gut. Bitte hÃ¶ren Sie nicht auf.",
+                      "file":  "tts_de/anna_good.wav",
+                      "duration_s":  3.437,
+                      "sha256":  "20a33a32cd0df4d49002693a1aea99e29e36dc426d64048f684d11fa049bd769"
+                  },
+                  {
+                      "key":  "anna_pause",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Bitte nicht aufhÃ¶ren! Machen Sie weiter!",
+                      "file":  "tts_de/anna_pause.wav",
+                      "duration_s":  2.554,
+                      "sha256":  "5571ea0c83031e7c7a87c270b617c885386b82e4d4765aba00dd6716b8c8a8ee"
+                  },
+                  {
+                      "key":  "anna_touch",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Jan, ich bin da â€¦",
+                      "file":  "tts_de/anna_touch.wav",
+                      "duration_s":  1.533,
+                      "sha256":  "82624b599f5b4e1496c80c54c224c993ac25d8531545b8c738c99b6b4d6a4586"
+                  },
+                  {
+                      "key":  "anna_sorry",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Entschuldigung! Ich gehe zurÃ¼ck.",
+                      "file":  "tts_de/anna_sorry.wav",
+                      "duration_s":  1.95,
+                      "sha256":  "a50e1b780bf57402033b9c7ac39ba6e5d4fcd3898c7d98426e2bd2b80c34f90b"
+                  },
+                  {
+                      "key":  "anna_shock",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Oh Gott! Was war das?",
+                      "file":  "tts_de/anna_shock.wav",
+                      "duration_s":  1.765,
+                      "sha256":  "10cc7e048feda545bbb1fb2b11d304485a94d8efbb605ca87034201d9f5d8039"
+                  },
+                  {
+                      "key":  "anna_relief",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Er atmet! Danke! Danke, dass Sie ihm geholfen haben!",
+                      "file":  "tts_de/anna_relief.wav",
+                      "duration_s":  3.437,
+                      "sha256":  "dd49a5b49c550e18f17df5f977f146f149eae75cd9268fb1cc59781920f011e1"
+                  },
+                  {
+                      "key":  "anna_no_shock",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Warum macht das GerÃ¤t nichts?",
+                      "file":  "tts_de/anna_no_shock.wav",
+                      "duration_s":  1.765,
+                      "sha256":  "e7b33a50bce6578664ff2addcdddf19d27a7418c62d93c6775f5498c61f3b54c"
+                  },
+                  {
+                      "key":  "anna_agonal",
+                      "language":  "de",
+                      "speaker":  "anna",
+                      "text":  "Er atmet doch noch! Sehen Sie, er atmet!",
+                      "file":  "tts_de/anna_agonal.wav",
+                      "duration_s":  3.344,
+                      "sha256":  "39cce9073ae1afc29ccdba6b5d33aee2ceaa4787ce398fad8cc9d02a4a12b2a2"
+                  },
+                  {
+                      "key":  "calm",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Zachowam spokÃ³j. ProszÄ™ powiedzieÄ‡, jak mogÄ™ pomÃ³c.",
+                      "file":  "tts_pl/calm.wav",
+                      "duration_s":  3.947,
+                      "sha256":  "9bb9140a785029090b6324507e420ce436a5f80c65a72e26f0e3bd55252856ec"
+                  },
+                  {
+                      "key":  "help",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "DzwoniÄ™ pod numer sto dwanaÅ›cie i wzywam pomoc.",
+                      "file":  "tts_pl/help.wav",
+                      "duration_s":  3.065,
+                      "sha256":  "800803766017b3d33d60b884f1a17a57aba6ffb7d4cc8672a796df70db6a5c50"
+                  },
+                  {
+                      "key":  "aed",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "PrzyniosÄ™ automatyczny defibrylator.",
+                      "file":  "tts_pl/aed.wav",
+                      "duration_s":  2.647,
+                      "sha256":  "f484588851d3b9040daa8042acb1d811a35ac5caeae29c67f8e826a467ea5ca5"
+                  },
+                  {
+                      "key":  "thanks",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "DziÄ™kujÄ™ za pomoc. ZostanÄ™ tutaj.",
+                      "file":  "tts_pl/thanks.wav",
+                      "duration_s":  2.647,
+                      "sha256":  "b0d79421ef02bf2143fa554adb45172b02d230cb5556200443a4211a57fc9d61"
+                  },
+                  {
+                      "key":  "start",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "Zaczynamy Ä‡wiczenie. Najpierw sprawdÅº, czy osoba reaguje.",
+                      "file":  "tts_pl/start.wav",
+                      "duration_s":  5.108,
+                      "sha256":  "f6dbbf926c197edbf0c22ec829c5a41692a9fe9ddca170c326672a75ede9d490"
+                  },
+                  {
+                      "key":  "cpr",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "Rozpocznij resuscytacjÄ™: trzydzieÅ›ci uciÅ›niÄ™Ä‡ i dwa oddechy ratownicze.",
+                      "file":  "tts_pl/cpr.wav",
+                      "duration_s":  5.526,
+                      "sha256":  "943be2b8a8acde620aa26bbc3093ab6c38d101ea45c79322a5c2d8077363b783"
+                  },
+                  {
+                      "key":  "aed_instruction",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "WÅ‚Ä…cz defibrylator i wykonuj jego polecenia.",
+                      "file":  "tts_pl/aed_instruction.wav",
+                      "duration_s":  3.344,
+                      "sha256":  "dbb992ea3f15566e37471ee2cca9a8456caf7692fa3d6be99dd1f61d6398a599"
+                  },
+                  {
+                      "key":  "recovery",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "Ä†wiczenie zakoÅ„czone. OmÃ³wcie teraz swoje dziaÅ‚ania.",
+                      "file":  "tts_pl/recovery.wav",
+                      "duration_s":  4.365,
+                      "sha256":  "d9e02c7e5e3a63eb08c405b9156ee34db970b528592c86a9812515f5269fe54e"
+                  },
+                  {
+                      "key":  "anna_arrive",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Pomocy! MÃ³j mÄ…Å¼ nagle upadÅ‚! ProszÄ™ mu pomÃ³c!",
+                      "file":  "tts_pl/anna_arrive.wav",
+                      "duration_s":  3.762,
+                      "sha256":  "0ddd2c89985b9f60bd92a38ba9aa26a316dce87375246bfed9ff873ad23e6268"
+                  },
+                  {
+                      "key":  "anna_urge",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "ProszÄ™, niech ktoÅ› coÅ› zrobi!",
+                      "file":  "tts_pl/anna_urge.wav",
+                      "duration_s":  1.95,
+                      "sha256":  "654475bfb7c4b6c6615ccc89859e054b3528a7bf7d3aef0c245e37aab48aca52"
+                  },
+                  {
+                      "key":  "anna_name",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Janek! Janek, sÅ‚yszysz mnie?",
+                      "file":  "tts_pl/anna_name.wav",
+                      "duration_s":  2.276,
+                      "sha256":  "ae081c7bf546f4e7cb9dfa2b584e0a6b153efceb263dbd1191ec453cbee349bb"
+                  },
+                  {
+                      "key":  "anna_breathing",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Czy on oddycha? ProszÄ™ coÅ› powiedzieÄ‡!",
+                      "file":  "tts_pl/anna_breathing.wav",
+                      "duration_s":  2.786,
+                      "sha256":  "17c780b20d30a7df17c1471e0c2e71ba9562362325a94fa510f092c23dbf67d2"
+                  },
+                  {
+                      "key":  "anna_good",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Takâ€¦ dobrze to idzie. ProszÄ™ nie przestawaÄ‡.",
+                      "file":  "tts_pl/anna_good.wav",
+                      "duration_s":  3.251,
+                      "sha256":  "e505b479b5b5af8c0eddade9bfe7fad444a282357832631f275a38836529a27c"
+                  },
+                  {
+                      "key":  "anna_pause",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "ProszÄ™ nie przerywaÄ‡! ProszÄ™ uciskaÄ‡ dalej!",
+                      "file":  "tts_pl/anna_pause.wav",
+                      "duration_s":  3.204,
+                      "sha256":  "39575d0d2481b4cdc6d65c7dbb60e7d09a857984e3f27f2e038791642ebb4b53"
+                  },
+                  {
+                      "key":  "anna_touch",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Janek, jestem tutajâ€¦",
+                      "file":  "tts_pl/anna_touch.wav",
+                      "duration_s":  1.904,
+                      "sha256":  "8126aa9e0d70c02ce780be93b3a0bb6c7dffa4290917ce521432a8c41846edba"
+                  },
+                  {
+                      "key":  "anna_sorry",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Przepraszam! JuÅ¼ siÄ™ odsuwam.",
+                      "file":  "tts_pl/anna_sorry.wav",
+                      "duration_s":  2.322,
+                      "sha256":  "5830e5ecdc034cb3450161a688d6ea60065a323537f35b80111164d5490d80d2"
+                  },
+                  {
+                      "key":  "anna_shock",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "O BoÅ¼e! Co to byÅ‚o?",
+                      "file":  "tts_pl/anna_shock.wav",
+                      "duration_s":  2.043,
+                      "sha256":  "257925aa338878682e2218cf90aee34051e830d758945952991f21868b262b4c"
+                  },
+                  {
+                      "key":  "anna_relief",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "On oddycha! DziÄ™kujÄ™! Bardzo dziÄ™kujÄ™ za pomoc!",
+                      "file":  "tts_pl/anna_relief.wav",
+                      "duration_s":  3.855,
+                      "sha256":  "37e6449328548a9d41967f28a80e0d061d18036229919780b5810bd4b11fe10e"
+                  },
+                  {
+                      "key":  "anna_no_shock",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "Dlaczego to urzÄ…dzenie nic nie robi?",
+                      "file":  "tts_pl/anna_no_shock.wav",
+                      "duration_s":  2.415,
+                      "sha256":  "805aece6ff358a64b494451f380e1ad2cab65f7c865cacca21db3e0a450732d2"
+                  },
+                  {
+                      "key":  "anna_agonal",
+                      "language":  "pl",
+                      "speaker":  "anna",
+                      "text":  "PrzecieÅ¼ on jeszcze oddycha! ProszÄ™ spojrzeÄ‡!",
+                      "file":  "tts_pl/anna_agonal.wav",
+                      "duration_s":  3.39,
+                      "sha256":  "00f5f0177099da812576483120097851e2c0507b390d03e10a24106d2a01664b"
+                  },
+                  {
+                      "key":  "marek_offer",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Ich bin hier. Was soll ich tun?",
+                      "file":  "tts_de/marek_offer.wav",
+                      "duration_s":  2.136,
+                      "sha256":  "66a719371dc30eb779c12e7b251c0d154676416cb09bcd19222af18ccce8b5ef"
+                  },
+                  {
+                      "key":  "marek_call",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Ich rufe die 112 an und stelle auf Lautsprecher.",
+                      "file":  "tts_de/marek_call.wav",
+                      "duration_s":  3.669,
+                      "sha256":  "02161303db00829f983f0f3419e78dfcf52f572f6630b0b617f8d051c9f161ff"
+                  },
+                  {
+                      "key":  "marek_dispatch",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Die Leitstelle ist dran. Sie fragen, ob er normal atmet.",
+                      "file":  "tts_de/marek_dispatch.wav",
+                      "duration_s":  3.715,
+                      "sha256":  "aac0dd54fd38357bbd3bfddb77ee91c862357b813726198582623c8353ccfb71"
+                  },
+                  {
+                      "key":  "marek_prompt_call",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Soll ich den Notruf wÃ¤hlen?",
+                      "file":  "tts_de/marek_prompt_call.wav",
+                      "duration_s":  1.672,
+                      "sha256":  "d7ec3d4b3d90f25423f767d910b64108ed1cea482c066b32ad4f8f8244000c97"
+                  },
+                  {
+                      "key":  "marek_go_aed",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Ich hole den Defibrillator!",
+                      "file":  "tts_de/marek_go_aed.wav",
+                      "duration_s":  1.858,
+                      "sha256":  "43dc13e969d37846e5c156299aa8af844c795ecbf04145c939b1404ba484294c"
+                  },
+                  {
+                      "key":  "marek_prompt_aed",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Soll ich einen Defibrillator suchen?",
+                      "file":  "tts_de/marek_prompt_aed.wav",
+                      "duration_s":  2.183,
+                      "sha256":  "dcd099fbd108fba8048b7e96d832b3261c93ea6a39a81ddb5ac482c227534ec4"
+                  },
+                  {
+                      "key":  "marek_back_aed",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Hier ist der AED! Machen Sie ihn an.",
+                      "file":  "tts_de/marek_back_aed.wav",
+                      "duration_s":  2.926,
+                      "sha256":  "a97c3e92258c228ef88c8327fe19d5badcec5c8719c20910abd209334c99f3a4"
+                  },
+                  {
+                      "key":  "marek_faster",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Die Leitstelle sagt: schneller drÃ¼cken!",
+                      "file":  "tts_de/marek_faster.wav",
+                      "duration_s":  2.461,
+                      "sha256":  "2ed72903355090675cdbbbd13064b18b05fc2488395b5f214bde7b58d3d0f7b0"
+                  },
+                  {
+                      "key":  "marek_slower",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Etwas langsamer, sagt die Leitstelle.",
+                      "file":  "tts_de/marek_slower.wav",
+                      "duration_s":  2.461,
+                      "sha256":  "69c7e2b957ebac8066c554ffd0d2c394a8a6781f4e166a97366480d06528f19c"
+                  },
+                  {
+                      "key":  "marek_position",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Die HÃ¤nde in die Mitte der Brust, sagt die Leitstelle.",
+                      "file":  "tts_de/marek_position.wav",
+                      "duration_s":  2.972,
+                      "sha256":  "9ded6ec3bdfa5accecd657b015a8a79699edaeb554d27b4c8be1312434f2f64d"
+                  },
+                  {
+                      "key":  "marek_resume",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Das GerÃ¤t sagt: sofort weiterdrÃ¼cken!",
+                      "file":  "tts_de/marek_resume.wav",
+                      "duration_s":  2.601,
+                      "sha256":  "59a83d9f2077f0933ee93695a5d35412b993eefd1a75dd27560bc9b99c7c5d66"
+                  },
+                  {
+                      "key":  "marek_swap",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Ich kann beim DrÃ¼cken Ã¼bernehmen, wenn Sie nicht mehr kÃ¶nnen.",
+                      "file":  "tts_de/marek_swap.wav",
+                      "duration_s":  3.111,
+                      "sha256":  "3636afdac1236dce7348273ec78e845eeaa8df7f32615941ba4abc10ae374e99"
+                  },
+                  {
+                      "key":  "marek_ems",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Der Rettungsdienst ist da.",
+                      "file":  "tts_de/marek_ems.wav",
+                      "duration_s":  1.672,
+                      "sha256":  "a6116aa861de0af2067c67390bb1e12a66bf338d3505d2794a09064d32fc756c"
+                  },
+                  {
+                      "key":  "marek_offer",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Jestem tutaj. Co mam robiÄ‡?",
+                      "file":  "tts_pl/marek_offer.wav",
+                      "duration_s":  2.926,
+                      "sha256":  "ff6dabc3c98e88c63c6e9555ca22531d63286a7bf8f55e6dd5b5aadab858da4f"
+                  },
+                  {
+                      "key":  "marek_call",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "DzwoniÄ™ pod 112 i wÅ‚Ä…czam gÅ‚oÅ›nik.",
+                      "file":  "tts_pl/marek_call.wav",
+                      "duration_s":  2.972,
+                      "sha256":  "59a8eab47d4d896c56f51283fd9daa8e7895a809c8efa44409a894815a0f2bde"
+                  },
+                  {
+                      "key":  "marek_dispatch",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Dyspozytor jest na linii. Pyta, czy on normalnie oddycha.",
+                      "file":  "tts_pl/marek_dispatch.wav",
+                      "duration_s":  4.365,
+                      "sha256":  "5283380380ed46d1de2856311941fd88629aee4ee1d4678222a02a1d6df5e436"
+                  },
+                  {
+                      "key":  "marek_prompt_call",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Mam zadzwoniÄ‡ na numer alarmowy?",
+                      "file":  "tts_pl/marek_prompt_call.wav",
+                      "duration_s":  2.461,
+                      "sha256":  "59eb8c618370ef80fc6112ef3a9d20f03db614513c0e6fd327eae1a8327275e1"
+                  },
+                  {
+                      "key":  "marek_go_aed",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "IdÄ™ po defibrylator!",
+                      "file":  "tts_pl/marek_go_aed.wav",
+                      "duration_s":  1.625,
+                      "sha256":  "e3c773ab0978914efeb935bf162881ac2e30511263386f8da08a4bace0c8fb22"
+                  },
+                  {
+                      "key":  "marek_prompt_aed",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Mam poszukaÄ‡ defibrylatora?",
+                      "file":  "tts_pl/marek_prompt_aed.wav",
+                      "duration_s":  2.183,
+                      "sha256":  "bd3c1544025a0e87c2686dae9f30ca4f867980bfa833fee44d85bbc9f4dbee10"
+                  },
+                  {
+                      "key":  "marek_back_aed",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Tu jest AED! ProszÄ™ go wÅ‚Ä…czyÄ‡.",
+                      "file":  "tts_pl/marek_back_aed.wav",
+                      "duration_s":  2.926,
+                      "sha256":  "85d892598cedb57ba885f6b49201e882a4dc22710f5c34a04e41ef3958472d3a"
+                  },
+                  {
+                      "key":  "marek_faster",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Dyspozytor mÃ³wi: szybciej uciskaÄ‡!",
+                      "file":  "tts_pl/marek_faster.wav",
+                      "duration_s":  2.972,
+                      "sha256":  "82c91e723c2c48285ddf373b1eaf95f2121eaddf12255ac2071f85637873c25e"
+                  },
+                  {
+                      "key":  "marek_slower",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "TrochÄ™ wolniej, mÃ³wi dyspozytor.",
+                      "file":  "tts_pl/marek_slower.wav",
+                      "duration_s":  2.136,
+                      "sha256":  "d2712263b2f0d8c17837959ea48a8e18a9bb37edc4829cc3a2b65f1ef55af9d0"
+                  },
+                  {
+                      "key":  "marek_position",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "RÄ™ce na Å›rodek klatki piersiowej, mÃ³wi dyspozytor.",
+                      "file":  "tts_pl/marek_position.wav",
+                      "duration_s":  3.715,
+                      "sha256":  "99f19f38714101123f5159b430ee220e6682953d02fc8630a780bce3fb01f807"
+                  },
+                  {
+                      "key":  "marek_resume",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "UrzÄ…dzenie mÃ³wi: natychmiast uciskaÄ‡ dalej!",
+                      "file":  "tts_pl/marek_resume.wav",
+                      "duration_s":  3.344,
+                      "sha256":  "a375d3a48c1a147fbd559d9e88e7368ca292a95ca16d417f12418272cff08960"
+                  },
+                  {
+                      "key":  "marek_swap",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "MogÄ™ zmieniÄ‡ przy uciskaniu, jeÅ›li trzeba.",
+                      "file":  "tts_pl/marek_swap.wav",
+                      "duration_s":  3.111,
+                      "sha256":  "daf1c62989333e2665c83c4b2eef4b415bdb853740b11de83875b7a375f53b73"
+                  },
+                  {
+                      "key":  "marek_ems",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Karetka juÅ¼ jest.",
+                      "file":  "tts_pl/marek_ems.wav",
+                      "duration_s":  1.486,
+                      "sha256":  "a2bec35de92d39758ea9d580e151633996d5b050a764a7a0a1e0a1560ecaf9b2"
+                  },
+                  {
+                      "key":  "aed_pads",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Kleben Sie die Elektroden auf die nackte Brust des Patienten.",
+                      "file":  "tts_de/aed_pads.wav",
+                      "duration_s":  3.576,
+                      "sha256":  "eae83ab12820dd6f79d68faf8be4276f691d597127ba9740c024b827c7795276"
+                  },
+                  {
+                      "key":  "aed_analyse",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Patienten nicht berÃ¼hren. Herzrhythmus wird analysiert.",
+                      "file":  "tts_de/aed_analyse.wav",
+                      "duration_s":  4.133,
+                      "sha256":  "9a5b9cdc1427e1eff0f2471ec795ab2f39269a7500793eddcf566166bb4affa2"
+                  },
+                  {
+                      "key":  "aed_shock_advised",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Schock empfohlen. ZurÃ¼cktreten, niemand berÃ¼hrt den Patienten.",
+                      "file":  "tts_de/aed_shock_advised.wav",
+                      "duration_s":  4.551,
+                      "sha256":  "37907925880a15caf3eda44d20ede83e75210f98dc0cd8e75396a39553d6f7ab"
+                  },
+                  {
+                      "key":  "aed_shocked",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Schock abgegeben. Beginnen Sie sofort mit der Herzdruckmassage.",
+                      "file":  "tts_de/aed_shocked.wav",
+                      "duration_s":  4.319,
+                      "sha256":  "f0449119b323cc4a2b130adbe7f6f58dc284b33811f5a89d4ef7d28a9a580cce"
+                  },
+                  {
+                      "key":  "aed_no_shock",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Kein Schock empfohlen.",
+                      "file":  "tts_de/aed_no_shock.wav",
+                      "duration_s":  1.533,
+                      "sha256":  "0ea965b9f1a2b2f32e8d74e3e6a3ed3ba3210d8117de3bc8ce1eece70476e1e1"
+                  },
+                  {
+                      "key":  "aed_stop_cpr",
+                      "language":  "de",
+                      "speaker":  "aed",
+                      "text":  "Herzdruckmassage unterbrechen. Patienten nicht berÃ¼hren.",
+                      "file":  "tts_de/aed_stop_cpr.wav",
+                      "duration_s":  4.226,
+                      "sha256":  "947c1de5b4bee50dde89ddb029fd474df60bd200cb8d39ce7859cd034660b74f"
+                  },
+                  {
+                      "key":  "aed_pads",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "Naklej elektrody na odsÅ‚oniÄ™tÄ… klatkÄ™ piersiowÄ… pacjenta.",
+                      "file":  "tts_pl/aed_pads.wav",
+                      "duration_s":  4.412,
+                      "sha256":  "824f72f0599cf26b0c1541b648b3d4ae80c324bc3471e99985e0db679aff54eb"
+                  },
+                  {
+                      "key":  "aed_analyse",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "Nie dotykaj pacjenta. Trwa analiza rytmu serca.",
+                      "file":  "tts_pl/aed_analyse.wav",
+                      "duration_s":  4.458,
+                      "sha256":  "f0613a75684db2afda43b85da62a7f7bb407d89623cb19d345f1efa8b95354d6"
+                  },
+                  {
+                      "key":  "aed_shock_advised",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "Zalecane wyÅ‚adowanie. OdsuÅ„ siÄ™, nikt nie dotyka pacjenta.",
+                      "file":  "tts_pl/aed_shock_advised.wav",
+                      "duration_s":  4.783,
+                      "sha256":  "ec61a2d85d610c446cc64b2c7b6d0ee37bec3ef0921227b4c894ee79d861f713"
+                  },
+                  {
+                      "key":  "aed_shocked",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "WyÅ‚adowanie wykonane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
+                      "file":  "tts_pl/aed_shocked.wav",
+                      "duration_s":  5.759,
+                      "sha256":  "8fcfc3f2061d3ac0019f8f5aedf7cc2dffa7d3ebbbcab05bc25851efa73e0d5e"
+                  },
+                  {
+                      "key":  "aed_no_shock",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "WyÅ‚adowanie niezalecane.",
+                      "file":  "tts_pl/aed_no_shock.wav",
+                      "duration_s":  1.95,
+                      "sha256":  "c5e75360f8b013f4bfab68420277b678efa316f13568ea6b3858f9d8c43f15f2"
+                  },
+                  {
+                      "key":  "aed_stop_cpr",
+                      "language":  "pl",
+                      "speaker":  "aed",
+                      "text":  "Przerwij uciskanie. Nie dotykaj pacjenta.",
+                      "file":  "tts_pl/aed_stop_cpr.wav",
+                      "duration_s":  3.622,
+                      "sha256":  "9563a69500764fd93ac314af3e852995f291f18c9a31b473e23446a813905b8a"
+                  },
+                  {
+                      "key":  "check_patient",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Sprechen Sie die Person laut an und rÃ¼tteln Sie sie vorsichtig an den Schultern.",
+                      "file":  "tts_de/check_patient.wav",
+                      "duration_s":  4.69,
+                      "sha256":  "1d416bba560b2d8f80989ab238cdc18a497a6a2810af2dd09d2e23db3cb41c08"
+                  },
+                  {
+                      "key":  "call_help",
+                      "language":  "de",
+                      "speaker":  "instructor",
+                      "text":  "Keine Reaktion? Rufen Sie sofort hundertzwÃ¶lf an, mit Lautsprecher. Dann Atemwege Ã¶ffnen und die Atmung hÃ¶chstens zehn Sekunden prÃ¼fen.",
+                      "file":  "tts_de/call_help.wav",
+                      "duration_s":  9.845,
+                      "sha256":  "44ddf4616a2825becc3894e72f40ebb94bf66f2c6f6bab3a0d745a640ccb396f"
+                  },
+                  {
+                      "key":  "check_patient",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "GÅ‚oÅ›no zwrÃ³Ä‡ siÄ™ do osoby i delikatnie potrzÄ…Å›nij jÄ… za ramiona.",
+                      "file":  "tts_pl/check_patient.wav",
+                      "duration_s":  5.016,
+                      "sha256":  "c3b2ed61e99e9232d45f6d63bf07630cc3b8c3677e8dd6d12cf1a7bdea02f431"
+                  },
+                  {
+                      "key":  "call_help",
+                      "language":  "pl",
+                      "speaker":  "instructor",
+                      "text":  "Brak reakcji? Natychmiast zadzwoÅ„ pod sto dwanaÅ›cie, na gÅ‚oÅ›niku. Potem udroÅ¼nij drogi oddechowe i oceniaj oddech najwyÅ¼ej dziesiÄ™Ä‡ sekund.",
+                      "file":  "tts_pl/call_help.wav",
+                      "duration_s":  11.146,
+                      "sha256":  "b8071c81b62824a48521c28f1bff65909656ff10f7c0aeaa65a8cdbc71ad0341"
+                  },
+                  {
+                      "key":  "marek_take_over",
+                      "language":  "de",
+                      "speaker":  "marek",
+                      "text":  "Ich drÃ¼cke weiter â€“ kleben Sie die Elektroden!",
+                      "file":  "tts_de/marek_take_over.wav",
+                      "duration_s":  2.879,
+                      "sha256":  "0f6cfcea4b40681f7d1d0c5f84349aa99bf7ee3f25f92c97b29bf2516f43cd2f"
+                  },
+                  {
+                      "key":  "marek_take_over",
+                      "language":  "pl",
+                      "speaker":  "marek",
+                      "text":  "Ja uciskam dalej â€“ proszÄ™ naklejaÄ‡ elektrody!",
+                      "file":  "tts_pl/marek_take_over.wav",
+                      "duration_s":  3.576,
+                      "sha256":  "6aab0de71c57a854d7f48b84137be564c5161ad59102277dcc50f75ea93dbfd1"
+                  },
+                  {
+                      "key":  "calm",
+                      "text":  "I will stay calm. Please tell me how I can help.",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/calm.wav",
+                      "duration_s":  4.209,
+                      "sha256":  "65e8f8f7a9af74e784e17a3a3076b178024879e2ed4a1f33dc15dcf0ac86d7ac",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "help",
+                      "text":  "I am calling the emergency services on one one two.",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/help.wav",
+                      "duration_s":  3.734,
+                      "sha256":  "e6248b9811de32d2b60a22eb1de70230d677101c3a34447cffd0f18bd738ba4b",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "thanks",
+                      "text":  "Thank you for helping. I will stay here.",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/thanks.wav",
+                      "duration_s":  3.804,
+                      "sha256":  "7ee399d10a0db2f19b8c81b112532db38b69d6fe6d619cfdcaa4167fa3716356",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "start",
+                      "text":  "We are starting the exercise. First check whether the person responds.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/start.wav",
+                      "duration_s":  5.563,
+                      "sha256":  "eebc0013a1d1eb5c3dedc9130c519185158a8de3d912f9b045eaaeb12911f9a1",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "check_patient",
+                      "text":  "Speak loudly to the person and gently shake their shoulders.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/check_patient.wav",
+                      "duration_s":  3.929,
+                      "sha256":  "ced4b739d5614ba77e326b8dbdd045486efc3873423c6c266163aee64e0fdc43",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "call_help",
+                      "text":  "No response? Call one one two immediately, on speakerphone. Then open the airway and check breathing for no more than ten seconds.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/call_help.wav",
+                      "duration_s":  9.983,
+                      "sha256":  "f038641a46811439a75115f4f039e1938be8f9ba51b9f3c442ac1fda142cd140",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "cpr",
+                      "text":  "Begin chest compressions: thirty compressions and two rescue breaths.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/cpr.wav",
+                      "duration_s":  5.029,
+                      "sha256":  "68e4835aca07a2507876fa1f8f236141cbb5a58a7b2cc3c84e1f25e068d00d65",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "recovery",
+                      "text":  "The exercise has ended. Now discuss what you did.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/recovery.wav",
+                      "duration_s":  4.389,
+                      "sha256":  "1c64df5b566a35697d4c280c425fd8566f884a363edbf42a3331d8b5dbd8b4ae",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "anna_arrive",
+                      "text":  "Help! My husband has just collapsed! Please help him!",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/anna_arrive.wav",
+                      "duration_s":  5.659,
+                      "sha256":  "108d543f2126be112bec2ef432ab0107ff44d46839079fa6f28ff8ec184dd1fe",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "anna_urge",
+                      "text":  "Please, do something!",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/anna_urge.wav",
+                      "duration_s":  2.454,
+                      "sha256":  "ef640c9d32a71828811c3540acec69a6c2841dddb4e15f8e9c43a4f2feb769c8",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "anna_name",
+                      "text":  "Jan! Jan, can you hear me?",
+                      "speaker":  "anna",
+                      "language":  "en",
+                      "file":  "tts_en/anna_name.wav",
+                      "duration_s":  3.804,
+                      "sha256":  "ab7b6c7a46ef163b9918538035f0e60ed24bb67fa2e8801e7670df0fe4a10925",
+                      "generator":  "Windows System.Speech, Microsoft Zira Desktop"
+                  },
+                  {
+                      "key":  "speech_repeat",
+                      "text":  "I could not confirm that step. Please say one report at a time. For example: The scene is safe.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/speech_repeat.wav",
+                      "duration_s":  9.307210884353742,
+                      "sha256":  "9cc650180299eb731f382909c32b3084c96eacfb8c5fc780f4fd5e49f805476f",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "confirm_begin_check",
+                      "text":  "Did you say the scene is safe? Say yes or no.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/confirm_begin_check.wav",
+                      "duration_s":  4.613605442176871,
+                      "sha256":  "1e425c9d31646a834e0f1115f53e48f580dca49149c4ee1c3d65e3d3c7597654",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "confirm_check_responsiveness",
+                      "text":  "Did you report that he is not responding? Say yes or no.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/confirm_check_responsiveness.wav",
+                      "duration_s":  5.363219954648526,
+                      "sha256":  "b4f14b5421e6fadc9a1e437f53a9f89b26b1ed204a55e6f231cf8c7f27c64e2f",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  },
+                  {
+                      "key":  "confirm_check_breathing",
+                      "text":  "Did you report that he is not breathing normally? Say yes or no.",
+                      "speaker":  "instructor",
+                      "language":  "en",
+                      "file":  "tts_en/confirm_check_breathing.wav",
+                      "duration_s":  5.613015873015873,
+                      "sha256":  "10e5506c263f996d010c33f604ebd4be1560904d47821ebe43d65734ae736d78",
+                      "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
+                  }
+              ]
+}

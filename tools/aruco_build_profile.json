@@ -1,0 +1,3 @@
+{
+  "enabled_classes": ["Node", "Node3D", "Image", "ImageTexture", "OS", "ProjectSettings"]
+}

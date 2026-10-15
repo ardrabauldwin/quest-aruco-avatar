@@ -1,0 +1,79 @@
+{
+  "checked_at_utc": "2026-09-08T12:24:05.783043+00:00",
+  "base_url": "https://apphubai.wolke.uni-greifswald.de/v1",
+  "runtime_timeout_s": 2,
+  "probe_timeout_s": 30,
+  "requested_models": {
+    "asr": "large-v3",
+    "tts": "omnivoice",
+    "llm": "unsloth/Qwen3.8-27B-GGUF:Q4_K_M",
+    "embeddings": "qwen3-embedding:8b"
+  },
+  "checks": {
+    "models": {
+      "http_status": 200,
+      "latency_ms": 597,
+      "within_2s": true,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 1373,
+      "model_ids": [
+        "Tongyi-MAI/Z-Image-Turbo",
+        "dengcao/Qwen3-Reranker-4B:Q8_0",
+        "knowledge-cdfi",
+        "knowledge-student",
+        "knowledge-urz",
+        "kokoro:82m",
+        "large-v3",
+        "ollama.com/splendidcomputer/llama3-dementia-care:latest",
+        "omnivoice",
+        "ornith-ai/Ornith-1.5-35B-A3B-GGUF:Q4_K_M",
+        "qwen2.5-fim:7b",
+        "qwen3-embedding:8b",
+        "unsloth/Qwen3.8-27B-GGUF:Q4_K_M",
+        "unsloth/gemma-4-31B-it-qat-GGUF:UD-Q4_K_XL"
+      ],
+      "requested_available": {
+        "asr": true,
+        "tts": true,
+        "llm": true,
+        "embeddings": true
+      }
+    },
+    "tts_de": {
+      "http_status": 200,
+      "latency_ms": 589,
+      "within_2s": true,
+      "content_type": "",
+      "bytes": 103278,
+      "valid_wav": true,
+      "voice_parameter": "omitted (alloy causes backend HTTP 500)"
+    },
+    "tts_pl": {
+      "http_status": 200,
+      "latency_ms": 551,
+      "within_2s": true,
+      "content_type": "",
+      "bytes": 100878,
+      "valid_wav": true,
+      "voice_parameter": "omitted (alloy causes backend HTTP 500)"
+    },
+    "llm": {
+      "http_status": 200,
+      "latency_ms": 736,
+      "within_2s": true,
+      "content_type": "application/json; charset=utf-8",
+      "bytes": 722,
+      "has_choices": true,
+      "returned_model": "unsloth/Qwen3.8-27B-GGUF:UD-Q4_K_M",
+      "finish_reason": "stop"
+    },
+    "asr": {
+      "http_status": 200,
+      "latency_ms": 619,
+      "within_2s": true,
+      "content_type": "",
+      "bytes": 91,
+      "has_transcript": true
+    }
+  }
+}

@@ -1,4 +1,11 @@
-[submodule "godot-cpp"]
-	path = godot-cpp
-	url = https://github.com/godotengine/godot-cpp.git
-	branch = 4.3
+[submodule "third_party/godot-opencv-aruco"]
+	path = third_party/godot-opencv-aruco
+	url = https://github.com/NaReT-Nachbarsprache-wird-reanimiert/godot-opencv-aruco
+	branch = cameraserver-readback
+[submodule "third_party/quest-aruco-avatar"]
+	path = third_party/quest-aruco-avatar
+	url = https://github.com/ardrabauldwin/quest-aruco-avatar
+	branch = recording-instructions
+[submodule "third_party/godot_openxr_vendors"]
+	path = third_party/godot_openxr_vendors
+	url = https://github.com/GodotVR/godot_openxr_vendors

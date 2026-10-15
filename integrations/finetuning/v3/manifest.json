@@ -1,0 +1,16 @@
+{
+  "counts": {
+    "train": 240,
+    "validation": 102,
+    "test": 36
+  },
+  "test_sha256": "a8a88757ac2402615f8707de5c9f51db1d58394ac6d0e8cada101634816ad42e",
+  "status": "complete_not_deployed",
+  "human_reviewed": false,
+  "prior_tests": "development_only",
+  "purpose": "help_questions_vs_mode_requests",
+  "adapter": "/opt/naret-training/v3-adapter",
+  "reference_adapter": "/opt/naret-training/v2-adapter",
+  "app_model": "qwen3:4b-instruct",
+  "challenge_status": "now_inspected_development_data"
+}

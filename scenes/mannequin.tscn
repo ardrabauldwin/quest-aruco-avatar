@@ -1,0 +1,80 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/mannequin/mannequin_controller.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/models/human_patient.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/models/heart.glb" id="3"]
+[ext_resource type="Script" path="res://scripts/mannequin/heart_system.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/mannequin/pupil_system.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/mannequin/breathing_system.gd" id="6"]
+[ext_resource type="PackedScene" path="res://assets/models/mannequin_scan.glb" id="7"]
+[sub_resource type="StandardMaterial3D" id="PupilMaterial"]
+albedo_color = Color(0.014, 0.02, 0.025, 1)
+[sub_resource type="SphereMesh" id="PupilMesh"]
+material = SubResource("PupilMaterial")
+radius = 0.006
+height = 0.006
+radial_segments = 12
+rings = 6
+[sub_resource type="StandardMaterial3D" id="ZoneMaterial"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.502, 0.659, 1, 0.9)
+emission_enabled = true
+emission = Color(0.502, 0.659, 1, 1)
+[sub_resource type="TorusMesh" id="ZoneMesh"]
+inner_radius = 0.047
+outer_radius = 0.0505
+rings = 32
+ring_segments = 8
+[sub_resource type="BoxShape3D" id="ChestShape"]
+size = Vector3(0.14, 0.1, 0.15)
+[sub_resource type="SphereShape3D" id="MouthShape"]
+radius = 0.04
+[sub_resource type="SphereShape3D" id="ForeheadShape"]
+radius = 0.055
+[sub_resource type="StandardMaterial3D" id="HeartBacking"]
+albedo_color = Color(0.1, 0.14, 0.17, 1)
+
+[node name="Mannequin" type="Node3D"]
+script = ExtResource("1")
+[node name="Model" parent="." instance=ExtResource("2")]
+scale = Vector3(0.9, 0.9, 0.9)
+[node name="ScanReference" parent="." instance=ExtResource("7")]
+visible = false
+[node name="Heart" type="Node3D" parent="."]
+position = Vector3(0.02, 0.13, -0.115)
+rotation_degrees = Vector3(-90, 0, 0)
+script = ExtResource("4")
+[node name="Model" parent="Heart" instance=ExtResource("3")]
+[node name="Pupils" type="Node3D" parent="."]
+script = ExtResource("5")
+[node name="Left" type="MeshInstance3D" parent="Pupils"]
+position = Vector3(-0.04, 0.224, -0.424)
+mesh = SubResource("PupilMesh")
+[node name="Right" type="MeshInstance3D" parent="Pupils"]
+position = Vector3(0.03, 0.251, -0.424)
+mesh = SubResource("PupilMesh")
+[node name="Breathing" type="Node" parent="."]
+script = ExtResource("6")
+[node name="Sternum" type="Marker3D" parent="."]
+position = Vector3(0, 0.207, -0.08)
+[node name="Highlight" type="MeshInstance3D" parent="Sternum"]
+mesh = SubResource("ZoneMesh")
+material_override = SubResource("ZoneMaterial")
+[node name="ChestZone" type="Area3D" parent="Sternum" groups=["chest_zone"]]
+collision_layer = 2
+collision_mask = 0
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Sternum/ChestZone"]
+shape = SubResource("ChestShape")
+[node name="MouthZone" type="Area3D" parent="." groups=["mouth_zone"]]
+position = Vector3(0, 0.266, -0.348)
+collision_layer = 2
+collision_mask = 0
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MouthZone"]
+shape = SubResource("MouthShape")
+[node name="ForeheadZone" type="Area3D" parent="." groups=["forehead_zone"]]
+position = Vector3(0, 0.224, -0.475)
+collision_layer = 2
+collision_mask = 0
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ForeheadZone"]
+shape = SubResource("ForeheadShape")

@@ -1,0 +1,8 @@
+{
+  "status": "failed",
+  "session_id": "20261012T223431Z",
+  "rows": 2,
+  "path": "C:\\Users\\bauld\\Overlay\\quest-aruco-avatar\\builds\\naret-migration\\integrations\\finetuning\\real_headset\\capture-20261012T223431Z.jsonl",
+  "error": "TimeoutExpired",
+  "training_eligible": false
+}

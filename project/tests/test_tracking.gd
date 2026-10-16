@@ -79,6 +79,14 @@ func run() -> Array[String]:
 	check(not tracker.tracked, "discard old geometry result already in flight")
 	provider.markers_updated.emit([7])
 	check(tracker.tracked, "new marker geometry reacquires tracking")
+	# The provider the app actually binds (main.gd): the opencv_aruco addon's node. Out of the
+	# tree it never starts a camera, so this pins only the API the tracker duck-types against.
+	if ClassDB.class_exists("OpenCVProcessor"):
+		var addon: Node = load("res://addons/opencv_aruco/aruco_marker_tracking.gd").new()
+		check(tracker.bind_provider(addon), "opencv_aruco ArucoMarkerTracking satisfies the provider API")
+		check("detect_inverted_markers" in addon, "addon exposes inverted-marker detection for the orange/blue prints")
+		tracker.bind_provider(provider)
+		addon.free()
 	var motion_path := "res://addons/naret_upstream/avatar/cpr_motion_session.gd"
 	if ResourceLoader.exists(motion_path):
 		var motion: RefCounted = load(motion_path).new()

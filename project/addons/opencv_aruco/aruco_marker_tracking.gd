@@ -144,6 +144,17 @@ signal xr_locator_ready(locator: OpenXRHeadLocator, xr_api: OpenXRAPIExtension, 
 		if processor != null:
 			processor.marker_dictionary = value
 
+## Find INVERTED markers -- light border and bits on a darker surround -- instead of the usual
+## black-on-white. This is what a print in colours whose luma is reversed looks like to the
+## detector, e.g. orange in place of black and blue in place of white: the Quest frame is the Y
+## plane only, where orange is the brighter of the two. Either-or, not both: with this on,
+## normally printed markers are no longer found.
+@export var detect_inverted_markers := false:
+	set(value):
+		detect_inverted_markers = value
+		if processor != null:
+			processor.detect_inverted_markers = value
+
 ## How long a marker may be absent from detection results before its tracker's pose is
 ## invalidated and its spatial_tracking_state goes to PAUSED. Detection is noisy (motion blur,
 ## glancing angles drop a marker for a frame or two); half a second bridges the dropouts.
@@ -527,6 +538,7 @@ func _push_calibration() -> void:
 	processor.aruco_patch_size = default_marker_size
 	processor.aruco_patch_sizes = PackedFloat64Array(marker_sizes)
 	processor.marker_dictionary = marker_dictionary
+	processor.detect_inverted_markers = detect_inverted_markers
 
 
 # Put the current marker sizes on the live trackers' bounds_size. The id -> size resolution itself

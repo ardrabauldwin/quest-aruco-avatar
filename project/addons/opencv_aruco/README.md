@@ -62,6 +62,10 @@ Two settings are about physical objects, and both are silent when wrong:
   Hamming distance of 12, against 16 bits at distance 4 — and the detector runs with no error
   correction, which is what makes 4x4_50 flaky here. 4x4_50 exists because printed markers cannot be
   recompiled. `tools/generate_markers.py` in the provider repo emits either.
+- **`detect_inverted_markers`** — off by default. Turn it on for markers whose border and bits are
+  LIGHTER than their surround in grayscale (white-on-black, or colour prints such as orange in
+  place of black and blue in place of white, since the Quest frame is luma only). It is either-or:
+  with it on, normally printed markers are no longer found.
 - **`default_marker_size` / `marker_sizes`** — the physical side length of the **black square**, in
   meters, per marker id. This is a pure metric-scale knob: `solvePnP` reads a marker measured 5 mm
   too small as ~7% further away. Measure, do not guess.

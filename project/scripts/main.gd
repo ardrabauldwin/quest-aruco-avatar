@@ -190,6 +190,7 @@ func _ready() -> void:
 	tracker.pose_updated.connect(_on_marker_pose)
 	tracker.status_changed.connect(_on_tracking_status)
 	tracker.set_view_camera(xr_camera if xr.active else desktop_camera)
+	_add_marker_provider()
 	add_child(tracker)
 	interaction = NaretXRInteraction.new()
 	add_child(interaction)
@@ -228,6 +229,23 @@ func _ready() -> void:
 	if not _smoke_mode: audio_manager.set_listening(true)
 	print("NARET_READY platform=%s xr=%s" % [OS.get_name(), xr.active])
 	if _smoke_mode: _smoke_test.call_deferred()
+
+## The marker source: the opencv_aruco addon's ArucoMarkerTracking, a sibling of the tracker,
+## which binds it through provider_path in its _ready. Only where there is a headset camera --
+## on the desktop the tracker keeps its preview pose. Loaded by path and kept untyped, so this
+## script still parses in a build without the native extension (tools/test_without_native.py).
+func _add_marker_provider() -> void:
+	if not (xr.active or OS.get_name() == "Android") or not ClassDB.class_exists("OpenCVProcessor"):
+		return
+	var aruco: Node = load("res://addons/opencv_aruco/aruco_marker_tracking.gd").new()
+	aruco.name = "ArucoMarkerTracking"
+	aruco.marker_dictionary = 1             # 4x4 (50 ids): the printed layout, ids 0-2
+	aruco.detect_inverted_markers = true    # orange/blue prints read as inverted in luma
+	# The raw Camera2 lens translation, as addon-port's scene had it, instead of the addon's
+	# hand-eye default. Marker sizes are not set here: the tracker pushes the layout's.
+	aruco.lens_translation = Vector3(-0.032377258, -0.017709386, -0.063451074)
+	add_child(aruco)
+	tracker.provider_path = NodePath("../ArucoMarkerTracking")
 
 func _on_marker_pose(pose: Transform3D) -> void:
 	var hands_cover_chest := false

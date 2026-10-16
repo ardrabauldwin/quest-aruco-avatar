@@ -1,33 +1,45 @@
-; NaReT Mannequin-XR — Godot 4.7
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
 config_version=5
 
 [application]
+
 config/name="NaReT · Mannequin XR"
+config/description="Bilinguales Reanimationstraining · Deutsch / Polski"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/description="Bilinguales Reanimationstraining · Deutsch / Polski"
 config/icon="res://assets/icon.svg"
 
+[audio]
+
+driver/enable_input=true
+
 [display]
+
 window/size/viewport_width=1440
 window/size/viewport_height=900
 window/size/window_width_override=1440
 window/size/window_height_override=900
 window/stretch/mode="canvas_items"
 
-[audio]
-driver/enable_input=true
-
 [editor_plugins]
+
 enabled=PackedStringArray("res://addons/opencv_aruco/plugin.cfg", "res://addons/GodotAndroidCamera/plugin.cfg")
 
 [physics]
+
 common/physics_ticks_per_second=72
 
 [rendering]
+
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=false
 textures/vram_compression/import_etc2_astc=true
 anti_aliasing/quality/msaa_3d=1
 environment/defaults/default_clear_color=Color(0.031, 0.047, 0.064, 1)
@@ -80,17 +92,18 @@ META_ENVIRONMENT_DEPTH_TO_CAMERA_PROJECTION_RIGHT={
 }
 
 [xr]
+
 openxr/enabled=true
+openxr/reference_space=2
+openxr/environment_blend_mode=2
 openxr/extensions/hand_tracking=true
 openxr/extensions/hand_tracking_unobstructed_data_source=true
 ; Hands-only: a held controller must not synthesise joints NaReT would act on.
 openxr/extensions/hand_tracking_controller_data_source=false
 openxr/extensions/hand_interaction_profile=true
-openxr/reference_space=2
-openxr/environment_blend_mode=2
+shaders/enabled=true
 openxr/extensions/meta/passthrough=true
 openxr/extensions/meta/hand_tracking_mesh=true
 openxr/extensions/meta/anchor_api=true
 openxr/extensions/meta/scene_api=true
 openxr/extensions/meta/environment_depth=true
-shaders/enabled=true

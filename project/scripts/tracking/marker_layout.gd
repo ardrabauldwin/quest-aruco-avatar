@@ -6,7 +6,7 @@ extends RefCounted
 
 # When enabled, keep the body horizontal. This changes rotation, not height.
 var floor_orientation := false
-var marker_size_m := 0.10
+var marker_size_m := 0.1
 # For each marker ID: the saved transform from that marker to the common anchor.
 var offsets: Dictionary = {}
 # Converts the common anchor's coordinate system to the patient's sternum anchor.

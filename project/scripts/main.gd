@@ -241,8 +241,8 @@ func _add_marker_provider() -> void:
 		return
 	var aruco: Node = load("res://addons/opencv_aruco/aruco_marker_tracking.gd").new()
 	aruco.name = "ArucoMarkerTracking"
-	aruco.marker_dictionary = 1             # 4x4 (50 ids): the printed layout, ids 0-2
-	aruco.detect_inverted_markers = true    # orange/blue prints read as inverted in luma
+	aruco.marker_dictionary = 1             # 0=36h12 1=4x4 (50 ids): the printed layout, ids 0-2
+	aruco.detect_inverted_markers = false   # true only for prints that read as inverted in luma (e.g. orange/blue)
 	# The raw Camera2 lens translation, as addon-port's scene had it, instead of the addon's
 	# hand-eye default. Marker sizes are not set here: the tracker pushes the layout's.
 	aruco.lens_translation = Vector3(-0.032377258, -0.017709386, -0.063451074)

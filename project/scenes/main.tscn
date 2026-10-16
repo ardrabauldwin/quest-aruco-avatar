@@ -23,6 +23,7 @@ size = Vector2(16, 16)
 [node name="NaReT" type="Node3D"]
 script = ExtResource("1")
 marker_layout_file = "res://data/user_marker_layout.cfg"
+show_marker_gizmos = true
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")
 [node name="KeyLight" type="DirectionalLight3D" parent="."]

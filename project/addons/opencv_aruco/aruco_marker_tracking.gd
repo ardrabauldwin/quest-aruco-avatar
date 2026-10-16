@@ -1057,8 +1057,18 @@ func _apply_detection_result() -> void:
 		var drift_cm := live_xform.origin.distance_to(_result_head_pose.origin) * 100.0
 		var turn_deg := rad_to_deg(_result_head_pose.basis.get_rotation_quaternion().angle_to(
 				live_xform.basis.get_rotation_quaternion()))
-		print("[opencv_aruco] [aruco_marker_tracking::_apply_detection_result] flow #%d (9) head pose at capture: pos=%v live_pos=%v drift_cm=%.1f turn_deg=%.1f" % [
-				result_id, _result_head_pose.origin, live_xform.origin, drift_cm, turn_deg])
+		# Camera (lens) at capture time, in the same play space the markers were baked into.
+		var cam_origin := (_result_head_pose * processor.get_lens_pose()).origin
+		var marker0_dist := "n/a"
+		var head_marker0_dist := "n/a"
+		if markers.has(0):
+			var marker0_origin := (markers[0] as Transform3D).origin
+			marker0_dist = "%.1f" % (cam_origin.distance_to(marker0_origin) * 100.0)
+			# Same capture-time head pose, without the lens offset -- for comparison only.
+			head_marker0_dist = "%.1f" % (_result_head_pose.origin.distance_to(marker0_origin) * 100.0)
+		print("[opencv_aruco] [aruco_marker_tracking::_apply_detection_result] flow #%d (9) head pose at capture: pos=%v live_pos=%v drift_cm=%.1f turn_deg=%.1f cam_to_marker0_cm=%s head_to_marker0_cm=%s marker0_size_m=%.3f" % [
+				result_id, _result_head_pose.origin, live_xform.origin, drift_cm, turn_deg, marker0_dist,
+				head_marker0_dist, processor.get_marker_size(0)])
 
 	var seen_ids: Array = []
 	for id in markers:

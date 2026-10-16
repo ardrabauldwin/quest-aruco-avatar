@@ -87,6 +87,20 @@ func run() -> Array[String]:
 		check("detect_inverted_markers" in addon, "addon exposes inverted-marker detection for the orange/blue prints")
 		tracker.bind_provider(provider)
 		addon.free()
+	var gizmos: Node3D = load("res://scripts/tracking/marker_gizmos.gd").new()
+	world.add_child(gizmos)
+	gizmos.bind(provider)
+	provider.age = 0.0
+	provider.markers_updated.emit([2])
+	var gizmo: Node3D = gizmos.get_node_or_null("MarkerGizmo2")
+	gizmos._process(0.01)
+	check(gizmo != null and gizmo.visible and gizmo.global_transform.is_equal_approx(provider.pose), "debug gizmo sits on the raw detected marker pose")
+	provider.age = 900.0
+	gizmos._process(0.01)
+	check(gizmo != null and not gizmo.visible, "debug gizmo hides once its marker is stale")
+	provider.markers_updated.disconnect(gizmos._on_markers_updated)
+	gizmos.free()
+	provider.age = 0.0
 	var motion_path := "res://addons/naret_upstream/avatar/cpr_motion_session.gd"
 	if ResourceLoader.exists(motion_path):
 		var motion: RefCounted = load(motion_path).new()

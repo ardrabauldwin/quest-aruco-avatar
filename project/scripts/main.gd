@@ -1,5 +1,7 @@
 extends Node3D
 @export_file("*.cfg") var marker_layout_file := ""
+## Debug: draw an axis gizmo at every raw detected marker pose (scripts/tracking/marker_gizmos.gd).
+@export var show_marker_gizmos := false
 ## Scene composition. AI supplies dialogue/guidance; guarded observations control progression.
 
 @onready var mannequin: NaretMannequin = $SpatialAnchor/Mannequin
@@ -246,6 +248,11 @@ func _add_marker_provider() -> void:
 	aruco.lens_translation = Vector3(-0.032377258, -0.017709386, -0.063451074)
 	add_child(aruco)
 	tracker.provider_path = NodePath("../ArucoMarkerTracking")
+	if show_marker_gizmos:
+		var gizmos = load("res://scripts/tracking/marker_gizmos.gd").new()
+		gizmos.name = "MarkerGizmos"
+		add_child(gizmos)
+		gizmos.bind(aruco)
 
 func _on_marker_pose(pose: Transform3D) -> void:
 	var hands_cover_chest := false

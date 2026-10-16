@@ -1,0 +1,6 @@
+(define (problem naret-session)
+  (:domain naret-witness)
+  (:objects patient - object)
+  (:init (= (reported-breaths) 0))
+  (:goal (finished))
+)

@@ -1,0 +1,15 @@
+# NaReT app (from naret-current-source); the addons and android/.build_version stay tracked.
+.env
+.env.*
+!.env.example
+*.local.json
+.DS_Store
+build/
+.cache/
+.venv/
+__pycache__/
+*.pyc
+android/build/
+export_credentials.cfg
+*.keystore
+*.log

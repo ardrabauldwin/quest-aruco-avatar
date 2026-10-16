@@ -1,0 +1,1498 @@
+{
+  "base": {
+    "correct": 3,
+    "total": 39,
+    "false_positives": 8,
+    "cases": [
+      {
+        "id": "test-0-0",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Can we continue in compression-only mode?"
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Can we continue in compression-only mode?"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Can we continue in compression-only mode?\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 6.309
+      },
+      {
+        "id": "test-0-1",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Bitte setzen wir die Übung ohne Beatmung fort."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Bitte setzen wir die Übung ohne Beatmung fort."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Bitte setzen wir die Übung ohne Beatmung fort.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.755
+      },
+      {
+        "id": "test-0-2",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę kontynuować ćwiczenie bez oddechów ratowniczych."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę kontynuować ćwiczenie bez oddechów ratowniczych."
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"kind\": \"request\",\n  \"result\": \"none\",\n  \"evidence\": \"Proszę kontynuować ćwiczenie bez oddechów ratowniczych.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.414
+      },
+      {
+        "id": "test-1-3",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Please transfer care to the ambulance crew."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Please transfer care to the ambulance crew."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Please transfer care to the ambulance crew.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.281
+      },
+      {
+        "id": "test-1-4",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Übergeben Sie den Patienten bitte an das Rettungsteam."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Übergeben Sie den Patienten bitte an das Rettungsteam."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Übergeben Sie den Patienten bitte an das Rettungsteam.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.128
+      },
+      {
+        "id": "test-1-5",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę przekazać pacjenta zespołowi ratowniczemu."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Proszę przekazać pacjenta zespołowi ratowniczemu."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Proszę przekazać pacjenta zespołowi ratowniczemu.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.714
+      },
+      {
+        "id": "test-2-6",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I checked for hazards; it is safe here."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I checked for hazards; it is safe here."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"I checked for hazards; it is safe here.\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 3.591
+      },
+      {
+        "id": "test-2-7",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Ich habe nach Gefahren geschaut. Hier ist es sicher."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Ich habe nach Gefahren geschaut. Hier ist es sicher."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Ich habe nach Gefahren geschaut. Hier ist es sicher.\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 3.686
+      },
+      {
+        "id": "test-2-8",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Sprawdziłem otoczenie. Można bezpiecznie podejść."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Sprawdziłem otoczenie. Można bezpiecznie podejść."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Sprawdziłem otoczenie. Można bezpiecznie podejść.\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 3.432
+      },
+      {
+        "id": "test-3-9",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I spoke to him and tapped his shoulders. He did not respond."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I spoke to him and tapped his shoulders. He did not respond."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"I spoke to him and tapped his shoulders. He did not respond.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.681
+      },
+      {
+        "id": "test-3-10",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.354
+      },
+      {
+        "id": "test-3-11",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.729
+      },
+      {
+        "id": "test-4-12",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I checked his breathing. There are only occasional gasps."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "I checked his breathing. There are only occasional gasps."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"I checked his breathing. There are only occasional gasps.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.496
+      },
+      {
+        "id": "test-4-13",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.271
+      },
+      {
+        "id": "test-4-14",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 4.686
+      },
+      {
+        "id": "test-5-15",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "The first rescue breath is completed."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "The first rescue breath is completed."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"The first rescue breath is completed.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.058
+      },
+      {
+        "id": "test-5-16",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Die erste Beatmung ist abgeschlossen."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Die erste Beatmung ist abgeschlossen."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Die erste Beatmung ist abgeschlossen.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.249
+      },
+      {
+        "id": "test-5-17",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Pierwszy oddech ratowniczy został wykonany."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Pierwszy oddech ratowniczy został wykonany."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Pierwszy oddech ratowniczy został wykonany.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.852
+      },
+      {
+        "id": "test-6-18",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, contact the emergency services now, please."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Anna, contact the emergency services now, please."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Anna, contact the emergency services now, please.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.302
+      },
+      {
+        "id": "test-6-19",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, verständige jetzt bitte den Rettungsdienst."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Anna, verständige jetzt bitte den Rettungsdienst."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Anna, verständige jetzt bitte den Rettungsdienst.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.756
+      },
+      {
+        "id": "test-6-20",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anno, proszę zadzwoń teraz po pogotowie."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Anno, proszę zadzwoń teraz po pogotowie."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Anno, proszę zadzwoń teraz po pogotowie.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 3.795
+      },
+      {
+        "id": "test-7-21",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "He opened his eyes and answered my question."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "He opened his eyes and answered my question."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"He opened his eyes and answered my question.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 2.985
+      },
+      {
+        "id": "test-7-22",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "Er hat die Augen geöffnet und mir geantwortet."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Er hat die Augen geöffnet und mir geantwortet."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Er hat die Augen geöffnet und mir geantwortet.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 3.759
+      },
+      {
+        "id": "test-7-23",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "Otworzył oczy i odpowiedział na moje pytanie."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Otworzył oczy i odpowiedział na moje pytanie."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Otworzył oczy i odpowiedział na moje pytanie.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 3.643
+      },
+      {
+        "id": "test-8-24",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "I checked and he is taking regular normal breaths."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I checked and he is taking regular normal breaths."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"I checked and he is taking regular normal breaths.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.779
+      },
+      {
+        "id": "test-8-25",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Ich habe geprüft: Er atmet regelmäßig und normal."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "normal",
+          "evidence": "Ich habe geprüft: Er atmet regelmäßig und normal."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"normal\",\n  \"evidence\": \"Ich habe geprüft: Er atmet regelmäßig und normal.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.172
+      },
+      {
+        "id": "test-8-26",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Sprawdziłem: oddycha regularnie i prawidłowo."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Sprawdziłem: oddycha regularnie i prawidłowo."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Sprawdziłem: oddycha regularnie i prawidłowo.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.17
+      },
+      {
+        "id": "test-9-27",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Next I am going to assess responsiveness."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Next I am going to assess responsiveness."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Next I am going to assess responsiveness.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.936
+      },
+      {
+        "id": "test-9-28",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Als Nächstes werde ich prüfen, ob er reagiert."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Als Nächstes werde ich prüfen, ob er reagiert."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Als Nächstes werde ich prüfen, ob er reagiert.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.109
+      },
+      {
+        "id": "test-9-29",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Następnie sprawdzę, czy reaguje."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "conversation",
+          "result": "safe",
+          "evidence": "Następnie sprawdzę, czy reaguje."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"conversation\",\n  \"result\": \"safe\",\n  \"evidence\": \"Następnie sprawdzę, czy reaguje.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.041
+      },
+      {
+        "id": "test-10-30",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "How can I tell if these gasps are normal?"
+        },
+        "prediction": {
+          "action": "question",
+          "kind": "question",
+          "result": "none",
+          "evidence": "How can I tell if these gasps are normal?"
+        },
+        "raw": "{\n  \"action\": \"question\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"How can I tell if these gasps are normal?\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.047
+      },
+      {
+        "id": "test-10-31",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wie erkenne ich, ob diese Atemzüge normal sind?"
+        },
+        "prediction": {
+          "action": "question",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wie erkenne ich, ob diese Atemzüge normal sind?"
+        },
+        "raw": "{\n  \"action\": \"question\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Wie erkenne ich, ob diese Atemzüge normal sind?\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.102
+      },
+      {
+        "id": "test-10-32",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Jak rozpoznać, czy te oddechy są prawidłowe?"
+        },
+        "prediction": {
+          "action": "question",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Jak rozpoznać, czy te oddechy są prawidłowe?"
+        },
+        "raw": "{\n  \"action\": \"question\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Jak rozpoznać, czy te oddechy są prawidłowe?\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.13
+      },
+      {
+        "id": "test-11-33",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I have given the first part of it."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I have given the first part of it."
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"I have given the first part of it.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.937
+      },
+      {
+        "id": "test-11-34",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich habe den ersten Teil davon gegeben."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Ich habe den ersten Teil davon gegeben."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Ich habe den ersten Teil davon gegeben.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.077
+      },
+      {
+        "id": "test-11-35",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Dałem pierwszą część tego."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Dałem pierwszą część tego."
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Dałem pierwszą część tego.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.872
+      },
+      {
+        "id": "test-12-36",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "I am ready to listen."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I am ready to listen."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"I am ready to listen.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.868
+      },
+      {
+        "id": "test-12-37",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Ich bin bereit zuzuhören."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Ich bin bereit zuzuhören."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Ich bin bereit zuzuhören.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.942
+      },
+      {
+        "id": "test-12-38",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Jestem gotowy słuchać."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Jestem gotowy słuchać."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Jestem gotowy słuchać.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.923
+      }
+    ]
+  },
+  "adapter": {
+    "correct": 18,
+    "total": 39,
+    "false_positives": 1,
+    "cases": [
+      {
+        "id": "test-0-0",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Can we continue in compression-only mode?"
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Can we continue in compression-only mode?"
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Can we continue in compression-only mode?\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.167
+      },
+      {
+        "id": "test-0-1",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Bitte setzen wir die Übung ohne Beatmung fort."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Bitte setzen wir die Übung ohne Beatmung fort."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Bitte setzen wir die Übung ohne Beatmung fort.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.114
+      },
+      {
+        "id": "test-0-2",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę kontynuować ćwiczenie bez oddechów ratowniczych."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę kontynuować ćwiczenie bez oddechów ratowniczych."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Proszę kontynuować ćwiczenie bez oddechów ratowniczych.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.315
+      },
+      {
+        "id": "test-1-3",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Please transfer care to the ambulance crew."
+        },
+        "prediction": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Please transfer care to the ambulance crew."
+        },
+        "raw": "{\"action\": \"handover\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Please transfer care to the ambulance crew.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.986
+      },
+      {
+        "id": "test-1-4",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Übergeben Sie den Patienten bitte an das Rettungsteam."
+        },
+        "prediction": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Übergeben Sie den Patienten bitte an das Rettungsteam."
+        },
+        "raw": "{\"action\": \"handover\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Übergeben Sie den Patienten bitte an das Rettungsteam.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.179
+      },
+      {
+        "id": "test-1-5",
+        "expected": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę przekazać pacjenta zespołowi ratowniczemu."
+        },
+        "prediction": {
+          "action": "handover",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Proszę przekazać pacjenta zespołowi ratowniczemu."
+        },
+        "raw": "{\"action\": \"handover\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Proszę przekazać pacjenta zespołowi ratowniczemu.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.203
+      },
+      {
+        "id": "test-2-6",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I checked for hazards; it is safe here."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I checked for hazards; it is safe here."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"I checked for hazards; it is safe here.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.037
+      },
+      {
+        "id": "test-2-7",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Ich habe nach Gefahren geschaut. Hier ist es sicher."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Ich habe nach Gefahren geschaut. Hier ist es sicher."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Ich habe nach Gefahren geschaut. Hier ist es sicher.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.233
+      },
+      {
+        "id": "test-2-8",
+        "expected": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Sprawdziłem otoczenie. Można bezpiecznie podejść."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Sprawdziłem otoczenie. Można bezpiecznie podejść."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Sprawdziłem otoczenie. Można bezpiecznie podejść.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.432
+      },
+      {
+        "id": "test-3-9",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I spoke to him and tapped his shoulders. He did not respond."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I spoke to him and tapped his shoulders. He did not respond."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"I spoke to him and tapped his shoulders. He did not respond.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.151
+      },
+      {
+        "id": "test-3-10",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Ich habe ihn angesprochen und an den Schultern berührt. Keine Reaktion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.433
+      },
+      {
+        "id": "test-3-11",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Zwróciłem się do niego i dotknąłem jego ramion. Nie reaguje.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.431
+      },
+      {
+        "id": "test-4-12",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I checked his breathing. There are only occasional gasps."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I checked his breathing. There are only occasional gasps."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"I checked his breathing. There are only occasional gasps.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.178
+      },
+      {
+        "id": "test-4-13",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Bei der Atemkontrolle sehe ich nur vereinzeltes Schnappen nach Luft.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.392
+      },
+      {
+        "id": "test-4-14",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Sprawdziłem oddech. Widzę tylko pojedyncze westchnienia agonalne.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.492
+      },
+      {
+        "id": "test-5-15",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "The first rescue breath is completed."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "The first rescue breath is completed."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"The first rescue breath is completed.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.014
+      },
+      {
+        "id": "test-5-16",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Die erste Beatmung ist abgeschlossen."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Die erste Beatmung ist abgeschlossen."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Die erste Beatmung ist abgeschlossen.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.117
+      },
+      {
+        "id": "test-5-17",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Pierwszy oddech ratowniczy został wykonany."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Pierwszy oddech ratowniczy został wykonany."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Pierwszy oddech ratowniczy został wykonany.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.315
+      },
+      {
+        "id": "test-6-18",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, contact the emergency services now, please."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, contact the emergency services now, please."
+        },
+        "raw": "{\"action\": \"call_emergency\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Anna, contact the emergency services now, please.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.076
+      },
+      {
+        "id": "test-6-19",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, verständige jetzt bitte den Rettungsdienst."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anna, verständige jetzt bitte den Rettungsdienst."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Anna, verständige jetzt bitte den Rettungsdienst.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.144
+      },
+      {
+        "id": "test-6-20",
+        "expected": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anno, proszę zadzwoń teraz po pogotowie."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Anno, proszę zadzwoń teraz po pogotowie."
+        },
+        "raw": "{\"action\": \"call_emergency\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Anno, proszę zadzwoń teraz po pogotowie.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.234
+      },
+      {
+        "id": "test-7-21",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "He opened his eyes and answered my question."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "He opened his eyes and answered my question."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"He opened his eyes and answered my question.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.057
+      },
+      {
+        "id": "test-7-22",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "Er hat die Augen geöffnet und mir geantwortet."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Er hat die Augen geöffnet und mir geantwortet."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Er hat die Augen geöffnet und mir geantwortet.\"}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.245
+      },
+      {
+        "id": "test-7-23",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "Otworzył oczy i odpowiedział na moje pytanie."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Otworzył oczy i odpowiedział na moje pytanie."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Otworzył oczy i odpowiedział na moje pytanie.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.275
+      },
+      {
+        "id": "test-8-24",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "I checked and he is taking regular normal breaths."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "I checked and he is taking regular normal breaths."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"I checked and he is taking regular normal breaths.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.118
+      },
+      {
+        "id": "test-8-25",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Ich habe geprüft: Er atmet regelmäßig und normal."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Ich habe geprüft: Er atmet regelmäßig und normal."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Ich habe geprüft: Er atmet regelmäßig und normal.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.177
+      },
+      {
+        "id": "test-8-26",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Sprawdziłem: oddycha regularnie i prawidłowo."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Sprawdziłem: oddycha regularnie i prawidłowo."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Sprawdziłem: oddycha regularnie i prawidłowo.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.266
+      },
+      {
+        "id": "test-9-27",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Next I am going to assess responsiveness."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Next I am going to assess responsiveness."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Next I am going to assess responsiveness.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.978
+      },
+      {
+        "id": "test-9-28",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Als Nächstes werde ich prüfen, ob er reagiert."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Als Nächstes werde ich prüfen, ob er reagiert."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Als Nächstes werde ich prüfen, ob er reagiert.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.255
+      },
+      {
+        "id": "test-9-29",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Następnie sprawdzę, czy reaguje."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "responsive",
+          "evidence": "Następnie sprawdzę, czy reaguje."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"responsive\", \"evidence\": \"Następnie sprawdzę, czy reaguje.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.18
+      },
+      {
+        "id": "test-10-30",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "How can I tell if these gasps are normal?"
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "How can I tell if these gasps are normal?"
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"How can I tell if these gasps are normal?\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.035
+      },
+      {
+        "id": "test-10-31",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wie erkenne ich, ob diese Atemzüge normal sind?"
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wie erkenne ich, ob diese Atemzüge normal sind?"
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Wie erkenne ich, ob diese Atemzüge normal sind?\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.251
+      },
+      {
+        "id": "test-10-32",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Jak rozpoznać, czy te oddechy są prawidłowe?"
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Jak rozpoznać, czy te oddechy są prawidłowe?"
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Jak rozpoznać, czy te oddechy są prawidłowe?\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.239
+      },
+      {
+        "id": "test-11-33",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I have given the first part of it."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I have given the first part of it."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"I have given the first part of it.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.997
+      },
+      {
+        "id": "test-11-34",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich habe den ersten Teil davon gegeben."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich habe den ersten Teil davon gegeben."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Ich habe den ersten Teil davon gegeben.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.999
+      },
+      {
+        "id": "test-11-35",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Dałem pierwszą część tego."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Dałem pierwszą część tego."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Dałem pierwszą część tego.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.943
+      },
+      {
+        "id": "test-12-36",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "I am ready to listen."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "I am ready to listen."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"conversation\", \"result\": \"none\", \"evidence\": \"I am ready to listen.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.893
+      },
+      {
+        "id": "test-12-37",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Ich bin bereit zuzuhören."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich bin bereit zuzuhören."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Ich bin bereit zuzuhören.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.004
+      },
+      {
+        "id": "test-12-38",
+        "expected": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Jestem gotowy słuchać."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Jestem gotowy słuchać."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Jestem gotowy słuchać.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.977
+      }
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "rows": 2,
+  "independent_recording_families": 1,
+  "source_sha256": "378fe8f9c760fe419ef79bc7b3e44fb78d91218eac17d9344aa69c0d9bc96ca2",
+  "audio_available": true,
+  "audio_current_sha256": "f03d15eaf81c9322d273f7a4fd3c00462d9900b35e45083de6387277dd67979c",
+  "audio_link_verified": false,
+  "warning": "The diagnostic WAV is overwritten by capture; its current contents may not match the historical comparison.",
+  "status": "imported_not_trained",
+  "reason": "Only one recording family; insufficient independent recordings for a real-data training/test split"
+}

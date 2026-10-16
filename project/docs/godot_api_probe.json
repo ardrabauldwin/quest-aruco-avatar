@@ -1,0 +1,31 @@
+{
+  "checks": {
+    "asr": {
+      "has_transcript": true,
+      "latency_ms": 975,
+      "ok": true
+    },
+    "llm_de": {
+      "latency_ms": 1392,
+      "ok": true,
+      "parsed": true
+    },
+    "llm_pl": {
+      "latency_ms": 1089,
+      "ok": true,
+      "parsed": true
+    },
+    "tts_de": {
+      "decoded": true,
+      "latency_ms": 1174,
+      "ok": true
+    },
+    "tts_pl": {
+      "decoded": true,
+      "latency_ms": 829,
+      "ok": true
+    }
+  },
+  "engine": "4.7.2-stable (official)",
+  "timeout_s": 2.0
+}

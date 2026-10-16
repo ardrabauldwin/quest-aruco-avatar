@@ -1,0 +1,48 @@
+{
+  "source_repository": "https://github.com/ardrabauldwin/quest-aruco-avatar",
+  "source_commit": "1560fee6bf766f4dae98f5025155b14476b75877",
+  "source_sha256": "c46bf3b8554e1872c5e587a3896d65a36bee2fa1d5b07faa93e949e433a587d6",
+  "uniform_scale": 1.0,
+  "godot_size_xyz_m": [
+    0.5462345000937356,
+    0.26412479427406055,
+    0.8148277398263042
+  ],
+  "godot_landmarks_xyz_m": {
+    "Sternum": [
+      0.0,
+      0.20318,
+      -0.08
+    ],
+    "LeftEye": [
+      -0.04,
+      0.22176,
+      -0.424
+    ],
+    "RightEye": [
+      0.03,
+      0.24902,
+      -0.424
+    ],
+    "Mouth": [
+      0.0,
+      0.26578,
+      -0.348
+    ],
+    "Forehead": [
+      0.0,
+      0.22379,
+      -0.475
+    ],
+    "Nose": [
+      0.0,
+      0.26546,
+      -0.397
+    ]
+  },
+  "mesh_node": "ScanTorso",
+  "blend_shapes": [
+    "ChestBreath",
+    "ChestCompression"
+  ]
+}

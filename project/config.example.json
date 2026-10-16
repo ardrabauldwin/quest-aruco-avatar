@@ -1,0 +1,13 @@
+{
+  "api": {
+    "base_url": "https://apphubai.wolke.uni-greifswald.de/v1",
+    "api_key": "",
+    "asr_model": "large-v3",
+    "tts_model": "omnivoice",
+    "tts_voice": "",
+    "llm_model": "unsloth/Qwen3.8-27B-GGUF:Q4_K_M",
+    "timeout_s": 2,
+    "offline": false,
+    "offline_fallback": true
+  }
+}

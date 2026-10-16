@@ -1,0 +1,182 @@
+{
+  "base": {
+    "correct": 0,
+    "total": 2,
+    "false_positives": 0,
+    "cases": [
+      {
+        "id": "saved-headset-medium",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "He is not breathing normally."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"He is not breathing normally.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.986
+      },
+      {
+        "id": "saved-headset-large-v3-turbo",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "is not breathing normally."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"is not breathing normally.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.858
+      }
+    ]
+  },
+  "adapter": {
+    "correct": 2,
+    "total": 2,
+    "false_positives": 0,
+    "cases": [
+      {
+        "id": "saved-headset-medium",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"He is not breathing normally.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.988
+      },
+      {
+        "id": "saved-headset-large-v3-turbo",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"is not breathing normally.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.919
+      }
+    ]
+  },
+  "previous_adapter": {
+    "correct": 2,
+    "total": 2,
+    "false_positives": 0,
+    "cases": [
+      {
+        "id": "saved-headset-medium",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"He is not breathing normally.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.84
+      },
+      {
+        "id": "saved-headset-large-v3-turbo",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"is not breathing normally.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.812
+      }
+    ]
+  },
+  "app_model_schema": {
+    "correct": 0,
+    "total": 2,
+    "false_positives": 0,
+    "cases": [
+      {
+        "id": "saved-headset-medium",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "He is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "He is not breathing normally.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"He is not breathing normally.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 2.994
+      },
+      {
+        "id": "saved-headset-large-v3-turbo",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "is not breathing normally."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "is not breathing normally.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"is not breathing normally.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.472
+      }
+    ]
+  }
+}

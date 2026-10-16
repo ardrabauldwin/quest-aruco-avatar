@@ -1,0 +1,198 @@
+{
+  "_comment": "Lines of the bystanders in docs/DREHBUCH.md. The app speaks them via NaretBystanderDirector; tools/generate_voices_fish.py bakes them as offline clips. Polish must be reviewed by a native speaker before a course. 'style' is the Fish Audio S2 inline tag used when baking (tools/generate_voices_fish.py). Lines with speaker 'aed' are the device's own voice prompts (NaretAED plays them through its speaker).",
+  "anna_arrive": {
+    "speaker": "anna",
+    "de": "Hilfe! Mein Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
+    "pl": "Pomocy! Mój mąż nagle upadł! Proszę mu pomóc!",
+    "style": "[panicked, breathless]",
+    "en": "Help! My husband has just collapsed! Please help him!"
+  },
+  "anna_urge": {
+    "speaker": "anna",
+    "de": "Bitte, tun Sie doch etwas!",
+    "pl": "Proszę, niech ktoś coś zrobi!",
+    "style": "[desperate, pleading]",
+    "en": "Please, do something!"
+  },
+  "anna_name": {
+    "speaker": "anna",
+    "de": "Jan! Jan, hörst du mich?",
+    "pl": "Janek! Janek, słyszysz mnie?",
+    "style": "[shouting, frightened]",
+    "en": "Jan! Jan, can you hear me?"
+  },
+  "anna_breathing": {
+    "speaker": "anna",
+    "de": "Atmet er? Sagen Sie doch etwas!",
+    "pl": "Czy on oddycha? Proszę coś powiedzieć!",
+    "style": "[anxious]"
+  },
+  "anna_good": {
+    "speaker": "anna",
+    "de": "Ja … Sie machen das gut. Bitte hören Sie nicht auf.",
+    "pl": "Tak… dobrze to idzie. Proszę nie przestawać.",
+    "style": "[shaky, a little relieved]"
+  },
+  "anna_pause": {
+    "speaker": "anna",
+    "de": "Bitte nicht aufhören! Machen Sie weiter!",
+    "pl": "Proszę nie przerywać! Proszę uciskać dalej!",
+    "style": "[pleading, urgent]"
+  },
+  "anna_touch": {
+    "speaker": "anna",
+    "de": "Jan, ich bin da …",
+    "pl": "Janek, jestem tutaj…",
+    "style": "[tearful, soft]"
+  },
+  "anna_sorry": {
+    "speaker": "anna",
+    "de": "Entschuldigung! Ich gehe zurück.",
+    "pl": "Przepraszam! Już się odsuwam.",
+    "style": "[embarrassed, quick]"
+  },
+  "anna_shock": {
+    "speaker": "anna",
+    "de": "Oh Gott! Was war das?",
+    "pl": "O Boże! Co to było?",
+    "style": "[shocked, gasping]"
+  },
+  "anna_relief": {
+    "speaker": "anna",
+    "de": "Er atmet! Danke! Danke, dass Sie ihm geholfen haben!",
+    "pl": "On oddycha! Dziękuję! Bardzo dziękuję za pomoc!",
+    "style": "[crying with relief]"
+  },
+  "anna_no_shock": {
+    "speaker": "anna",
+    "de": "Warum macht das Gerät nichts?",
+    "pl": "Dlaczego to urządzenie nic nie robi?",
+    "style": "[desperate]"
+  },
+  "anna_agonal": {
+    "speaker": "anna",
+    "de": "Er atmet doch noch! Sehen Sie, er atmet!",
+    "pl": "Przecież on jeszcze oddycha! Proszę spojrzeć!",
+    "style": "[insistent, hopeful]"
+  },
+  "marek_offer": {
+    "speaker": "marek",
+    "de": "Ich bin hier. Was soll ich tun?",
+    "pl": "Jestem tutaj. Co mam robić?",
+    "style": "[calm, determined]"
+  },
+  "marek_call": {
+    "speaker": "marek",
+    "de": "Ich rufe die 112 an und stelle auf Lautsprecher.",
+    "pl": "Dzwonię pod 112 i włączam głośnik.",
+    "style": "[calm]"
+  },
+  "marek_dispatch": {
+    "speaker": "marek",
+    "de": "Die Leitstelle ist dran. Sie fragen, ob er normal atmet.",
+    "pl": "Dyspozytor jest na linii. Pyta, czy on normalnie oddycha.",
+    "style": "[calm, focused]"
+  },
+  "marek_prompt_call": {
+    "speaker": "marek",
+    "de": "Soll ich den Notruf wählen?",
+    "pl": "Mam zadzwonić na numer alarmowy?",
+    "style": "[helpful]"
+  },
+  "marek_go_aed": {
+    "speaker": "marek",
+    "de": "Ich hole den Defibrillator!",
+    "pl": "Idę po defibrylator!",
+    "style": "[urgent]"
+  },
+  "marek_prompt_aed": {
+    "speaker": "marek",
+    "de": "Soll ich einen Defibrillator suchen?",
+    "pl": "Mam poszukać defibrylatora?",
+    "style": "[helpful]"
+  },
+  "marek_back_aed": {
+    "speaker": "marek",
+    "de": "Hier ist der AED! Machen Sie ihn an.",
+    "pl": "Tu jest AED! Proszę go włączyć.",
+    "style": "[out of breath]"
+  },
+  "marek_faster": {
+    "speaker": "marek",
+    "de": "Die Leitstelle sagt: schneller drücken!",
+    "pl": "Dyspozytor mówi: szybciej uciskać!",
+    "style": "[urgent]"
+  },
+  "marek_slower": {
+    "speaker": "marek",
+    "de": "Etwas langsamer, sagt die Leitstelle.",
+    "pl": "Trochę wolniej, mówi dyspozytor.",
+    "style": "[calm]"
+  },
+  "marek_position": {
+    "speaker": "marek",
+    "de": "Die Hände in die Mitte der Brust, sagt die Leitstelle.",
+    "pl": "Ręce na środek klatki piersiowej, mówi dyspozytor.",
+    "style": "[calm, clear]"
+  },
+  "marek_resume": {
+    "speaker": "marek",
+    "de": "Das Gerät sagt: sofort weiterdrücken!",
+    "pl": "Urządzenie mówi: natychmiast uciskać dalej!",
+    "style": "[urgent, firm]"
+  },
+  "marek_swap": {
+    "speaker": "marek",
+    "de": "Ich kann beim Drücken übernehmen, wenn Sie nicht mehr können.",
+    "pl": "Mogę zmienić przy uciskaniu, jeśli trzeba.",
+    "style": "[calm, supportive]"
+  },
+  "marek_ems": {
+    "speaker": "marek",
+    "de": "Der Rettungsdienst ist da.",
+    "pl": "Karetka już jest.",
+    "style": "[relieved]"
+  },
+  "aed_pads": {
+    "speaker": "aed",
+    "de": "Kleben Sie die Elektroden auf die nackte Brust des Patienten.",
+    "pl": "Naklej elektrody na odsłoniętą klatkę piersiową pacjenta.",
+    "style": "[calm, clear, steady]"
+  },
+  "aed_analyse": {
+    "speaker": "aed",
+    "de": "Patienten nicht berühren. Herzrhythmus wird analysiert.",
+    "pl": "Nie dotykaj pacjenta. Trwa analiza rytmu serca.",
+    "style": "[calm, clear, steady]"
+  },
+  "aed_shock_advised": {
+    "speaker": "aed",
+    "de": "Schock empfohlen. Zurücktreten, niemand berührt den Patienten.",
+    "pl": "Zalecane wyładowanie. Odsuń się, nikt nie dotyka pacjenta.",
+    "style": "[calm, clear, steady]"
+  },
+  "aed_shocked": {
+    "speaker": "aed",
+    "de": "Schock abgegeben. Beginnen Sie sofort mit der Herzdruckmassage.",
+    "pl": "Wyładowanie wykonane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
+    "style": "[calm, clear, steady]"
+  },
+  "aed_no_shock": {
+    "speaker": "aed",
+    "de": "Kein Schock empfohlen.",
+    "pl": "Wyładowanie niezalecane.",
+    "style": "[calm, clear, steady]"
+  },
+  "aed_stop_cpr": {
+    "speaker": "aed",
+    "de": "Herzdruckmassage unterbrechen. Patienten nicht berühren.",
+    "pl": "Przerwij uciskanie. Nie dotykaj pacjenta.",
+    "style": "[calm, clear, steady]"
+  },
+  "marek_take_over": {
+    "speaker": "marek",
+    "de": "Ich drücke weiter – kleben Sie die Elektroden!",
+    "pl": "Ja uciskam dalej – proszę naklejać elektrody!",
+    "style": "[urgent, determined]"
+  }
+}

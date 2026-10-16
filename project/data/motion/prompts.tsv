@@ -1,0 +1,8 @@
+walk	5	A person walks forward at a relaxed, natural pace, arms swinging loosely.
+anxious	8	A worried person stands in place, wringing their hands in front of their chest and shifting their weight nervously from foot to foot.
+phone	8	A person stands holding a phone to their right ear with their right hand, talking and nodding, the left arm relaxed.
+idle	8	A person stands still, breathing calmly, occasionally shifting their weight a little.
+relief	5	A relieved person exhales, puts a hand on their chest and relaxes their shoulders.
+talk	6	A person stands and talks to someone in front of them, gesturing with both hands.
+reach	3	A worried woman bends forward from the hips and reaches down with both hands toward someone lying on the floor, then holds still.
+cpr	1.5 6	A person standing next to someone lying on the floor kneels down on both knees beside them. The kneeling person performs fast chest compressions on the lying person, pushing straight down with locked arms, shoulders above the hands.

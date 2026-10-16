@@ -1,0 +1,59 @@
+extends "res://tests/suite.gd"
+
+func run() -> Array[String]:
+	failures.clear()
+	var tree := Engine.get_main_loop() as SceneTree
+	var origin := XROrigin3D.new()
+	tree.root.add_child(origin)
+	var interaction := NaretXRInteraction.new()
+	tree.root.add_child(interaction)
+	interaction.set_process(false)
+	var menu := NaretHandMenu.new()
+	tree.root.add_child(menu)
+	menu.configure(origin, 0, interaction)
+	menu.set_process(false)
+	menu._rig.visible = true
+	menu._controls.position = Vector3(0, 0.3, 0)
+	var audio := NaretAudioManager.new()
+	tree.root.add_child(audio)
+	var started: Array = []
+	audio.utterance_started.connect(func(_text: String, language: String, _source: String, _speaker: String): started.append(language))
+	menu.voice_sample_requested.connect(func(): audio.speak("", "en", "anna_arrive", "bystander"))
+	menu._language_menu.pressed.emit()
+	var selected: Array = []
+	menu.language_requested.connect(func(code: String): selected.append(code))
+	var sample := menu._language_keys["en"] as Node3D
+	var hit := interaction._poke_panel(sample.global_position + Vector3(0, 0, 0.003))
+	check(hit.get("target") == sample, "fingertip must pick the visible voice button")
+	interaction._click_hit(hit, true, "test")
+	interaction._click_hit({}, false, "test")
+	await tree.process_frame
+	check(selected == ["en"] and menu._language_choices.visible, "language selection emits once and leaves confirmation visible")
+	menu.set_language("en")
+	check(menu._language_keys["en"].fill.a > 0.0, "selected English remains highlighted")
+	menu._language_menu.pressed.emit()
+	check(menu._language_choices.visible, "Language choices remain directly visible on wrist")
+	check(menu._lang_key.visible and menu._lang_key.label.text == "EN", "Compact cuff also exposes current language")
+	var scenario := NaretScenario.new()
+	var actions: Array = []
+	menu.action_requested.connect(func(action: String): actions.append(action))
+	menu.update_session(scenario)
+	hit = interaction._poke_panel(menu._large_start.global_position + Vector3(0, 0, 0.003))
+	interaction._click_hit(hit, true, "test")
+	check(actions == ["start"], "Start activates on contact without requiring withdrawal")
+	interaction._send_pointer(hit, true, true)
+	check(actions == ["start"], "Held contact does not repeat Start")
+	interaction._click_hit({}, false, "test")
+	check(actions == ["start"], "start button press and release sends start action")
+	var fallback_camera := Camera3D.new()
+	origin.add_child(fallback_camera)
+	menu._show_control_fallback(fallback_camera)
+	check(menu._rig.visible and menu._language_choices.is_visible_in_tree(), "language controls remain visible without tracked hands or controllers")
+	check(menu._controls.global_position.distance_to(fallback_camera.global_position) < 0.7, "compact fallback stays within reach")
+	scenario.free()
+	audio.stop_speech()
+	audio.free()
+	menu.free()
+	interaction.free()
+	origin.free()
+	return failures

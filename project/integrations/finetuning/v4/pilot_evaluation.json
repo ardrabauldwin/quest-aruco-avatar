@@ -1,0 +1,2766 @@
+{
+  "base": {
+    "correct": 2,
+    "total": 36,
+    "false_positives": 8,
+    "cases": [
+      {
+        "id": "v4-challenge-0-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"I shouted to him and touched his shoulder. He stayed completely unresponsive.\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.902
+      },
+      {
+        "id": "v4-challenge-0-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.101
+      },
+      {
+        "id": "v4-challenge-0-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.096
+      },
+      {
+        "id": "v4-challenge-1-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"There was zero reaction to my attempt to wake him.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.958
+      },
+      {
+        "id": "v4-challenge-1-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.298
+      },
+      {
+        "id": "v4-challenge-1-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Na moją próbę obudzenia go nie było żadnej reakcji.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.282
+      },
+      {
+        "id": "v4-challenge-2-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"My check showed that he would neither answer nor move.\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.005
+      },
+      {
+        "id": "v4-challenge-2-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.113
+      },
+      {
+        "id": "v4-challenge-2-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.285
+      },
+      {
+        "id": "v4-challenge-3-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Walk me through placing my hands before I start pressing.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.123
+      },
+      {
+        "id": "v4-challenge-3-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.249
+      },
+      {
+        "id": "v4-challenge-3-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.415
+      },
+      {
+        "id": "v4-challenge-4-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "prediction": {
+          "action": "question",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "raw": "{\n  \"action\": \"question\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Tell me whether breaths are required in this mode.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.979
+      },
+      {
+        "id": "v4-challenge-4-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Sag mir, ob in diesem Modus Beatmungen erforderlich sind.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.0
+      },
+      {
+        "id": "v4-challenge-4-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "prediction": {
+          "action": "report",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "raw": "{\n  \"action\": \"report\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Powiedz mi, czy w tym trybie oddechy są wymagane.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.966
+      },
+      {
+        "id": "v4-challenge-5-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"When the upcoming breath is over, I shall tell you the result.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.11
+      },
+      {
+        "id": "v4-challenge-5-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "abnormal",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"abnormal\",\n  \"evidence\": \"Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.346
+      },
+      {
+        "id": "v4-challenge-5-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Gdy nadchodzący oddech się skończy, zgłoszę wynik.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.087
+      },
+      {
+        "id": "v4-challenge-6-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "request",
+          "result": "unresponsive",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"request\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"I still need to give that breath before reporting completion.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.942
+      },
+      {
+        "id": "v4-challenge-6-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde."
+        },
+        "prediction": {
+          "action": "call_emergency",
+          "kind": "request",
+          "result": "safe",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich meinen Abschluss melde."
+        },
+        "raw": "{\n  \"action\": \"call_emergency\",\n  \"kind\": \"request\",\n  \"result\": \"safe\",\n  \"evidence\": \"Ich muss diese Beatmung noch geben, bevor ich meinen Abschluss melde.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.083
+      },
+      {
+        "id": "v4-challenge-6-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "request",
+          "result": "unresponsive",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"request\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.525
+      },
+      {
+        "id": "v4-challenge-7-en",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"One rescue breath has now been delivered by me.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.085
+      },
+      {
+        "id": "v4-challenge-7-de",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Eine Beatmung wurde jetzt von mir durchgeführt.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.172
+      },
+      {
+        "id": "v4-challenge-7-pl",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Jeden oddech ratowniczy został teraz przeze mnie wykonany.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.107
+      },
+      {
+        "id": "v4-challenge-8-en",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"I cannot verify that a breath actually happened.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.994
+      },
+      {
+        "id": "v4-challenge-8-de",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.245
+      },
+      {
+        "id": "v4-challenge-8-pl",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Nie mogę potwierdzić, że oddech rzeczywiście został wykonany.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.039
+      },
+      {
+        "id": "v4-challenge-9-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"After watching his chest, I found regular normal breathing.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.912
+      },
+      {
+        "id": "v4-challenge-9-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"normal\",\n  \"evidence\": \"Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.388
+      },
+      {
+        "id": "v4-challenge-9-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "report",
+          "result": "safe",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"report\",\n  \"result\": \"safe\",\n  \"evidence\": \"Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech.\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.366
+      },
+      {
+        "id": "v4-challenge-10-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"I assessed his breathing: there are gasps instead of normal breaths.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.04
+      },
+      {
+        "id": "v4-challenge-10-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Es gibt Schnappen nach Luft statt normaler Atemzüge.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.096
+      },
+      {
+        "id": "v4-challenge-10-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "unresponsive",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"unresponsive\",\n  \"evidence\": \"Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.324
+      },
+      {
+        "id": "v4-challenge-11-en",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "question",
+          "result": "none",
+          "evidence": "None of the above"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"None of the above\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.76
+      },
+      {
+        "id": "v4-challenge-11-de",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "prediction": {
+          "action": "begin_check",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "raw": "{\n  \"action\": \"begin_check\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.26
+      },
+      {
+        "id": "v4-challenge-11-pl",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"kind\": \"question\",\n  \"result\": \"none\",\n  \"evidence\": \"Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej.\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.324
+      }
+    ]
+  },
+  "adapter": {
+    "correct": 30,
+    "total": 36,
+    "false_positives": 2,
+    "cases": [
+      {
+        "id": "v4-challenge-0-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"I shouted to him and touched his shoulder. He stayed completely unresponsive.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.438
+      },
+      {
+        "id": "v4-challenge-0-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.522
+      },
+      {
+        "id": "v4-challenge-0-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.635
+      },
+      {
+        "id": "v4-challenge-1-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"There was zero reaction to my attempt to wake him.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.005
+      },
+      {
+        "id": "v4-challenge-1-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.239
+      },
+      {
+        "id": "v4-challenge-1-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Na moją próbę obudzenia go nie było żadnej reakcji.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.443
+      },
+      {
+        "id": "v4-challenge-2-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"My check showed that he would neither answer nor move.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.039
+      },
+      {
+        "id": "v4-challenge-2-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.319
+      },
+      {
+        "id": "v4-challenge-2-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.45
+      },
+      {
+        "id": "v4-challenge-3-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"conversation\", \"result\": \"none\", \"evidence\": \"Walk me through placing my hands before I start pressing.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.047
+      },
+      {
+        "id": "v4-challenge-3-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.536
+      },
+      {
+        "id": "v4-challenge-3-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.886
+      },
+      {
+        "id": "v4-challenge-4-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Tell me whether breaths are required in this mode.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.177
+      },
+      {
+        "id": "v4-challenge-4-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Sag mir, ob in diesem Modus Beatmungen erforderlich sind.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.324
+      },
+      {
+        "id": "v4-challenge-4-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Powiedz mi, czy w tym trybie oddechy są wymagane.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.204
+      },
+      {
+        "id": "v4-challenge-5-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"When the upcoming breath is over, I shall tell you the result.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.051
+      },
+      {
+        "id": "v4-challenge-5-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.251
+      },
+      {
+        "id": "v4-challenge-5-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Gdy nadchodzący oddech się skończy, zgłoszę wynik.\"}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.254
+      },
+      {
+        "id": "v4-challenge-6-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"I still need to give that breath before reporting completion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.054
+      },
+      {
+        "id": "v4-challenge-6-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich meinen Abschluss melde."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Ich muss diese Beatmung noch geben, bevor ich meinen Abschluss melde.\"}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.144
+      },
+      {
+        "id": "v4-challenge-6-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "request",
+          "result": "one_breath",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"request\", \"result\": \"one_breath\", \"evidence\": \"Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.39
+      },
+      {
+        "id": "v4-challenge-7-en",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"One rescue breath has now been delivered by me.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.1
+      },
+      {
+        "id": "v4-challenge-7-de",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Eine Beatmung wurde jetzt von mir durchgeführt.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.25
+      },
+      {
+        "id": "v4-challenge-7-pl",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Jeden oddech ratowniczy został teraz przeze mnie wykonany.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.427
+      },
+      {
+        "id": "v4-challenge-8-en",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"I cannot verify that a breath actually happened.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.085
+      },
+      {
+        "id": "v4-challenge-8-de",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.326
+      },
+      {
+        "id": "v4-challenge-8-pl",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"Nie mogę potwierdzić, że oddech rzeczywiście został wykonany.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.056
+      },
+      {
+        "id": "v4-challenge-9-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"After watching his chest, I found regular normal breathing.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.257
+      },
+      {
+        "id": "v4-challenge-9-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.668
+      },
+      {
+        "id": "v4-challenge-9-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.712
+      },
+      {
+        "id": "v4-challenge-10-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"I assessed his breathing: there are gasps instead of normal breaths.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.244
+      },
+      {
+        "id": "v4-challenge-10-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.672
+      },
+      {
+        "id": "v4-challenge-10-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.38
+      },
+      {
+        "id": "v4-challenge-11-en",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Choose the exercise option that consists solely of chest compressions.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.007
+      },
+      {
+        "id": "v4-challenge-11-de",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.16
+      },
+      {
+        "id": "v4-challenge-11-pl",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.477
+      }
+    ]
+  },
+  "previous_adapter": {
+    "correct": 29,
+    "total": 36,
+    "false_positives": 1,
+    "cases": [
+      {
+        "id": "v4-challenge-0-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"I shouted to him and touched his shoulder. He stayed completely unresponsive.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.07
+      },
+      {
+        "id": "v4-challenge-0-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.313
+      },
+      {
+        "id": "v4-challenge-0-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.63
+      },
+      {
+        "id": "v4-challenge-1-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"There was zero reaction to my attempt to wake him.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.308
+      },
+      {
+        "id": "v4-challenge-1-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.304
+      },
+      {
+        "id": "v4-challenge-1-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Na moją próbę obudzenia go nie było żadnej reakcji.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.429
+      },
+      {
+        "id": "v4-challenge-2-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"My check showed that he would neither answer nor move.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.105
+      },
+      {
+        "id": "v4-challenge-2-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.273
+      },
+      {
+        "id": "v4-challenge-2-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "raw": "{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.648
+      },
+      {
+        "id": "v4-challenge-3-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "conversation",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"conversation\", \"result\": \"none\", \"evidence\": \"Walk me through placing my hands before I start pressing.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.925
+      },
+      {
+        "id": "v4-challenge-3-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.168
+      },
+      {
+        "id": "v4-challenge-3-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.326
+      },
+      {
+        "id": "v4-challenge-4-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Tell me whether breaths are required in this mode.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.93
+      },
+      {
+        "id": "v4-challenge-4-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Sag mir, ob in diesem Modus Beatmungen erforderlich sind.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.434
+      },
+      {
+        "id": "v4-challenge-4-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"question\", \"result\": \"none\", \"evidence\": \"Powiedz mi, czy w tym trybie oddechy są wymagane.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.976
+      },
+      {
+        "id": "v4-challenge-5-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"When the upcoming breath is over, I shall tell you the result.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.137
+      },
+      {
+        "id": "v4-challenge-5-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.549
+      },
+      {
+        "id": "v4-challenge-5-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Gdy nadchodzący oddech się skończy, zgłoszę wynik.\"}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 1.508
+      },
+      {
+        "id": "v4-challenge-6-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"I still need to give that breath before reporting completion.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.129
+      },
+      {
+        "id": "v4-challenge-6-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.254
+      },
+      {
+        "id": "v4-challenge-6-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"intention\", \"result\": \"none\", \"evidence\": \"Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.313
+      },
+      {
+        "id": "v4-challenge-7-en",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"One rescue breath has now been delivered by me.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.27
+      },
+      {
+        "id": "v4-challenge-7-de",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "raw": "{\"action\": \"ventilation\", \"kind\": \"report\", \"result\": \"one_breath\", \"evidence\": \"Eine Beatmung wurde jetzt von mir durchgeführt.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.251
+      },
+      {
+        "id": "v4-challenge-7-pl",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"Jeden oddech ratowniczy został teraz przeze mnie wykonany.\"}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 1.041
+      },
+      {
+        "id": "v4-challenge-8-en",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"I cannot verify that a breath actually happened.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.836
+      },
+      {
+        "id": "v4-challenge-8-de",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.033
+      },
+      {
+        "id": "v4-challenge-8-pl",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "prediction": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "raw": "{\"action\": \"none\", \"kind\": \"uncertain\", \"result\": \"none\", \"evidence\": \"Nie mogę potwierdzić, że oddech rzeczywiście został wykonany.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.116
+      },
+      {
+        "id": "v4-challenge-9-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"After watching his chest, I found regular normal breathing.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.991
+      },
+      {
+        "id": "v4-challenge-9-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.484
+      },
+      {
+        "id": "v4-challenge-9-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"normal\", \"evidence\": \"Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.371
+      },
+      {
+        "id": "v4-challenge-10-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"I assessed his breathing: there are gasps instead of normal breaths.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.178
+      },
+      {
+        "id": "v4-challenge-10-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.417
+      },
+      {
+        "id": "v4-challenge-10-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "raw": "{\"action\": \"check_breathing\", \"kind\": \"report\", \"result\": \"abnormal\", \"evidence\": \"Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.444
+      },
+      {
+        "id": "v4-challenge-11-en",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Choose the exercise option that consists solely of chest compressions.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.031
+      },
+      {
+        "id": "v4-challenge-11-de",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.311
+      },
+      {
+        "id": "v4-challenge-11-pl",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "raw": "{\"action\": \"compression_only\", \"kind\": \"request\", \"result\": \"none\", \"evidence\": \"Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej.\"}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 1.299
+      }
+    ]
+  },
+  "app_model_schema": {
+    "correct": 24,
+    "total": 36,
+    "false_positives": 2,
+    "cases": [
+      {
+        "id": "v4-challenge-0-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "I shouted to him and touched his shoulder. He stayed completely unresponsive.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"I shouted to him and touched his shoulder. He stayed completely unresponsive.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 3.462
+      },
+      {
+        "id": "v4-challenge-0-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"Ich rief ihn an und berührte seine Schulter. Er blieb völlig ohne Reaktion.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.669
+      },
+      {
+        "id": "v4-challenge-0-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Zawołałem do niego i dotknąłem ramienia. Nadal zupełnie nie reagował."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "Nadal zupełnie nie reagował.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"Nadal zupełnie nie reagował.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.496
+      },
+      {
+        "id": "v4-challenge-1-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "There was zero reaction to my attempt to wake him."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "There was zero reaction to my attempt to wake him.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"There was zero reaction to my attempt to wake him.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.538
+      },
+      {
+        "id": "v4-challenge-1-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Auf meinen Versuch, ihn zu wecken, gab es keinerlei Reaktion."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "keinerlei Reaktion",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"keinerlei Reaktion\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.452
+      },
+      {
+        "id": "v4-challenge-1-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "Na moją próbę obudzenia go nie było żadnej reakcji.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"Na moją próbę obudzenia go nie było żadnej reakcji.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.622
+      },
+      {
+        "id": "v4-challenge-2-en",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "My check showed that he would neither answer nor move."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "My check showed that he would neither answer nor move.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"My check showed that he would neither answer nor move.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.51
+      },
+      {
+        "id": "v4-challenge-2-de",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"Meine Prüfung zeigte, dass er weder antwortete noch sich bewegte.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.619
+      },
+      {
+        "id": "v4-challenge-2-pl",
+        "expected": {
+          "action": "check_responsiveness",
+          "kind": "report",
+          "result": "unresponsive",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał."
+        },
+        "prediction": {
+          "action": "check_responsiveness",
+          "evidence": "Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_responsiveness\",\n  \"evidence\": \"Sprawdzenie wykazało, że ani nie odpowiadał, ani się nie poruszał.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.716
+      },
+      {
+        "id": "v4-challenge-3-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Walk me through placing my hands before I start pressing."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Walk me through placing my hands before I start pressing.",
+          "kind": "question",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Walk me through placing my hands before I start pressing.\",\n  \"kind\": \"question\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.531
+      },
+      {
+        "id": "v4-challenge-3-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke.",
+          "kind": "question",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Erkläre mir Schritt für Schritt die Handposition, bevor ich drücke.\",\n  \"kind\": \"question\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.626
+      },
+      {
+        "id": "v4-challenge-3-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać.",
+          "kind": "conversation",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Wyjaśnij krok po kroku ułożenie rąk, zanim zacznę uciskać.\",\n  \"kind\": \"conversation\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.728
+      },
+      {
+        "id": "v4-challenge-4-en",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Tell me whether breaths are required in this mode."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Tell me whether breaths are required in this mode.",
+          "kind": "question",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Tell me whether breaths are required in this mode.\",\n  \"kind\": \"question\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.533
+      },
+      {
+        "id": "v4-challenge-4-de",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Sag mir, ob in diesem Modus Beatmungen erforderlich sind.",
+          "kind": "question",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Sag mir, ob in diesem Modus Beatmungen erforderlich sind.\",\n  \"kind\": \"question\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.7
+      },
+      {
+        "id": "v4-challenge-4-pl",
+        "expected": {
+          "action": "none",
+          "kind": "question",
+          "result": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Powiedz mi, czy w tym trybie oddechy są wymagane.",
+          "kind": "question",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Powiedz mi, czy w tym trybie oddechy są wymagane.\",\n  \"kind\": \"question\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.649
+      },
+      {
+        "id": "v4-challenge-5-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "When the upcoming breath is over, I shall tell you the result."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "When the upcoming breath is over, I shall tell you the result.",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"When the upcoming breath is over, I shall tell you the result.\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.627
+      },
+      {
+        "id": "v4-challenge-5-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden."
+        },
+        "prediction": {
+          "action": "none",
+          "evidence": "Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden.",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"none\",\n  \"evidence\": \"Wenn die bevorstehende Beatmung vorbei ist, werde ich das Ergebnis melden.\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.692
+      },
+      {
+        "id": "v4-challenge-5-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Gdy nadchodzący oddech się skończy, zgłoszę wynik.",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Gdy nadchodzący oddech się skończy, zgłoszę wynik.\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.694
+      },
+      {
+        "id": "v4-challenge-6-en",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "I still need to give that breath before reporting completion."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "I still need to give that breath before reporting completion.",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"I still need to give that breath before reporting completion.\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.524
+      },
+      {
+        "id": "v4-challenge-6-de",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Ich muss diese Beatmung noch geben, bevor ich ihren Abschluss melde."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "Ich muss diese Beatmung noch geben",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"Ich muss diese Beatmung noch geben\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.544
+      },
+      {
+        "id": "v4-challenge-6-pl",
+        "expected": {
+          "action": "none",
+          "kind": "intention",
+          "result": "none",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie.",
+          "kind": "intention",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"Muszę jeszcze wykonać ten oddech, zanim zgłoszę zakończenie.\",\n  \"kind\": \"intention\",\n  \"result\": \"none\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.667
+      },
+      {
+        "id": "v4-challenge-7-en",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "One rescue breath has now been delivered by me."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "One rescue breath has now been delivered by me.",
+          "kind": "report",
+          "result": "one_breath"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"One rescue breath has now been delivered by me.\",\n  \"kind\": \"report\",\n  \"result\": \"one_breath\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.537
+      },
+      {
+        "id": "v4-challenge-7-de",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "Eine Beatmung wurde jetzt von mir durchgeführt.",
+          "kind": "report",
+          "result": "normal"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"Eine Beatmung wurde jetzt von mir durchgeführt.\",\n  \"kind\": \"report\",\n  \"result\": \"normal\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.505
+      },
+      {
+        "id": "v4-challenge-7-pl",
+        "expected": {
+          "action": "ventilation",
+          "kind": "report",
+          "result": "one_breath",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany."
+        },
+        "prediction": {
+          "action": "ventilation",
+          "evidence": "Jeden oddech ratowniczy został teraz przeze mnie wykonany.",
+          "kind": "report",
+          "result": "normal"
+        },
+        "raw": "{\n  \"action\": \"ventilation\",\n  \"evidence\": \"Jeden oddech ratowniczy został teraz przeze mnie wykonany.\",\n  \"kind\": \"report\",\n  \"result\": \"normal\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.605
+      },
+      {
+        "id": "v4-challenge-8-en",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "I cannot verify that a breath actually happened."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "I cannot verify that a breath actually happened.",
+          "kind": "report",
+          "result": "abnormal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"I cannot verify that a breath actually happened.\",\n  \"kind\": \"report\",\n  \"result\": \"abnormal\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.522
+      },
+      {
+        "id": "v4-challenge-8-de",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat.",
+          "kind": "report",
+          "result": "unresponsive"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Ich kann nicht bestätigen, dass tatsächlich eine Beatmung stattgefunden hat.\",\n  \"kind\": \"report\",\n  \"result\": \"unresponsive\"\n}",
+        "correct": false,
+        "false_positive": false,
+        "seconds": 0.652
+      },
+      {
+        "id": "v4-challenge-8-pl",
+        "expected": {
+          "action": "none",
+          "kind": "uncertain",
+          "result": "none",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Nie mogę potwierdzić, że oddech rzeczywiście został wykonany.",
+          "kind": "report",
+          "result": "abnormal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Nie mogę potwierdzić, że oddech rzeczywiście został wykonany.\",\n  \"kind\": \"report\",\n  \"result\": \"abnormal\"\n}",
+        "correct": false,
+        "false_positive": true,
+        "seconds": 0.635
+      },
+      {
+        "id": "v4-challenge-9-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "After watching his chest, I found regular normal breathing."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "After watching his chest, I found regular normal breathing.",
+          "kind": "report",
+          "result": "normal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"After watching his chest, I found regular normal breathing.\",\n  \"kind\": \"report\",\n  \"result\": \"normal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.523
+      },
+      {
+        "id": "v4-challenge-9-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest.",
+          "kind": "report",
+          "result": "normal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Nach Beobachtung seines Brustkorbs stellte ich regelmäßige normale Atmung fest.\",\n  \"kind\": \"report\",\n  \"result\": \"normal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.694
+      },
+      {
+        "id": "v4-challenge-9-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "normal",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech.",
+          "kind": "report",
+          "result": "normal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Po obserwacji klatki piersiowej stwierdziłem regularny prawidłowy oddech.\",\n  \"kind\": \"report\",\n  \"result\": \"normal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.727
+      },
+      {
+        "id": "v4-challenge-10-en",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "I assessed his breathing: there are gasps instead of normal breaths.",
+          "kind": "report",
+          "result": "abnormal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"I assessed his breathing: there are gasps instead of normal breaths.\",\n  \"kind\": \"report\",\n  \"result\": \"abnormal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.602
+      },
+      {
+        "id": "v4-challenge-10-de",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Ich beurteilte seine Atmung: Es gibt Schnappen nach Luft statt normaler Atemzüge."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Es gibt Schnappen nach Luft statt normaler Atemzüge.",
+          "kind": "report",
+          "result": "abnormal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Es gibt Schnappen nach Luft statt normaler Atemzüge.\",\n  \"kind\": \"report\",\n  \"result\": \"abnormal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.629
+      },
+      {
+        "id": "v4-challenge-10-pl",
+        "expected": {
+          "action": "check_breathing",
+          "kind": "report",
+          "result": "abnormal",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo."
+        },
+        "prediction": {
+          "action": "check_breathing",
+          "evidence": "Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo.",
+          "kind": "report",
+          "result": "abnormal"
+        },
+        "raw": "{\n  \"action\": \"check_breathing\",\n  \"evidence\": \"Oceniłem oddech: łapie powietrze zamiast oddychać prawidłowo.\",\n  \"kind\": \"report\",\n  \"result\": \"abnormal\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.707
+      },
+      {
+        "id": "v4-challenge-11-en",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Choose the exercise option that consists solely of chest compressions."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "evidence": "Choose the exercise option that consists solely of chest compressions.",
+          "kind": "request",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"compression_only\",\n  \"evidence\": \"Choose the exercise option that consists solely of chest compressions.\",\n  \"kind\": \"request\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.62
+      },
+      {
+        "id": "v4-challenge-11-de",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "evidence": "Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht.",
+          "kind": "request",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"compression_only\",\n  \"evidence\": \"Wähle die Übungsoption, die ausschließlich aus Herzdruckmassage besteht.\",\n  \"kind\": \"request\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.641
+      },
+      {
+        "id": "v4-challenge-11-pl",
+        "expected": {
+          "action": "compression_only",
+          "kind": "request",
+          "result": "none",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej."
+        },
+        "prediction": {
+          "action": "compression_only",
+          "evidence": "Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej.",
+          "kind": "request",
+          "result": "none"
+        },
+        "raw": "{\n  \"action\": \"compression_only\",\n  \"evidence\": \"Wybierz opcję ćwiczenia obejmującą wyłącznie uciski klatki piersiowej.\",\n  \"kind\": \"request\",\n  \"result\": \"none\"\n}",
+        "correct": true,
+        "false_positive": false,
+        "seconds": 0.702
+      }
+    ]
+  }
+}

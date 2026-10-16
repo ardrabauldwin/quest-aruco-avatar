@@ -1,0 +1,38 @@
+{
+  "de": {
+    "calm": "Ich bleibe ruhig. Bitte sagen Sie mir, wie ich helfen kann.",
+    "help": "Ich rufe den Rettungsdienst unter hundertzwölf an.",
+    "aed": "Ich hole den automatisierten Defibrillator.",
+    "thanks": "Danke, dass Sie helfen. Ich bleibe hier.",
+    "start": "Wir beginnen die Übung. Prüfen Sie zuerst, ob die Person reagiert.",
+    "check_patient": "Sprechen Sie die Person laut an und rütteln Sie sie vorsichtig an den Schultern.",
+    "call_help": "Keine Reaktion? Rufen Sie sofort hundertzwölf an, mit Lautsprecher. Dann Atemwege öffnen und die Atmung höchstens zehn Sekunden prüfen.",
+    "cpr": "Beginnen Sie die Herzdruckmassage: dreißig Kompressionen und zwei Beatmungen.",
+    "aed_instruction": "Schalten Sie den Defibrillator ein und folgen Sie seinen Anweisungen.",
+    "recovery": "Die Übung ist beendet. Besprechen Sie jetzt Ihr Vorgehen."
+  },
+  "pl": {
+    "calm": "Zachowam spokój. Proszę powiedzieć, jak mogę pomóc.",
+    "help": "Dzwonię pod numer sto dwanaście i wzywam pomoc.",
+    "aed": "Przyniosę automatyczny defibrylator.",
+    "thanks": "Dziękuję za pomoc. Zostanę tutaj.",
+    "start": "Zaczynamy ćwiczenie. Najpierw sprawdź, czy osoba reaguje.",
+    "check_patient": "Głośno zwróć się do osoby i delikatnie potrząśnij ją za ramiona.",
+    "call_help": "Brak reakcji? Natychmiast zadzwoń pod sto dwanaście, na głośniku. Potem udrożnij drogi oddechowe i oceniaj oddech najwyżej dziesięć sekund.",
+    "cpr": "Rozpocznij resuscytację: trzydzieści uciśnięć i dwa oddechy ratownicze.",
+    "aed_instruction": "Włącz defibrylator i wykonuj jego polecenia.",
+    "recovery": "Ćwiczenie zakończone. Omówcie teraz swoje działania."
+  },
+  "en": {
+    "calm": "I will stay calm. Please tell me how I can help.",
+    "help": "I am calling the emergency services on one one two.",
+    "aed": "I will fetch the automated defibrillator.",
+    "thanks": "Thank you for helping. I will stay here.",
+    "start": "We are starting the exercise. First check whether the person responds.",
+    "check_patient": "Speak loudly to the person and gently shake their shoulders.",
+    "call_help": "No response? Call one one two immediately, on speakerphone. Then open the airway and check breathing for no more than ten seconds.",
+    "cpr": "Begin chest compressions: thirty compressions and two rescue breaths.",
+    "aed_instruction": "Switch on the defibrillator and follow its instructions.",
+    "recovery": "The exercise has ended. Now discuss what you did."
+  }
+}

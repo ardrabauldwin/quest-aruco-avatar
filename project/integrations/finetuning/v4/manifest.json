@@ -1,0 +1,13 @@
+{
+  "counts": {
+    "train": 288,
+    "validation": 117,
+    "test": 36
+  },
+  "test_sha256": "29b0e2fff3e8fbc66a44c61b1a7916a8e219a38ab0a20f6f3f44e385b1d88e0d",
+  "status": "complete_not_deployed",
+  "human_reviewed": false,
+  "prior_tests": "development_only",
+  "checkpoint_selection": "minimum_validation_loss; test never selects checkpoint",
+  "challenge_status": "now_inspected_development_data"
+}

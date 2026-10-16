@@ -1,0 +1,67 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/mannequin.tscn" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/bystander.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/tracking/spatial_anchor.gd" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/bystander_male.tscn" id="5"]
+[sub_resource type="Environment" id="Environment"]
+background_mode = 1
+background_color = Color(0.042, 0.067, 0.085, 1)
+ambient_light_source = 3
+ambient_light_color = Color(0.60, 0.74, 0.80, 1)
+ambient_light_energy = 0.22
+reflected_light_source = 2
+tonemap_mode = 2
+[sub_resource type="StandardMaterial3D" id="FloorMaterial"]
+albedo_color = Color(0.023, 0.039, 0.05, 1)
+roughness = 0.9
+[sub_resource type="PlaneMesh" id="FloorMesh"]
+material = SubResource("FloorMaterial")
+size = Vector2(16, 16)
+
+[node name="NaReT" type="Node3D"]
+script = ExtResource("1")
+marker_layout_file = "res://data/user_marker_layout.cfg"
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+[node name="KeyLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-54, -33, 0)
+light_color = Color(0.89, 0.96, 1, 1)
+light_energy = 0.68
+shadow_enabled = true
+directional_shadow_max_distance = 8.0
+[node name="FillLight" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-35, 135, 0)
+light_color = Color(0.54, 0.76, 0.68, 1)
+light_energy = 0.2
+[node name="Room" type="Node3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="Room"]
+position = Vector3(0, -0.025, 0)
+mesh = SubResource("FloorMesh")
+[node name="XROrigin3D" type="XROrigin3D" parent="."]
+[node name="XRCamera3D" type="XRCamera3D" parent="XROrigin3D"]
+position = Vector3(0, 1.6, 0)
+near = 0.03
+[node name="LeftHand" type="XRController3D" parent="XROrigin3D"]
+tracker = &"left_hand"
+pose = &"grip"
+[node name="RightHand" type="XRController3D" parent="XROrigin3D"]
+tracker = &"right_hand"
+pose = &"grip"
+[node name="DesktopCamera" type="Camera3D" parent="."]
+position = Vector3(1.9, 2.3, 2.5)
+fov = 42.0
+near = 0.03
+current = true
+[node name="SpatialAnchor" type="Node3D" parent="."]
+script = ExtResource("4")
+default_model_rotation_degrees = Vector3(180, 0, 0)
+[node name="Mannequin" parent="SpatialAnchor" instance=ExtResource("2")]
+[node name="Bystanders" type="Node3D" parent="."]
+[node name="Anna" parent="Bystanders" instance=ExtResource("3")]
+position = Vector3(1.0, 0, -0.55)
+rotation_degrees = Vector3(0, -90, 0)
+
+[node name="Instructor" parent="." instance=ExtResource("5")]
+position = Vector3(-1.0, 0, -0.55)

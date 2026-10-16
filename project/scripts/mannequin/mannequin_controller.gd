@@ -1,0 +1,329 @@
+class_name NaretMannequin
+extends Node3D
+
+@onready var heart: NaretHeart = $Heart
+@onready var pupils: NaretPupils = $Pupils
+@onready var breathing: NaretBreathing = $Breathing
+@onready var sternum: Marker3D = $Sternum
+@onready var zone: MeshInstance3D = $Sternum/Highlight
+var _rig: NaretRigAnimator
+var ragdoll: NaretRagdoll
+var _recovered := false
+var _breath_clock := 0.0
+var _current_compression := 0.0
+var _target_compression := 0.0
+var _zone_rest_position := Vector3.ZERO
+var _recoil_tween: Tween
+var _skin: Array[StandardMaterial3D] = []
+var _pallor := 1.0
+var _metronome := 0.0
+## Cardiac arrest drains colour from the skin: grey-blue, like the real thing,
+## warming back up after ROSC. Multiplies the diffuse texture.
+const PALLOR := Color(0.78, 0.8, 0.9)
+const GLOW := Color("80a8ff")
+const WRONG := Color("d11909")
+## Head tilt (airway opening, ERC "head tilt – chin lift"): extension in degrees
+## on neck and head, eased in and out.
+# Conservative visual prototype: about 20 degrees combined, not measured technique.
+const TILT := {"neck_01": 10.0, "head": 10.0}
+var _tilt_modifier: HeadTilt
+var _eyes: Array[Node3D] = []
+var _neutral_forehead := Vector3.ZERO
+var _neutral_chin := Vector3.ZERO
+## Physical mannequin fit. Length means crown to waist, not full adult height.
+## Zero disables fitting for another mannequin. Thickness is kept unchanged.
+@export var fit_head_to_waist_m := 0.0
+@export var fit_shoulder_width_m := 0.0
+var _overlay_materials: Array[ShaderMaterial] = []
+var _overlay_sources: Array[StandardMaterial3D] = []
+@export var pe_visual_cues := true
+
+func _refresh_overlay() -> void:
+	var forehead := $Model.find_child("Forehead", true, false) as Node3D
+	if forehead == null:
+		return
+	var mouth := $Model.find_child("Mouth", true, false) as Node3D
+	var calf_world := Vector3.ZERO
+	var landmarks := $Model.find_children("*", "Skeleton3D", true, false)
+	var calf_found := false
+	if not landmarks.is_empty():
+		var skeleton := landmarks[0] as Skeleton3D
+		var knee := skeleton.find_bone("calf_l")
+		var ankle := skeleton.find_bone("foot_l")
+		if knee >= 0 and ankle >= 0:
+			calf_world = skeleton.global_transform * ((skeleton.get_bone_global_pose(knee).origin + skeleton.get_bone_global_pose(ankle).origin) * 0.5)
+			calf_found = true
+	for i in _overlay_materials.size():
+		_overlay_materials[i].set_shader_parameter("head_world", forehead.global_position)
+		_overlay_materials[i].set_shader_parameter("tint", _overlay_sources[i].albedo_color)
+		_overlay_materials[i].set_shader_parameter("pe_visual_cues", pe_visual_cues and mouth != null and calf_found)
+		_overlay_materials[i].set_shader_parameter("mouth_world", mouth.global_position if mouth else forehead.global_position)
+		_overlay_materials[i].set_shader_parameter("calf_world", calf_world)
+		_overlay_materials[i].set_shader_parameter("patient_inverse", global_basis.orthonormalized().inverse())
+
+func _fit_patient(model: Node3D) -> void:
+	var skeletons := model.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty() or fit_head_to_waist_m <= 0.0 or fit_shoulder_width_m <= 0.0:
+		return
+	var skeleton := skeletons[0] as Skeleton3D
+	# The lowest spine joint defines the waist; shoulder joints define the
+	# cross-section where we measure the OUTSIDE of the skin, excluding hands.
+	var waist_id := skeleton.find_bone("spine_01")
+	var shoulder_id := skeleton.find_bone("upperarm_l")
+	if waist_id < 0 or shoulder_id < 0:
+		return
+	var to_model := model.global_transform.affine_inverse() * skeleton.global_transform
+	var waist_z := (to_model * skeleton.get_bone_global_pose(waist_id)).origin.z
+	var shoulder_z := (to_model * skeleton.get_bone_global_pose(shoulder_id)).origin.z
+	var crown_z := INF
+	var shoulder_min := INF
+	var shoulder_max := -INF
+	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if not String(mesh.name).ends_with("Body"):
+			continue
+		var to_local_model := model.global_transform.affine_inverse() * mesh.global_transform
+		for surface in mesh.mesh.get_surface_count():
+			for vertex in NaretSpatialAnchor.posed_vertices(mesh, surface):
+				var point: Vector3 = to_local_model * vertex
+				crown_z = minf(crown_z, point.z)
+				if absf(point.z - shoulder_z) <= 0.01:
+					shoulder_min = minf(shoulder_min, point.x)
+					shoulder_max = maxf(shoulder_max, point.x)
+	var length := waist_z - crown_z
+	var width := shoulder_max - shoulder_min
+	if not is_finite(length) or not is_finite(width) or length <= 0.0 or width <= 0.0:
+		push_warning("Patient fit: missing usable body landmarks; keeping original scale.")
+		return
+	model.scale.x = fit_shoulder_width_m / width
+	model.scale.z = fit_head_to_waist_m / length
+	print("NARET_MODEL_FIT head_to_waist=%.3f shoulders=%.3f scale=%s waist=spine_01 shoulder_band=20mm" % [fit_head_to_waist_m, fit_shoulder_width_m, model.scale])
+
+## Left arm moved away from the body for the lateral AED pad (degrees, about the
+## upper arm's own Z axis on this rig).
+const ARM_OUT := 32.0
+
+class HeadTilt extends SkeletonModifier3D:
+	## Runs after the animation, so the breathing/idle clip keeps playing underneath.
+	var amount := 0.0
+	var target := 0.0
+	var arm := 0.0
+	var arm_target := 0.0
+	func _process_modification() -> void:
+		amount = move_toward(amount, target, get_process_delta_time() * 2.5)
+		arm = move_toward(arm, arm_target, get_process_delta_time() * 1.5)
+		var skeleton := get_skeleton()
+		if skeleton == null:
+			return
+		var upper := skeleton.find_bone("upperarm_l")
+		if upper >= 0 and arm > 0.0:
+			skeleton.set_bone_pose_rotation(upper, skeleton.get_bone_pose_rotation(upper) * Quaternion(Vector3.BACK, deg_to_rad(ARM_OUT * arm)))
+		if amount <= 0.0:
+			return
+		for bone_name: String in TILT:
+			var bone := skeleton.find_bone(bone_name)
+			if bone < 0:
+				continue
+			var pose := skeleton.get_bone_pose_rotation(bone)
+			# -X extends the neck on this rig (+X flexes, as for the spine).
+			skeleton.set_bone_pose_rotation(bone, pose * Quaternion(Vector3.RIGHT, deg_to_rad(-TILT[bone_name] * amount)))
+
+func _ready() -> void:
+	var model := $Model as Node3D
+	_fit_patient(model)
+	_zone_rest_position = zone.position
+	var anatomical_sternum := model.find_child("Sternum", true, false) as Node3D
+	if anatomical_sternum:
+		# The physical mannequin defines interaction coordinates. Align the human
+		# appearance to the same chest landmark without altering the 1:1 scan.
+		model.position += sternum.position - to_local(anatomical_sternum.global_position)
+	# Interaction targets must follow the resized anatomy, not the old scan.
+	for pair in [["Mouth", $MouthZone], ["Forehead", $ForeheadZone]]:
+		var marker := model.find_child(pair[0], true, false) as Node3D
+		if marker:
+			(pair[1] as Node3D).position = to_local(marker.global_position)
+	# Capture neutral landmarks once. Animation must not move its own hit zones.
+	var forehead_marker := model.find_child("Forehead", true, false) as Node3D
+	var mouth_marker := model.find_child("Mouth", true, false) as Node3D
+	if forehead_marker and mouth_marker:
+		_neutral_forehead = to_local(forehead_marker.global_position)
+		_neutral_chin = to_local(mouth_marker.global_position) + Vector3(0, -0.025, 0.04) * model.scale
+	for pair in [["EyeLeft", $Pupils/Left], ["EyeRight", $Pupils/Right]]:
+		var marker := model.find_child(pair[0], true, false) as Node3D
+		if marker == null:
+			continue
+		# The marker sits on the cornea and rides the eye bone, so the overlay
+		# follows the gaze instead of floating in front of a turning eyeball.
+		var pupil := pair[1] as Node3D
+		pupil.reparent(marker, false)
+		pupil.position = Vector3.ZERO
+		_eyes.append(pupil)
+	_rig = NaretRigAnimator.new()
+	_rig.name = "RigAnimator"
+	add_child(_rig)
+	_rig.configure(model)
+	ragdoll = NaretRagdoll.new()
+	ragdoll.name = "Ragdoll"
+	add_child(ragdoll)
+	ragdoll.configure(model)
+	var chest := $Model.find_child("ScanTorso", true, false) as Node3D
+	if not chest: chest = $Model.find_child("Chest", true, false) as Node3D
+	if chest: breathing.configure(chest)
+	_collect_skin(model)
+	_apply_pallor(1.0)
+	var skeletons := model.find_children("*", "Skeleton3D", true, false)
+	if not skeletons.is_empty():
+		_tilt_modifier = HeadTilt.new()
+		skeletons[0].add_child(_tilt_modifier)
+
+func _collect_skin(node: Node) -> void:
+	## Own copies of the body's skin materials, so the tint never leaks into
+	## the bystanders who share the imported resources.
+	if node is MeshInstance3D and String(node.name).ends_with("Body"):
+		var mesh := node as MeshInstance3D
+		for surface in mesh.mesh.get_surface_count():
+			var source := mesh.get_active_material(surface) as StandardMaterial3D
+			if source == null:
+				continue
+			var copy := source.duplicate() as StandardMaterial3D
+			mesh.set_surface_override_material(surface, copy)
+			_skin.append(copy)
+	for child in node.get_children():
+		_collect_skin(child)
+
+func _apply_pallor(amount: float) -> void:
+	_pallor = amount
+	for material in _skin:
+		var tint := Color.WHITE.lerp(PALLOR, amount)
+		tint.a = material.albedo_color.a # Preserve overlay opacity during skin feedback.
+		material.albedo_color = tint
+
+func get_sternum_transform() -> Transform3D:
+	return sternum.global_transform
+
+func set_overlay_opacity(opacity: float) -> void:
+	# Coverage transparency writes normal depth; the face remains opaque.
+	if not _overlay_materials.is_empty():
+		for material in _overlay_materials:
+			material.set_shader_parameter("opacity", clampf(opacity, 0.0, 1.0))
+		return
+	for mesh: MeshInstance3D in $Model.find_children("*", "MeshInstance3D", true, false):
+		mesh.transparency = 0.0
+		for surface in mesh.mesh.get_surface_count():
+			var material := mesh.get_active_material(surface) as StandardMaterial3D
+			if material == null:
+				continue
+			var overlay := ShaderMaterial.new()
+			overlay.shader = load("res://assets/patient_overlay.gdshader")
+			overlay.set_shader_parameter("clinical_skin", String(mesh.name).to_lower().ends_with("body"))
+			overlay.set_shader_parameter("skin_texture", material.albedo_texture)
+			overlay.set_shader_parameter("has_texture", material.albedo_texture != null)
+			overlay.set_shader_parameter("surface_roughness", material.roughness)
+			overlay.set_shader_parameter("opacity", clampf(opacity, 0.0, 1.0))
+			_overlay_materials.append(overlay)
+			_overlay_sources.append(material)
+			mesh.set_surface_override_material(surface, overlay)
+	_refresh_overlay()
+
+func set_compression_depth(depth_m: float) -> void:
+	var target := clampf(depth_m, 0.0, 0.065)
+	if target > 0.0:
+		if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
+			_recoil_tween.kill()
+		_apply_compression(target)
+	else:
+		if _current_compression > 0.005:
+			if not (is_instance_valid(_recoil_tween) and _recoil_tween.is_running()):
+				_recoil_tween = create_tween()
+				_recoil_tween.tween_method(_apply_compression, _current_compression, 0.0, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		else:
+			if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
+				_recoil_tween.kill()
+			_apply_compression(0.0)
+
+func _apply_compression(depth: float) -> void:
+	_current_compression = depth
+	# In human_patient.glb, the scaled mesh compression target yields 0.0282m depression at weight 1.0.
+	# A target depth of 0.05m (5 cm) corresponds to weight 1.77 for realistic AHA/ERC depth.
+	var weight := clampf(depth / 0.0282, 0.0, 2.2)
+	_rig.set_compression_amount(weight)
+	zone.position.y = _zone_rest_position.y - depth * 0.8
+	heart.squeeze(depth)
+
+func compress(depth: float = 0.045) -> void:
+	if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
+		_recoil_tween.kill()
+	_current_compression = 0.0
+	var weight := clampf(depth / 0.0282, 0.5, 2.2)
+	if not _rig.play_action("compression", weight):
+		breathing.compress(depth)
+	heart.squeeze(depth)
+	get_tree().create_timer(0.12).timeout.connect(func(): heart.squeeze(0.0))
+	var tween := create_tween()
+	tween.tween_property(zone, "position:y", _zone_rest_position.y - clampf(depth * 0.8, 0.0, 0.05), 0.11)
+	tween.tween_property(zone, "position:y", _zone_rest_position.y, 0.18)
+
+func ventilate() -> void:
+	if not _rig.play_action("breathing"): breathing.ventilate()
+
+func set_head_tilt(tilted: bool) -> void:
+	if _tilt_modifier:
+		_tilt_modifier.target = 1.0 if tilted else 0.0
+
+func set_arm_clear(clear: bool) -> void:
+	## The left arm out of the way of the lateral electrode.
+	if _tilt_modifier:
+		_tilt_modifier.arm_target = 1.0 if clear else 0.0
+
+func forehead() -> Vector3:
+	## Above the eyes towards the crown (head end is -Z, the face +Y): where a hand
+	## goes to tilt the head back.
+	var eyes := pupils.global_position
+	if not _eyes.is_empty():
+		eyes = (_eyes[0].global_position + _eyes[-1].global_position) * 0.5
+	return eyes + global_basis.y.normalized() * 0.02 - global_basis.z.normalized() * 0.05
+
+func gesture_forehead() -> Vector3:
+	return global_transform * _neutral_forehead
+
+func gesture_chin() -> Vector3:
+	return global_transform * _neutral_chin
+
+func set_recovered(recovered: bool) -> void:
+	_recovered = recovered
+	_breath_clock = 0.0
+	pupils.set_dilation(0.4 if recovered else 1.0)
+	create_tween().tween_method(_apply_pallor, _pallor, 0.0 if recovered else 1.0, 6.0 if recovered else 0.5)
+	if not recovered:
+		_rig.clear_gaze()
+
+func _process(delta: float) -> void:
+	_refresh_overlay()
+	# The placement ring breathes at 110/min, a silent metronome for the target rate.
+	_metronome = fmod(_metronome + delta * 110.0 / 60.0, 1.0)
+	var beat := pow(1.0 - _metronome, 3.0)
+	zone.scale = Vector3.ONE * (1.0 + beat * 0.12)
+	(zone.material_override as StandardMaterial3D).albedo_color.a = 0.55 + beat * 0.45
+	if not _recovered:
+		return
+	# Only a patient with signs of life tracks anyone; arrest leaves eyes fixed.
+	var camera := get_viewport().get_camera_3d()
+	if camera:
+		_rig.look_at_point(camera.global_position)
+	_breath_clock += delta
+	if _breath_clock >= 4.0:
+		_breath_clock = 0.0
+		ventilate()
+
+func set_hand_feedback(correct: bool) -> void:
+	var mat := zone.material_override as StandardMaterial3D
+	mat.albedo_color = GLOW if correct else WRONG
+	mat.emission = mat.albedo_color
+
+func set_reference_visible(enabled: bool) -> void:
+	var reference := get_node_or_null("ScanReference") as Node3D
+	if reference:
+		reference.visible = enabled
+		$Model.visible = not enabled
+	heart.visible = not enabled
+	pupils.visible = not enabled
+	zone.visible = not enabled

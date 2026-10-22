@@ -17,8 +17,10 @@ signal mode_requested(mode: String)
 signal recording_requested(active: bool)
 signal export_requested
 signal voice_sample_requested
+signal alignment_save_requested
 var _controls: Node3D
 var _large_mic: Key3D
+var _large_align: Key3D
 var _language_keys: Dictionary = {}
 var _language_menu: Key3D
 var _language_choices: Node3D
@@ -493,11 +495,17 @@ func _build_exercise_controls() -> void:
 		_refresh_mic()
 		recording_requested.emit(_mic_on), _controls)
 	_large_mic.position = Vector3(0.060, -0.022, 0)
+	# Hands-only replacement for the right controller's A button: saves the
+	# current marker placement as the patient alignment, which Start requires.
+	_large_align = _key(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language), Vector2(0.075, 0.035), "key", func():
+		alignment_save_requested.emit(), _controls)
+	_large_align.position = Vector3(-0.060, -0.072, 0)
+	_large_align.label.font_size = 20
 	_lang_key.visible = true
 	_mode_key.visible = true
 	_mic_key.visible = false
 	_notice = make_label("", 21, INK)
-	_notice.position = Vector3(0, -0.055, 0.002)
+	_notice.position = Vector3(0.025, -0.105, 0.002)
 	_controls.add_child(_notice)
 
 func _place_on_cuff(key: Key3D, angle_deg: float, y: float) -> void:
@@ -757,6 +765,7 @@ func set_language(value: String) -> void:
 	_lang_key.set_text(language.to_upper())
 	_lang_key.set_accent(Color("32d16d"), Color("16843c"))
 	_export_key.set_text(NaretLanguage.ui("Export", "Eksport", language))
+	_large_align.set_text(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language))
 	_refresh_mode()
 	_refresh_mic()
 

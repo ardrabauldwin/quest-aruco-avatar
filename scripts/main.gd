@@ -264,6 +264,7 @@ func _build_xr_ui() -> void:
 		audio_manager.stop_speech()
 		audio_manager.speak("", _language, "anna_arrive", "bystander"))
 	hand_menu.export_requested.connect(_export_session)
+	hand_menu.alignment_save_requested.connect(_save_alignment)
 	hand_menu.menu_shown_changed.connect(func(shown: bool): interaction.set_menu_hand(0 if shown else -1))
 	_info_viewport = SubViewport.new()
 	_info_viewport.size = Vector2i(900, 660)
@@ -475,15 +476,19 @@ func _update_controller_alignment(delta: float) -> void:
 
 func _on_alignment_button(button: StringName) -> void:
 	if button == &"ax_button": # Right A saves the model offset, including yaw.
-		if not anchor.locked:
-			_toast("Wait for marker placement")
-			return
-		anchor.calibrated = true
-		if anchor.save_calibration() == OK:
-			_toast("Alignment saved")
-			print("NARET_ALIGNMENT saved offset=", anchor.marker_to_mannequin)
-		else:
-			_toast("Save failed")
+		_save_alignment()
+
+func _save_alignment() -> void:
+	## Shared by the A button and the hand menu's save key.
+	if not anchor.locked:
+		_toast("Wait for marker placement")
+		return
+	anchor.calibrated = true
+	if anchor.save_calibration() == OK:
+		_toast("Alignment saved")
+		print("NARET_ALIGNMENT saved offset=", anchor.marker_to_mannequin)
+	else:
+		_toast("Save failed")
 
 func _on_action(action: String, details: Dictionary = {}) -> void:
 	if action in ["start", "restart", "reset"]:

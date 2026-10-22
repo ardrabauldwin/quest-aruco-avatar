@@ -45,6 +45,13 @@ func run() -> Array[String]:
 	check(actions == ["start"], "Held contact does not repeat Start")
 	interaction._click_hit({}, false, "test")
 	check(actions == ["start"], "start button press and release sends start action")
+	var saves: Array = []
+	menu.alignment_save_requested.connect(func(): saves.append(true))
+	hit = interaction._poke_panel(menu._large_align.global_position + Vector3(0, 0, 0.003))
+	check(hit.get("target") == menu._large_align, "fingertip must pick the save-alignment key, not Start")
+	interaction._click_hit(hit, true, "test")
+	interaction._click_hit({}, false, "test")
+	check(saves.size() == 1 and actions == ["start"], "save-alignment key replaces the controller A button")
 	var fallback_camera := Camera3D.new()
 	origin.add_child(fallback_camera)
 	menu._show_control_fallback(fallback_camera)

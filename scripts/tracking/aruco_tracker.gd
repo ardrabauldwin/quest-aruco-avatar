@@ -1,6 +1,6 @@
 class_name NaretArucoTracker
 extends Node3D
-## Adapter for the pinned CameraServer/OpenCV backend. All emitted poses are world poses.
+## Adapter for the pinned opencv_aruco addon's ArucoMarkerTracking node. All emitted poses are world poses.
 signal pose_updated(pose: Transform3D)
 signal status_changed(message: String)
 
@@ -53,15 +53,17 @@ func _ready() -> void:
 		if _layout != null and _provider != null:
 			_apply_marker_configuration(_provider)
 	elif ClassDB.class_exists("OpenCVProcessor") and (not desktop_preview or OS.get_name() == "Android"):
-		var path := "res://scripts/tracking/user_camera_provider.gd"
+		# Upstream's ArucoMarkerTracking node, unmodified: CameraX luma frames from passthrough
+		# camera "50" at 640x480, ArucoNano, its own calibration. Loaded by path, never typed,
+		# because desktop builds have no OpenCVProcessor class to parse it against.
+		var path := "res://addons/opencv_aruco/aruco_marker_tracking.gd"
 		if ResourceLoader.exists(path):
 			var script: Script = load(path)
 			var provider: Node = script.new()
-			provider.set("xr_camera", _camera)
-			provider.set("xr_origin", _camera.get_parent())
+			# The printed sternum marker is DICT_4X4_50; upstream defaults to ARUCO_MIP_36h12.
+			provider.set("marker_dictionary", 1)
 			_apply_marker_configuration(provider)
-			provider.set("image_downscale_factor", 0.5)
-			provider.name = "UpstreamArucoMarkerTracking"
+			provider.name = "ArucoMarkerTracking"
 			bind_provider(provider)
 			add_child(provider)
 	if _provider == null:

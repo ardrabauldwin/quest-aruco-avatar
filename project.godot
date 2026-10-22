@@ -19,7 +19,7 @@ window/stretch/mode="canvas_items"
 driver/enable_input=true
 
 [editor_plugins]
-enabled=PackedStringArray("res://addons/opencv_aruco/plugin.cfg")
+enabled=PackedStringArray("res://addons/GodotAndroidCamera/plugin.cfg", "res://addons/opencv_aruco/plugin.cfg")
 
 [physics]
 common/physics_ticks_per_second=72

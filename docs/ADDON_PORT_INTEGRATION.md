@@ -11,17 +11,19 @@ from Godot imports with `.gdignore`.
 
 ## Active camera path
 
-`user_camera_provider.gd` retains the working CameraServer colour shader:
-orange cells become black and blue cells become white. Its detection worker
-calls the new `OpenCVProcessor.detect_markers()` API when available.
+Superseded: detection now runs upstream's `ArucoMarkerTracking` node from
+`godot-opencv-aruco` `main` unchanged, created by `NaretArucoTracker`. Stage it
+with `python -c "import sys; sys.path.insert(0,'tools'); import setup_dependencies as s; s.stage_aruco(True)"`,
+which copies `addons/opencv_aruco` and `addons/GodotAndroidCamera` from the
+submodule.
 
-- Dictionary is explicitly 4x4/50 (value 1), matching the existing prints.
-- The existing camera intrinsics and lens extrinsics are retained.
-- Marker sizes come from the current tracking configuration.
-- Identity head pose is passed to the native call; the existing capture-time
-  head transform is applied once when publishing the result.
-- Diagnostic PNG saving is off by default. `NARET_DETECTOR` logs duration and
-  detected IDs every two seconds for measuring actual headset performance.
+- Camera: CameraX (GodotAndroidCamera), left passthrough camera "50", 640x480
+  luma plane with sensor timestamps. No GPU readback.
+- Detector: ArucoNano at full resolution with upstream's calibration.
+- The only override is the dictionary, 4x4/50 (value 1), plus the marker sizes
+  from the tracking configuration.
+- The orange/blue colour path (`user_camera_provider.gd`, colour shader) was
+  removed: luma frames carry no colour. Print the marker black on white.
 
 Placement, marker fusion, startup, motion gating, smoothing, model alignment,
 compression counting, HUD and speech are not replaced by the demo's versions.
@@ -92,7 +94,8 @@ camera/world-pose adapter. All 24 application suites pass. The paragraph above
 describes the superseded version-39 experiment, not the current behavior.
 
 1. Check for native or script errors in logcat after launch.
-2. Show the orange/blue markers and record `NARET_DETECTOR` IDs and milliseconds.
+2. Show the black-and-white markers; enable `debug_prints_enabled` on the
+   `ArucoMarkerTracking` node to log `detect_ms` and marker counts.
 3. Confirm startup placement, correct head/feet orientation and saved nudge.
 4. Move your head around the stationary mannequin and check holding behavior.
 5. Check the original compression counter, pace needle and depth display.

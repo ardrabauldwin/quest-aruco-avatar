@@ -12,6 +12,7 @@ __pycache__/
 android/
 addons/godot_openxr_vendors/
 addons/opencv_aruco/
+addons/GodotAndroidCamera/
 export_credentials.cfg
 *.keystore
 *.log

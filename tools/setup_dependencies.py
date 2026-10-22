@@ -69,7 +69,15 @@ def stage_aruco(force: bool) -> None:
         print("Build the upstream extension, then rerun with --aruco. See docs/TRACKING.md.")
         return
     target = ROOT / "addons/opencv_aruco"
-    shutil.copytree(source, target, dirs_exist_ok=True, ignore=shutil.ignore_patterns("*.uid", ".gitkeep"))
+    # Replace, never merge: a file upstream deleted must not survive from an older stage.
+    shutil.rmtree(target, ignore_errors=True)
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("*.uid", ".gitkeep"))
+    # CameraX push path (luma frames + sensor timestamps, no GPU readback). Without it the
+    # addon silently falls back to the CameraServer readback.
+    camera_source = source.parent / "GodotAndroidCamera"
+    camera_target = ROOT / "addons/GodotAndroidCamera"
+    shutil.rmtree(camera_target, ignore_errors=True)
+    shutil.copytree(camera_source, camera_target, ignore=shutil.ignore_patterns("*.uid", ".gitkeep"))
     # Only advertise binaries actually built. A missing host binary must not poison
     # the Godot editor, while Android entries are still exported when present.
     extension = target / "bin/opencv_aruco.gdextension"
@@ -84,10 +92,12 @@ def stage_aruco(force: bool) -> None:
     project = ROOT / "project.godot"
     if project.exists():
         settings = project.read_text()
-        plugin = 'res://addons/opencv_aruco/plugin.cfg'
+        plugins = 'enabled=PackedStringArray("res://addons/GodotAndroidCamera/plugin.cfg", "res://addons/opencv_aruco/plugin.cfg")'
         if "[editor_plugins]" not in settings:
-            project.write_text(settings + '\n[editor_plugins]\nenabled=PackedStringArray("' + plugin + '")\n')
-    print(f"Staged ArUco addon with {len(native)} native binaries/frameworks.")
+            project.write_text(settings + '\n[editor_plugins]\n' + plugins + '\n')
+        elif "res://addons/GodotAndroidCamera/plugin.cfg" not in settings:
+            project.write_text(settings.replace('enabled=PackedStringArray("res://addons/opencv_aruco/plugin.cfg")', plugins))
+    print(f"Staged ArUco addon with {len(native)} native binaries/frameworks, plus GodotAndroidCamera.")
 
 
 def stage_vendors(download: bool, archive: Path | None) -> None:

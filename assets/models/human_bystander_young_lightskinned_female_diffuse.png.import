@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cda6sq8yoi43x"
-path="res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.ctex"
+path.s3tc="res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.s3tc.ctex"
+path.etc2="res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "5a8baaf7122c5c4041a282276ed90af4"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/human_bystander_young_lightskinned_female_diffuse.png"
-dest_files=["res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.ctex"]
+dest_files=["res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.s3tc.ctex", "res://.godot/imported/human_bystander_young_lightskinned_female_diffuse.png-5a9d1d11b90dd80a3f7fed6baf1d8485.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

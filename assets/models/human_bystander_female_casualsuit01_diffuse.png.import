@@ -3,9 +3,11 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://btku65fhhvpal"
-path="res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.ctex"
+path.s3tc="res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.s3tc.ctex"
+path.etc2="res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.etc2.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "156012d5ab80b233f3af08c849c73daf"
@@ -14,11 +16,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/human_bystander_female_casualsuit01_diffuse.png"
-dest_files=["res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.ctex"]
+dest_files=["res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.s3tc.ctex", "res://.godot/imported/human_bystander_female_casualsuit01_diffuse.png-a7c5ff73f2f84634f91801bb5cf426b7.etc2.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -40,4 +42,4 @@ process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
-detect_3d/compress_to=1
+detect_3d/compress_to=0

@@ -34,6 +34,7 @@ var _walk_target := Vector3.INF
 var _speed := 0.0
 var _hand: BoneAttachment3D
 var _phone: MeshInstance3D
+var _floor_shadow: ShaderMaterial
 
 func _ready() -> void:
 	var model := get_node_or_null("Model") as Node3D
@@ -233,3 +234,16 @@ func place_on_floor(spot: Transform3D) -> void:
 				lowest = minf(lowest, (mesh.global_transform * vertex).y)
 	if is_finite(lowest):
 		global_position.y += spot.origin.y - lowest
+	if _floor_shadow:
+		_floor_shadow.set_shader_parameter("floor_y", spot.origin.y)
+
+func cast_floor_shadow(light_direction: Vector3) -> void:
+	## Passthrough shows the real floor, which receives no shadow-map shadows, so
+	## every mesh also draws itself flattened onto the floor as a soft dark pass.
+	if _floor_shadow == null:
+		_floor_shadow = ShaderMaterial.new()
+		_floor_shadow.shader = preload("res://assets/floor_shadow.gdshader")
+		_floor_shadow.set_shader_parameter("floor_y", global_position.y)
+		for mesh: MeshInstance3D in find_children("*", "MeshInstance3D", true, false):
+			mesh.material_overlay = _floor_shadow
+	_floor_shadow.set_shader_parameter("light_direction", light_direction)

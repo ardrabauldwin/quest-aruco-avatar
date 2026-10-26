@@ -18,9 +18,27 @@ signal recording_requested(active: bool)
 signal export_requested
 signal voice_sample_requested
 signal alignment_save_requested
+signal floor_calibration_requested
+signal reference_scan_toggled(visible: bool)
+signal hand_meshes_toggled(visible: bool)
+signal chest_calibration_requested
+signal chest_fit_requested(fit: String)
+signal sternum_landmark_apply_requested
+signal occlusion_requested(mode: String)
 var _controls: Node3D
-var _large_mic: Key3D
 var _large_align: Key3D
+var _floor_key: Key3D
+var _scan_key: Key3D
+var _scan_on := false
+var _hands_key: Key3D
+var _hands_on := false
+var _chest_key: Key3D
+var _fit_key: Key3D
+var chest_fit := "shift"
+var _ring_key: Key3D
+var _occlusion_key: Key3D
+var occlusion := "room"
+const OCCLUSION_CYCLE := ["off", "room", "all"]
 var _language_keys: Dictionary = {}
 var _language_menu: Key3D
 var _language_choices: Node3D
@@ -55,7 +73,9 @@ const NODE_R_M := 0.011
 const CALLOUT_ROW_M := 0.03
 const CALLOUT_SPREAD := 1.6
 const CUFF_R_M := 0.043
-const CUFF_LEN_M := 0.062
+## Three rows: main tiles, floor key under the mode key, overflow actions.
+const CUFF_LEN_M := 0.092
+const CUFF_ROW_Y := [-0.021, -0.050, -0.077]
 const CUFF_ARC_DEG := 200.0
 const TAP_ON_M := 0.025
 const TAP_OFF_M := 0.035
@@ -363,7 +383,7 @@ func configure(origin: XROrigin3D, index: int, interaction: Node = null) -> void
 	for i in 2:
 		var key := _key("", Vector2(0.05, 0.02), "key", Callable(), _cuff)
 		key.label.font_size = 20
-		_place_on_cuff(key, -36.0 if i == 0 else 36.0, -0.047)
+		_place_on_cuff(key, -36.0 if i == 0 else 36.0, CUFF_ROW_Y[2])
 		key.visible = false
 		_action_keys.append(key)
 	_refresh_mode()
@@ -460,9 +480,48 @@ func _build_cuff() -> void:
 		recording_requested.emit(_mic_on), _cuff)
 	_build_mic_icon(_mic_key.icon)
 	_place_on_cuff(_mic_key, 0.0, -0.021)
+	# Measures the real floor under a resting fingertip (NaretFloorTouch).
+	_floor_key = _key(NaretLanguage.ui("Boden", "Podłoga", language), Vector2(0.024, 0.026), "tile", func(): floor_calibration_requested.emit(), _cuff)
+	_build_target_icon(_floor_key.icon)
+	_place_on_cuff(_floor_key, -76.0, CUFF_ROW_Y[0])
 	_export_key = _key("Export", Vector2(0.024, 0.026), "tile", func(): export_requested.emit(), _cuff)
 	_build_export_icon(_export_key.icon)
 	_place_on_cuff(_export_key, 76.0, -0.021)
+	# Swaps the full-body patient for the 1:1 mannequin scan, to check the fit.
+	_scan_key = _key("", Vector2(0.024, 0.026), "key", func():
+		_scan_on = not _scan_on
+		_refresh_scan()
+		reference_scan_toggled.emit(_scan_on), _cuff)
+	_scan_key.label.font_size = 19
+	_place_on_cuff(_scan_key, 38.0, -0.021)
+	# Testing aid: Meta's tracked hand meshes over the passthrough hands.
+	_hands_key = _key("", Vector2(0.024, 0.026), "key", func():
+		_hands_on = not _hands_on
+		_refresh_scan()
+		hand_meshes_toggled.emit(_hands_on), _cuff)
+	_hands_key.label.font_size = 19
+	_place_on_cuff(_hands_key, 0.0, CUFF_ROW_Y[1])
+	# A flat hand on the compression point measures the real chest height.
+	# Calibration tiles share the target icon: floor above, chest below it.
+	_chest_key = _key("", Vector2(0.024, 0.026), "tile", func(): chest_calibration_requested.emit(), _cuff)
+	_build_target_icon(_chest_key.icon)
+	_place_on_cuff(_chest_key, -76.0, CUFF_ROW_Y[1])
+	# How the body meets that height: flattened, or lowered into the floor.
+	_fit_key = _key("", Vector2(0.024, 0.026), "key", func():
+		chest_fit_requested.emit("shift" if chest_fit == "flatten" else "flatten"), _cuff)
+	_fit_key.label.font_size = 19
+	_place_on_cuff(_fit_key, 76.0, CUFF_ROW_Y[1])
+	# Tuning: applies the Mannequin's sternum_landmark_offset as edited in the
+	# editor's Remote inspector.
+	_ring_key = _key("", Vector2(0.024, 0.026), "key", func(): sternum_landmark_apply_requested.emit(), _cuff)
+	_ring_key.label.font_size = 19
+	_place_on_cuff(_ring_key, -38.0, CUFF_ROW_Y[1])
+	# Real-world occlusion: off → room (patient excluded) → all.
+	_occlusion_key = _key("", Vector2(0.024, 0.026), "key", func():
+		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _cuff)
+	_occlusion_key.label.font_size = 19
+	_place_on_cuff(_occlusion_key, 38.0, CUFF_ROW_Y[1])
+	_refresh_scan()
 
 
 func _build_exercise_controls() -> void:
@@ -470,42 +529,42 @@ func _build_exercise_controls() -> void:
 	# Other-hand poke/pinch uses the same registered hit targets as existing keys.
 	_controls = Node3D.new()
 	_rig.add_child(_controls)
+	# The languages pop out to the right of this key only while chosen, then fold away again.
 	_language_menu = _key("Languages", Vector2(0.090, 0.035), "key", func():
-		_language_choices.visible = true, _controls)
+		_language_choices.visible = not _language_choices.visible, _controls)
 	_language_menu.position = Vector3(0, 0.022, 0)
 	_language_choices = Node3D.new()
 	_controls.add_child(_language_choices)
-	_language_choices.visible = true
+	_language_choices.visible = false
 	for i in 3:
 		var code: String = ["en", "de", "pl"][i]
 		var title: String = ["English", "Deutsch", "Polski"][i]
 		var key := _key(title, Vector2(0.052, 0.035), "key", func():
-			language_requested.emit(code), _language_choices)
-		key.position = Vector3((i - 1) * 0.060, 0.070, 0)
+			language_requested.emit(code)
+			_language_choices.visible = false, _language_choices)
+		# One row level with the Languages key, to its right.
+		key.position = Vector3(0.075 + i * 0.060, 0.022, 0)
 		key.label.font_size = 22
 		_language_keys[code] = key
 	_refresh_language_selection()
 	_large_start = _key("Start training", Vector2(0.075, 0.045), "key", func():
 		show_notice("Start requested" if not _start_action.is_empty() else "Training already active")
 		if not _start_action.is_empty(): action_requested.emit(_start_action), _controls)
-	_large_start.position = Vector3(-0.060, -0.022, 0)
+	# Start and save share one row, 2.5 cm apart so a poke cannot hit both.
+	_large_start.position = Vector3(-0.050, -0.022, 0)
 	_large_start.activate_on_press = true
-	_large_mic = _key("Mic OFF", Vector2(0.052, 0.035), "key", func():
-		_mic_on = not _mic_on
-		_refresh_mic()
-		recording_requested.emit(_mic_on), _controls)
-	_large_mic.position = Vector3(0.060, -0.022, 0)
 	# Hands-only replacement for the right controller's A button: saves the
 	# current marker placement as the patient alignment, which Start requires.
 	_large_align = _key(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language), Vector2(0.075, 0.035), "key", func():
 		alignment_save_requested.emit(), _controls)
-	_large_align.position = Vector3(-0.060, -0.072, 0)
+	_large_align.position = Vector3(0.050, -0.022, 0)
 	_large_align.label.font_size = 20
-	_lang_key.visible = true
+	# The language row above replaces the cuff's language key; mode, mic and
+	# floor calibration live on the cuff.
+	_lang_key.visible = false
 	_mode_key.visible = true
-	_mic_key.visible = false
 	_notice = make_label("", 21, INK)
-	_notice.position = Vector3(0.025, -0.105, 0.002)
+	_notice.position = Vector3(0.0, -0.060, 0.002)
 	_controls.add_child(_notice)
 
 func _place_on_cuff(key: Key3D, angle_deg: float, y: float) -> void:
@@ -620,7 +679,8 @@ func _process(delta: float) -> void:
 	var palm_basis := Basis(fingers.cross(normal), fingers, normal)
 	_palm.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + normal * PALM_LIFT_M)
 	if not pressing:
-		_controls.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + forearm * 0.14 + normal * 0.025)
+		# 20 cm up the forearm puts the top (language) row past the wrist cuff.
+		_controls.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + forearm * 0.21 + normal * 0.025)
 	var cuff_out := (normal - forearm * normal.dot(forearm)).normalized()
 	_cuff.global_transform = Transform3D(Basis((-forearm).cross(cuff_out), -forearm, cuff_out).scaled(Vector3.ONE * pop), (wrist as Transform3D).origin)
 	var thumb: Variant = _joint(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
@@ -671,8 +731,9 @@ func _process(delta: float) -> void:
 
 func _show_control_fallback(camera: Camera3D) -> void:
 	# When holding controllers, use the same compact controls on the left wrist.
+	# Without a tracked hand or controller the menu hides: it never floats in space.
 	var left := _origin.get_node_or_null("LeftHand") as XRController3D
-	if camera == null:
+	if camera == null or left == null or not left.get_has_tracking_data():
 		_set_shown(false)
 		return
 	_set_shown(true)
@@ -684,12 +745,7 @@ func _show_control_fallback(camera: Camera3D) -> void:
 	# drag the captured button away before release.
 	if _interaction != null and _interaction.has_method("has_active_menu_press") and _interaction.call("has_active_menu_press"):
 		return
-	# No tracked hand/controller must not remove language and Start controls.
-	# This is the same compact menu, without a fabricated hand pose.
-	var position := camera.global_transform * Vector3(-0.20, -0.18, -0.55)
-	if left != null and left.get_has_tracking_data():
-		position = left.global_position + camera.global_basis.y * 0.10
-	_controls.global_transform = Transform3D(camera.global_basis, position)
+	_controls.global_transform = Transform3D(camera.global_basis, left.global_position + camera.global_basis.y * 0.10)
 
 func _draw_trace() -> void:
 	var mesh := _trace.mesh as ImmediateMesh
@@ -766,6 +822,8 @@ func set_language(value: String) -> void:
 	_lang_key.set_accent(Color("32d16d"), Color("16843c"))
 	_export_key.set_text(NaretLanguage.ui("Export", "Eksport", language))
 	_large_align.set_text(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language))
+	_floor_key.set_text(NaretLanguage.ui("Boden", "Podłoga", language))
+	_refresh_scan()
 	_refresh_mode()
 	_refresh_mic()
 
@@ -784,6 +842,37 @@ func _refresh_language_selection() -> void:
 		var selected := code == language
 		_language_keys[code].set_accent(Color("32d16d") if selected else GLOW, Color("16843c") if selected else Color.TRANSPARENT)
 
+func _refresh_scan() -> void:
+	# Like the mode key: a short name over the state, green while switched on.
+	_refresh_toggle(_scan_key, NaretLanguage.ui("Scan", "Skan", language), _scan_on)
+	_refresh_toggle(_hands_key, NaretLanguage.ui("Hände", "Dłonie", language), _hands_on)
+	if _ring_key:
+		_ring_key.set_text(NaretLanguage.ui("Ring\nanwenden", "Pierścień\nzastosuj", language))
+	if _occlusion_key:
+		var state: String = {"off": NaretLanguage.ui("aus", "wył.", language), "room": NaretLanguage.ui("Umgeb.", "otocz.", language), "all": NaretLanguage.ui("alle", "wszystko", language)}[occlusion]
+		_occlusion_key.set_text(NaretLanguage.ui("Tiefe", "Głębia", language) + "\n" + state)
+		_occlusion_key.set_accent(GLOW if occlusion == "off" else Color("32d16d"), Color.TRANSPARENT if occlusion == "off" else Color("16843c"))
+	if _chest_key:
+		_chest_key.set_text(NaretLanguage.ui("Brust", "Klatka", language))
+	if _fit_key:
+		# Shows the active fit; pressing switches to the other one.
+		_fit_key.set_text(NaretLanguage.ui("Brust\nflach", "Klatka\npłaska", language) if chest_fit == "flatten" else NaretLanguage.ui("Brust\ntiefer", "Klatka\nniżej", language))
+
+func set_occlusion(value: String) -> void:
+	occlusion = value
+	_refresh_scan()
+
+func set_chest_fit(value: String) -> void:
+	chest_fit = value
+	_refresh_scan()
+
+func _refresh_toggle(key: Key3D, title: String, on: bool) -> void:
+	if key == null:
+		return
+	var state := NaretLanguage.ui("an", "wł.", language) if on else NaretLanguage.ui("aus", "wył.", language)
+	key.set_text(title + "\n" + state)
+	key.set_accent(Color("32d16d") if on else GLOW, Color("16843c") if on else Color.TRANSPARENT)
+
 func _refresh_mode() -> void:
 	# The key offers the other mode, so its label is what pressing it switches to.
 	var other := (NaretLanguage.ui("Nachbar", "Sąsiad", language)) if mode == "own" else (NaretLanguage.ui("Eigene", "Własny", language))
@@ -801,9 +890,8 @@ func set_listening(active: bool) -> void:
 
 
 func _refresh_mic() -> void:
-	if _large_mic:
-		_large_mic.set_text("Mic ON" if _mic_on else "Mic OFF")
-		_large_mic.set_accent(Color("32d16d") if _mic_on else GLOW, Color("16843c") if _mic_on else Color.TRANSPARENT)
+	# Green while listening, like the scan key; the icon's light turns red while recording.
+	_mic_key.set_accent(Color("32d16d") if _mic_on else GLOW, Color("16843c") if _mic_on else Color.TRANSPARENT)
 	var material := _mic_light.material_override as StandardMaterial3D
 	var color := RED if _recording else (GLOW if _mic_on else Color("3a4766"))
 	material.albedo_color = color

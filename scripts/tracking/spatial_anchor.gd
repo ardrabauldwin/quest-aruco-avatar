@@ -8,6 +8,18 @@ var floor_adjustment_m := 0.0
 ## Explicit correction for a wrong headset floor reference. Old profiles default
 ## to zero; legacy alignment values must never silently become this correction.
 var manual_floor_correction_m := 0.0
+## Fingertip-measured floor minus the automatic floor source it was measured
+## against ("room_scan" or "local_floor"); applies only while that source is used.
+var floor_touch_offset_m := 0.0
+var floor_touch_source := ""
+## Hand-measured height of the real compression point above the floor
+## (NaretChestTouch); 0 = not measured. A mannequin property, so it survives
+## other rooms and recentring. Puts the patient's `Sternum` at that height:
+## "flatten" scales the body's thickness and keeps its back on the floor,
+## "shift" keeps the thickness and lowers the whole body into the floor.
+var chest_height_m := 0.0
+var chest_fit := "shift"
+const CHEST_FITS := ["flatten", "shift"]
 var patient_opacity := 0.75
 var _floor_vertices := PackedVector3Array()
 var _floor_projection := Vector3(INF, INF, INF)
@@ -74,6 +86,13 @@ func _ready() -> void:
 	load_calibration()
 	if not calibrated:
 		marker_to_mannequin = sternum_offset()
+
+func body_changed() -> void:
+	## The patient's mesh moved inside the anchor (sternum landmark offset):
+	## measure its floor contact again.
+	_floor_vertices.clear()
+	_floor_projection = Vector3(INF, INF, INF)
+	refresh()
 
 func sternum_offset() -> Transform3D:
 	## Marker frame = patient frame moved onto the sternum surface (+ marker thickness).
@@ -195,6 +214,10 @@ func save_calibration() -> Error:
 	config.set_value("calibration", "calibrated", calibrated)
 	config.set_value("calibration", "floor_adjustment_m", floor_adjustment_m)
 	config.set_value("calibration", "manual_floor_correction_m", manual_floor_correction_m)
+	config.set_value("calibration", "floor_touch_offset_m", floor_touch_offset_m)
+	config.set_value("calibration", "floor_touch_source", floor_touch_source)
+	config.set_value("calibration", "chest_height_m", chest_height_m)
+	config.set_value("calibration", "chest_fit", chest_fit)
 	config.set_value("calibration", "marker_height_lock", true)
 	config.set_value("calibration", "patient_opacity", patient_opacity)
 	var result := config.save(calibration_file)
@@ -217,7 +240,13 @@ func load_calibration() -> Error:
 	calibrated = bool(config.get_value("calibration", "calibrated", false))
 	floor_adjustment_m = clampf(float(config.get_value("calibration", "floor_adjustment_m", 0.0)), -0.3, 0.3)
 	manual_floor_correction_m = clampf(float(config.get_value("calibration", "manual_floor_correction_m", 0.0)), -1.5, 1.5)
-	# Preserve the explicitly saved vertical adjustment in older profiles too.
+	floor_touch_offset_m = clampf(float(config.get_value("calibration", "floor_touch_offset_m", 0.0)), -0.3, 0.3)
+	floor_touch_source = str(config.get_value("calibration", "floor_touch_source", ""))
+	chest_height_m = clampf(float(config.get_value("calibration", "chest_height_m", 0.0)), 0.0, 0.5)
+	# Lowering looked better on the real mannequin than flattening (deformed feet).
+	chest_fit = str(config.get_value("calibration", "chest_fit", "shift"))
+	if chest_fit not in CHEST_FITS:
+		chest_fit = "shift"	# Preserve the explicitly saved vertical adjustment in older profiles too.
 	# Dropping it silently raises a patient that the user previously nudged down.
 	patient_opacity = clampf(float(config.get_value("calibration", "patient_opacity", 0.75)), 0.0, 1.0)
 	return OK
@@ -272,9 +301,38 @@ func _snap_to_floor() -> void:
 		_floor_offset_y = INF
 		for vertex in _floor_vertices:
 			_floor_offset_y = minf(_floor_offset_y, projection.dot(vertex))
-	if is_finite(_floor_offset_y):
-		var contact_y := floor_y - _floor_offset_y
+	if not is_finite(_floor_offset_y):
+		return
+	var contact_y := floor_y - _floor_offset_y
+	var mannequin := get_node_or_null("Mannequin")
+	var sternum: Node3D = mannequin.get("sternum") if mannequin else null
+	var measured := chest_height_m > 0.0 and sternum != null
+	# Height of the patient's sternum above its own lowest point, as placed now.
+	var sternum_y := projection.dot(mannequin.transform * sternum.position) if sternum else 0.0
+	var rise := sternum_y - _floor_offset_y
+	var flatten := measured and chest_fit == "flatten" and rise > 0.01
+	# Lowest point and sternum scale together, so the ratio gives the thickness.
+	# A changed body drops the vertex cache; the second pass measures it anew.
+	var thickness := clampf(float(mannequin.get("thickness")) * chest_height_m / rise, 0.4, 1.2) if flatten else 1.0
+	if _set_thickness(thickness):
+		_snap_to_floor()
+		return
+	if not measured:
 		global_position.y = contact_y + maxf(floor_adjustment_m, 0.0) + manual_floor_correction_m
+	elif flatten:
+		global_position.y = contact_y + manual_floor_correction_m
+	else:
+		global_position.y = floor_y + chest_height_m - sternum_y + manual_floor_correction_m
+
+func _set_thickness(value: float) -> bool:
+	## True when the body changed, so the cached floor vertices were dropped.
+	var mannequin := get_node_or_null("Mannequin")
+	if mannequin == null or not mannequin.has_method("set_thickness") or absf(float(mannequin.get("thickness")) - value) < 0.003:
+		return false
+	mannequin.call("set_thickness", value)
+	_floor_vertices.clear()
+	_floor_projection = Vector3(INF, INF, INF)
+	return true
 
 static func posed_vertices(instance: MeshInstance3D, surface: int) -> PackedVector3Array:
 	# Raw GLB vertices describe the bind pose, not necessarily the visible body.

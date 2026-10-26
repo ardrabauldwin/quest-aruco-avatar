@@ -26,6 +26,11 @@ var hand_menu: NaretHandMenu
 var aed: NaretAED
 var director: NaretBystanderDirector
 var room: NaretRoomLayout
+var floor_touch: NaretFloorTouch
+var chest_touch: NaretChestTouch
+## Automatic floor height and its source, before the fingertip offset.
+var _floor_source := ""
+var _floor_source_y := NAN
 var qcpr: NaretQcprManager
 var qcpr_debug_panel: NaretQcprDebugPanel
 var _info_viewport: SubViewport
@@ -204,7 +209,10 @@ func _ready() -> void:
 		desktop_camera.current = false
 		xr_camera.current = true
 		# Use the real passthrough hands; tracking and CPR input remain active.
-		# Do not install the coloured virtual hand meshes.
+		# The coloured virtual hand meshes stay hidden unless the cuff's hands key
+		# switches them on for testing.
+		xr.install_hands(origin)
+		xr.install_environment_depth(xr_camera)
 		mannequin.set_overlay_opacity(anchor.patient_opacity)
 		$Bystanders/Anna.visible = false # Wait for the real patient location.
 		$Instructor.visible = false
@@ -214,8 +222,24 @@ func _ready() -> void:
 		add_child(room)
 		room.layout_ready.connect(_on_room_status)
 		room.configure(origin)
+		floor_touch = NaretFloorTouch.new()
+		add_child(floor_touch)
+		floor_touch.measured.connect(_on_floor_measured)
+		floor_touch.failed.connect(func(): _toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language)))
+		chest_touch = NaretChestTouch.new()
+		add_child(chest_touch)
+		chest_touch.measured.connect(_on_chest_measured)
+		chest_touch.failed.connect(func(): _toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language)))
 		# The physical room/floor remains visible through passthrough.
 		$Room.visible = false
+		# The speakers' shadows fall on that real floor instead. They follow the key
+		# light's heading but come from steeply above, like diffuse ceiling light.
+		var heading: Vector3 = -($KeyLight as Node3D).global_basis.z
+		heading.y = 0.0
+		var shadow_direction: Vector3 = heading.normalized() * cos(deg_to_rad(70.0)) + Vector3.DOWN * sin(deg_to_rad(70.0))
+		for person: NaretBystander in [$Bystanders/Anna, $Instructor]:
+			person.cast_floor_shadow(shadow_direction)
+		mannequin.cast_floor_shadow(shadow_direction)
 	else:
 		_update_camera()
 	performance = NaretPerformanceMonitor.new()
@@ -264,7 +288,16 @@ func _build_xr_ui() -> void:
 		audio_manager.stop_speech()
 		audio_manager.speak("", _language, "anna_arrive", "bystander"))
 	hand_menu.export_requested.connect(_export_session)
+	hand_menu.floor_calibration_requested.connect(_calibrate_floor)
 	hand_menu.alignment_save_requested.connect(_save_alignment)
+	hand_menu.reference_scan_toggled.connect(mannequin.set_reference_visible)
+	hand_menu.hand_meshes_toggled.connect(xr.set_hands_visible)
+	hand_menu.chest_calibration_requested.connect(_calibrate_chest)
+	hand_menu.chest_fit_requested.connect(_set_chest_fit)
+	hand_menu.set_chest_fit(anchor.chest_fit)
+	hand_menu.sternum_landmark_apply_requested.connect(_apply_sternum_landmark)
+	hand_menu.occlusion_requested.connect(_set_occlusion)
+	_set_occlusion(xr.occlusion)
 	hand_menu.menu_shown_changed.connect(func(shown: bool): interaction.set_menu_hand(0 if shown else -1))
 	_info_viewport = SubViewport.new()
 	_info_viewport.size = Vector2i(900, 660)
@@ -317,12 +350,88 @@ func _refresh_floor_reference() -> void:
 		source = "local_floor"
 	if not is_finite(height):
 		return
+	_floor_source = source
+	_floor_source_y = height
+	if anchor.floor_touch_source == source:
+		height += anchor.floor_touch_offset_m
 	if not anchor.floor_locked or not is_equal_approx(anchor.floor_y, height):
 		anchor.floor_locked = true
 		anchor.floor_y = height
 		anchor.refresh()
 		_bystanders_placed_at = Vector3(INF, INF, INF)
-		print("NARET_FLOOR_SOURCE source=%s world_y=%.3f reference_y=%.3f play_area=%d" % [source, height, XRServer.get_reference_frame().origin.y, xr.interface.get_play_area_mode()])
+		print("NARET_FLOOR_SOURCE source=%s world_y=%.3f touch_offset=%.3f reference_y=%.3f play_area=%d" % [source, height, height - _floor_source_y, XRServer.get_reference_frame().origin.y, xr.interface.get_play_area_mode()])
+
+func _calibrate_floor() -> void:
+	## Hand-menu key: the next fingertip resting on the floor sets its height.
+	if floor_touch == null:
+		return
+	floor_touch.start(origin, xr_camera)
+	_toast(NaretLanguage.ui("Zeigefinger auf den Boden legen und still halten", "Połóż palec wskazujący na podłodze i trzymaj nieruchomo", _language))
+
+func _on_floor_measured(floor_y: float) -> void:
+	# Stored against the automatic source, so recentring and the next session
+	# keep the correction; a different source later ignores it.
+	var offset := floor_y - _floor_source_y
+	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > 0.3:
+		# No headset floor yet (e.g. room scan still loading) or one far off.
+		print("NARET_FLOOR_TOUCH rejected source=%s source_y=%.3f touch_y=%.3f offset=%.3f" % [_floor_source if not _floor_source.is_empty() else "none", _floor_source_y, floor_y, offset])
+		_toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language))
+		return
+	anchor.floor_touch_offset_m = offset
+	anchor.floor_touch_source = _floor_source
+	_refresh_floor_reference()
+	var saved := anchor.save_calibration() == OK
+	_toast(NaretLanguage.ui("Boden kalibriert: ", "Podłoga skalibrowana: ", _language) + "%+.1f cm" % (offset * 100.0) + ("" if saved else " (Save failed)"))
+
+func _calibrate_chest() -> void:
+	## Hand-menu key: a flat hand resting on the compression point sets the chest
+	## height above the floor, so no marker has to lie on the chest.
+	if chest_touch == null:
+		return
+	if not anchor.floor_locked:
+		_toast(NaretLanguage.ui("Zuerst Boden kalibrieren", "Najpierw skalibruj podłogę", _language))
+		return
+	chest_touch.start(origin, func() -> Vector3: return mannequin.get_sternum_transform().origin)
+	_toast(NaretLanguage.ui("Hand flach auf den Druckpunkt legen und still halten", "Połóż płasko dłoń na punkcie uciśnięć i trzymaj nieruchomo", _language))
+
+func _on_chest_measured(surface_y: float) -> void:
+	# Stored above the measured floor, not as a room height: it belongs to the
+	# mannequin and survives recentring and other rooms.
+	var height := surface_y - anchor.floor_y
+	if not is_finite(height) or height < 0.05 or height > 0.5:
+		_toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language))
+		return
+	anchor.chest_height_m = height
+	anchor.refresh()
+	var saved := anchor.save_calibration() == OK
+	print("NARET_CHEST height=%.3f fit=%s thickness=%.3f" % [height, anchor.chest_fit, mannequin.thickness])
+	_toast(NaretLanguage.ui("Brust: ", "Klatka: ", _language) + "%.1f" % (height * 100.0) + NaretLanguage.ui(" cm über Boden", " cm nad podłogą", _language) + ("" if saved else " (Save failed)"))
+
+func _set_chest_fit(fit: String) -> void:
+	## Switches live between a flattened body and one lowered into the floor.
+	anchor.chest_fit = fit
+	anchor.refresh()
+	anchor.save_calibration()
+	hand_menu.set_chest_fit(fit)
+	print("NARET_CHEST fit=%s height=%.3f thickness=%.3f" % [fit, anchor.chest_height_m, mannequin.thickness])
+
+func _set_occlusion(mode: String) -> void:
+	## Cuff key: real-world occlusion off, for the room only, or for the patient too.
+	xr.set_occlusion(mode)
+	mannequin.set_occludable(xr.occlusion == "all")
+	hand_menu.set_occlusion(xr.occlusion)
+
+func _apply_sternum_landmark() -> void:
+	## Hand-menu key for tuning: applies the Mannequin's sternum_landmark_offset
+	## after it was edited in the editor's Remote inspector. Not saved: copy the
+	## logged value into scenes/mannequin.tscn to keep it.
+	var offset := mannequin.sternum_landmark_offset
+	if not mannequin.apply_sternum_landmark_offset():
+		_toast(NaretLanguage.ui("Ring-Offset unverändert", "Offset pierścienia bez zmian", _language))
+		return
+	anchor.body_changed()
+	print("NARET_STERNUM_OFFSET ", offset)
+	_toast(NaretLanguage.ui("Ring-Offset: ", "Offset pierścienia: ", _language) + "X %+.1f · Y %+.1f · Z %+.1f cm" % [offset.x * 100.0, offset.y * 100.0, offset.z * 100.0])
 
 func _local_rect(xs: Array, zs: Array) -> Rect2:
 	## World floor rect (XZ) around patient-local corners.
@@ -362,6 +471,10 @@ func _place_bystanders() -> void:
 	var spots: Array[Transform3D] = []
 	if room and room.available:
 		spots = room.find_spots(centre, 4, [_local_rect([-0.35, 0.35], [-1.05, 1.05]), _local_rect([-1.4, -0.3], [-1.1, 1.1])])
+		if anchor.floor_locked:
+			# Stand on the reference floor, which includes a fingertip correction.
+			for index in spots.size():
+				spots[index].origin.y = anchor.floor_y
 		if xr.active:
 			# Choose among free scanned spots by viewing direction at placement.
 			# Once placed, the existing cache holds Anna there as the head moves.
@@ -419,11 +532,16 @@ func _speaker_floor_pose(position: Vector3, centre: Vector3) -> Transform3D:
 
 func _process(delta: float) -> void:
 	if interaction and scenario:
-		interaction.set_cpr_feedback_visible(NaretTrainingCoach.step(scenario) in ["compressions", "compression_only"])
+		var compressing := NaretTrainingCoach.step(scenario) in ["compressions", "compression_only"]
+		interaction.set_cpr_feedback_visible(compressing)
+		mannequin.heart_on_press = compressing
 	if not scenario: return
 	if xr.active:
 		_refresh_floor_reference()
 		_update_controller_alignment(delta)
+		# The shadow lies on the measured real floor, even where the body sinks below it.
+		if anchor.floor_locked:
+			mannequin.set_shadow_floor(anchor.floor_y)
 	for person: NaretBystander in [$Bystanders/Anna, $Instructor]:
 		if audio_manager and person.speaking:
 			person.set_mouth_open(audio_manager.get_speech_amplitude())
@@ -887,6 +1005,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					else:
 						_on_action("ventilation")
 				KEY_F2: _toggle_qcpr_panel()
+				KEY_F3: mannequin.set_reference_visible(not mannequin.get_node("ScanReference").visible)
 				KEY_F8: pass
 				KEY_ESCAPE:
 					# An open modal already took Escape above.

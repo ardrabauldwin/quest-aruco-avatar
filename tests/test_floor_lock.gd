@@ -100,7 +100,41 @@ func _test_real_patient() -> void:
 		lowest = minf(lowest, (anchor.global_transform * vertex).y)
 	check(absf(lowest) < 0.0001, "resting skinned mesh contacts the configured floor")
 	print("Floor regression: patient root Y=", anchor.global_position.y, " resting mesh bottom=", lowest)
+	# A hand-measured chest height puts the sternum there, flattened or lowered.
+	var model := patient.get_node("Model") as Node3D
+	# A real marker pose cancels the scene's 180° model rotation: chest up.
+	anchor.locked_pose.basis = Basis(Vector3.RIGHT, PI)
+	anchor.refresh()
+	var native_rise := (patient as NaretMannequin).get_sternum_transform().origin.y
+	check(native_rise > 0.1, "face-up patient's sternum lies above the floor, got %s" % native_rise)
+	anchor.chest_height_m = native_rise - 0.04
+	anchor.chest_fit = "flatten"
+	anchor.refresh()
+	check(absf(patient.get_sternum_transform().origin.y - anchor.chest_height_m) < 0.003, "flatten puts the sternum on the measured chest height")
+	check(absf(_lowest(anchor)) < 0.001 and model.scale.y < 0.9 and is_equal_approx(model.scale.x, 0.9), "flatten keeps the back on the floor and only thins the body")
+	anchor.chest_fit = "shift"
+	anchor.refresh()
+	check(absf(patient.get_sternum_transform().origin.y - anchor.chest_height_m) < 0.003, "shift puts the sternum on the measured chest height")
+	check(is_equal_approx(model.scale.y, 0.9) and _lowest(anchor) < -0.03, "shift keeps the thickness and lowers the body into the floor")
+	anchor.chest_height_m = 0.0
+	anchor.refresh()
+	check(absf(_lowest(anchor)) < 0.001 and is_equal_approx(model.scale.y, 0.9), "without a chest height the patient rests on the floor unchanged")
+	# The live landmark key moves the body under a fixed ring.
+	var mannequin := patient as NaretMannequin
+	var ring_before := mannequin.sternum.position
+	var body_before := model.position
+	# Relative to whatever offset the scene ships with.
+	mannequin.sternum_landmark_offset += Vector3(0, 0, -0.03)
+	check(mannequin.apply_sternum_landmark_offset(), "an edited landmark offset applies")
+	check(mannequin.sternum.position == ring_before and model.position.is_equal_approx(body_before + Vector3(0, 0, 0.03)), "landmark offset moves the body toward the feet, not the ring")
+	check(not mannequin.apply_sternum_landmark_offset(), "applying an unchanged offset does nothing")
 	anchor.free()
+
+func _lowest(anchor: NaretSpatialAnchor) -> float:
+	var lowest := INF
+	for vertex in anchor._floor_vertices:
+		lowest = minf(lowest, (anchor.global_transform * vertex).y)
+	return lowest
 
 func _test_standing_people() -> void:
 	var tree := Engine.get_main_loop() as SceneTree

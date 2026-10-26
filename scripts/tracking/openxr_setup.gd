@@ -2,6 +2,13 @@ class_name NaretOpenXRSetup
 extends Node
 var active := false
 var interface: XRInterface
+## Meta's tracked hand meshes, hidden unless switched on for testing.
+var hand_meshes: Array[Node3D] = []
+## Real-world occlusion from Meta environment depth: "off", "room" (patient
+## excluded, hands removed from the depth map) or "all" (patient and hands too).
+const OCCLUSION_MODES := ["off", "room", "all"]
+var occlusion := "room"
+var _environment_depth: Node3D
 
 func _ready() -> void:
 	interface = XRServer.find_interface("OpenXR")
@@ -66,5 +73,52 @@ func install_hands(origin: XROrigin3D) -> void:
 		var modifier := XRHandModifier3D.new()
 		modifier.hand_tracker = root.tracker
 		mesh.add_child(modifier)
+		# hand_mesh.gd shows/hides the root with tracking every frame, so the
+		# testing toggle switches the mesh itself.
+		mesh.visible = false
 		root.add_child(mesh)
 		origin.add_child(root)
+		hand_meshes.append(mesh)
+
+func install_environment_depth(camera: XRCamera3D) -> void:
+	## OpenXRMetaEnvironmentDepth writes the real room's depth into the depth
+	## buffer, so real objects in front hide virtual pixels behind them.
+	if not active or not ClassDB.class_exists("OpenXRMetaEnvironmentDepth") or not Engine.has_singleton("OpenXRMetaEnvironmentDepthExtension"):
+		return
+	_environment_depth = ClassDB.instantiate("OpenXRMetaEnvironmentDepth")
+	_environment_depth.name = "EnvironmentDepth"
+	camera.add_child(_environment_depth)
+	var extension: Object = Engine.get_singleton("OpenXRMetaEnvironmentDepthExtension")
+	# Hand removal only takes effect once depth is running.
+	extension.connect("openxr_meta_environment_depth_started", _apply_occlusion)
+	# Starting needs a running OpenXR session.
+	if interface.has_signal("session_begun"):
+		interface.connect("session_begun", _apply_occlusion)
+
+func set_occlusion(mode: String) -> void:
+	occlusion = mode if mode in OCCLUSION_MODES else "room"
+	_apply_occlusion()
+
+func _apply_occlusion() -> void:
+	if _environment_depth == null:
+		return
+	var extension: Object = Engine.get_singleton("OpenXRMetaEnvironmentDepthExtension")
+	if not extension.call("is_environment_depth_supported"):
+		return
+	var on := occlusion != "off"
+	_environment_depth.visible = on
+	var started: bool = extension.call("is_environment_depth_started")
+	if on and not started:
+		# There is a GPU cost, so depth only runs while occlusion is on.
+		extension.call("start_environment_depth")
+	elif not on and started:
+		extension.call("stop_environment_depth")
+	if on and started and extension.call("is_hand_removal_supported"):
+		# Real hands are noisy in the depth map and would cut the arm menu; in
+		# "all" they stay in it so they can cover the patient.
+		extension.call("set_hand_removal_enabled", occlusion == "room")
+	print("NARET_OCCLUSION mode=%s started=%s" % [occlusion, extension.call("is_environment_depth_started")])
+
+func set_hands_visible(visible: bool) -> void:
+	for mesh in hand_meshes:
+		mesh.visible = visible

@@ -34,8 +34,33 @@ var _neutral_chin := Vector3.ZERO
 ## Zero disables fitting for another mannequin. Thickness is kept unchanged.
 @export var fit_head_to_waist_m := 0.0
 @export var fit_shoulder_width_m := 0.0
+## Which point of the full-body model belongs on the compression point (the
+## `Sternum` node, i.e. the physical mannequin), relative to the model's own
+## sternum landmark, in mannequin metres: -Z toward the head, +Y up. A negative
+## Z moves the body toward the feet, so the ring sits higher on its chest.
+@export var sternum_landmark_offset := Vector3.ZERO
+## Vertical scale of the full-body model only (1 = native chest thickness);
+## NaretSpatialAnchor sets it to flatten the chest onto the measured height.
+var thickness := 1.0
+var _applied_landmark_offset := Vector3.ZERO
+var _base_model_scale_y := 1.0
+var _base_heart_y := 0.0
 var _overlay_materials: Array[ShaderMaterial] = []
 var _overlay_sources: Array[StandardMaterial3D] = []
+var _floor_shadow: ShaderMaterial
+var _occludable := true
+## Hand press: the tracked hands push the chest down to their own height, so
+## real hands do not sink into a static chest. Bounded and smoothed against
+## tracking jumps; shown by a shader dent, not the fixed compression morph.
+const PRESS_MAX_DEPTH_M := 0.065
+const PRESS_RESPONSE := 30.0
+var _press_active := false
+var _press_target := 0.0
+var _press_depth := 0.0
+var _press_center := Vector3.ZERO
+## Set by main for the compression steps: only then does a hand press bring up
+## the x-ray heart; the chest dent itself shows in every step.
+var heart_on_press := false
 @export var pe_visual_cues := true
 
 func _refresh_overlay() -> void:
@@ -131,22 +156,15 @@ func _ready() -> void:
 	var model := $Model as Node3D
 	_fit_patient(model)
 	_zone_rest_position = zone.position
+	_base_model_scale_y = model.scale.y
+	_base_heart_y = heart.position.y
 	var anatomical_sternum := model.find_child("Sternum", true, false) as Node3D
 	if anatomical_sternum:
 		# The physical mannequin defines interaction coordinates. Align the human
 		# appearance to the same chest landmark without altering the 1:1 scan.
-		model.position += sternum.position - to_local(anatomical_sternum.global_position)
-	# Interaction targets must follow the resized anatomy, not the old scan.
-	for pair in [["Mouth", $MouthZone], ["Forehead", $ForeheadZone]]:
-		var marker := model.find_child(pair[0], true, false) as Node3D
-		if marker:
-			(pair[1] as Node3D).position = to_local(marker.global_position)
-	# Capture neutral landmarks once. Animation must not move its own hit zones.
-	var forehead_marker := model.find_child("Forehead", true, false) as Node3D
-	var mouth_marker := model.find_child("Mouth", true, false) as Node3D
-	if forehead_marker and mouth_marker:
-		_neutral_forehead = to_local(forehead_marker.global_position)
-		_neutral_chin = to_local(mouth_marker.global_position) + Vector3(0, -0.025, 0.04) * model.scale
+		model.position += sternum.position - (to_local(anatomical_sternum.global_position) + sternum_landmark_offset)
+		_applied_landmark_offset = sternum_landmark_offset
+	_sync_landmarks()
 	for pair in [["EyeLeft", $Pupils/Left], ["EyeRight", $Pupils/Right]]:
 		var marker := model.find_child(pair[0], true, false) as Node3D
 		if marker == null:
@@ -174,6 +192,48 @@ func _ready() -> void:
 	if not skeletons.is_empty():
 		_tilt_modifier = HeadTilt.new()
 		skeletons[0].add_child(_tilt_modifier)
+
+func _sync_landmarks() -> void:
+	# Interaction targets must follow the resized anatomy, not the old scan.
+	var model := $Model as Node3D
+	for pair in [["Mouth", $MouthZone], ["Forehead", $ForeheadZone]]:
+		var marker := model.find_child(pair[0], true, false) as Node3D
+		if marker:
+			(pair[1] as Node3D).position = to_local(marker.global_position)
+	# Capture neutral landmarks at rest. Animation must not move its own hit zones.
+	var forehead_marker := model.find_child("Forehead", true, false) as Node3D
+	var mouth_marker := model.find_child("Mouth", true, false) as Node3D
+	if forehead_marker and mouth_marker:
+		_neutral_forehead = to_local(forehead_marker.global_position)
+		_neutral_chin = to_local(mouth_marker.global_position) + Vector3(0, -0.025, 0.04) * model.scale
+
+func apply_sternum_landmark_offset() -> bool:
+	## Hand-menu key for tuning: applies sternum_landmark_offset as last edited,
+	## e.g. in the editor's Remote inspector while the app runs. The body moves
+	## opposite to the change; the ring (`Sternum`, the physical compression
+	## point) stays where it is. False when nothing changed.
+	var change := sternum_landmark_offset - _applied_landmark_offset
+	if change.is_zero_approx():
+		return false
+	($Model as Node3D).position -= change
+	_applied_landmark_offset = sternum_landmark_offset
+	_sync_landmarks()
+	return true
+
+func set_thickness(value: float) -> void:
+	## Flattens (or restores) the full-body model vertically. The scan stays 1:1.
+	## Ring, chest zone, mouth and forehead move onto the flattened surface; X/Z
+	## and therefore the placement on the mannequin stay unchanged.
+	if is_equal_approx(value, thickness):
+		return
+	thickness = value
+	var model := $Model as Node3D
+	model.scale.y = _base_model_scale_y * value
+	heart.position.y = _base_heart_y * value
+	var anatomical_sternum := model.find_child("Sternum", true, false) as Node3D
+	if anatomical_sternum:
+		sternum.position.y = to_local(anatomical_sternum.global_position).y + _applied_landmark_offset.y
+	_sync_landmarks()
 
 func _collect_skin(node: Node) -> void:
 	## Own copies of the body's skin materials, so the tint never leaks into
@@ -222,6 +282,9 @@ func set_overlay_opacity(opacity: float) -> void:
 			_overlay_materials.append(overlay)
 			_overlay_sources.append(material)
 			mesh.set_surface_override_material(surface, overlay)
+	# New overlay materials start at render_priority 0; keep an exclusion.
+	if not _occludable:
+		set_occludable(false)
 	_refresh_overlay()
 
 func set_compression_depth(depth_m: float) -> void:
@@ -248,6 +311,37 @@ func _apply_compression(depth: float) -> void:
 	_rig.set_compression_amount(weight)
 	zone.position.y = _zone_rest_position.y - depth * 0.8
 	heart.squeeze(depth)
+
+func set_hand_press(hand_bottom: Vector3) -> void:
+	## World point under the lowest tracked hand. The resting chest surface is
+	## the `Sternum` node, which compressions never move.
+	_press_target = clampf(sternum.global_position.y - hand_bottom.y, 0.0, PRESS_MAX_DEPTH_M)
+	_press_center = hand_bottom
+	if not _press_active:
+		if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
+			_recoil_tween.kill()
+		# The dent replaces the fixed morph while the hands drive the chest.
+		_current_compression = 0.0
+		_rig.set_compression_amount(0.0)
+	_press_active = true
+
+func release_hand_press() -> void:
+	## Hands off or lost: the chest springs back through the same smoothing.
+	_press_target = 0.0
+
+func _step_press(delta: float) -> void:
+	if not _press_active:
+		return
+	_press_depth = lerpf(_press_depth, _press_target, 1.0 - exp(-PRESS_RESPONSE * delta))
+	if is_zero_approx(_press_target) and _press_depth < 0.001:
+		_press_depth = 0.0
+		_press_active = false
+	zone.position.y = _zone_rest_position.y - _press_depth
+	heart.squeeze(_press_depth if heart_on_press else 0.0)
+	var point := Vector3(_press_center.x, sternum.global_position.y - _press_depth, _press_center.z)
+	for material in _overlay_materials:
+		material.set_shader_parameter("press_point", point)
+		material.set_shader_parameter("press_depth", _press_depth)
 
 func compress(depth: float = 0.045) -> void:
 	if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
@@ -298,6 +392,7 @@ func set_recovered(recovered: bool) -> void:
 
 func _process(delta: float) -> void:
 	_refresh_overlay()
+	_step_press(delta)
 	# The placement ring breathes at 110/min, a silent metronome for the target rate.
 	_metronome = fmod(_metronome + delta * 110.0 / 60.0, 1.0)
 	var beat := pow(1.0 - _metronome, 3.0)
@@ -318,6 +413,41 @@ func set_hand_feedback(correct: bool) -> void:
 	var mat := zone.material_override as StandardMaterial3D
 	mat.albedo_color = GLOW if correct else WRONG
 	mat.emission = mat.albedo_color
+
+func cast_floor_shadow(light_direction: Vector3) -> void:
+	## Same flattened overlay pass as the bystanders' (bystander_controller.gd):
+	## passthrough shows the real floor, which receives no shadow-map shadows.
+	## Body and scan cast it; heart, pupils and the placement ring do not.
+	if _floor_shadow == null:
+		_floor_shadow = ShaderMaterial.new()
+		_floor_shadow.shader = preload("res://assets/floor_shadow.gdshader")
+		_floor_shadow.set_shader_parameter("floor_y", global_position.y)
+		for root: Node in [$Model, get_node_or_null("ScanReference")]:
+			if root == null:
+				continue
+			for mesh: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
+				mesh.material_overlay = _floor_shadow
+	_floor_shadow.set_shader_parameter("light_direction", light_direction)
+
+func set_occludable(enabled: bool) -> void:
+	## The patient lies on the real mannequin, which the depth sensor also sees,
+	## so it would punch holes in its own overlay. Opaque materials rendered
+	## before OpenXRMetaEnvironmentDepth (render_priority -50) are not occluded.
+	## Transparent ones (ring, heart x-ray) cannot be excluded this way.
+	_occludable = enabled
+	for mesh: MeshInstance3D in find_children("*", "MeshInstance3D", true, false):
+		if mesh.mesh == null:
+			continue
+		for surface in mesh.mesh.get_surface_count():
+			var material := mesh.get_active_material(surface)
+			if material is BaseMaterial3D and (material as BaseMaterial3D).transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
+				continue
+			if material:
+				material.render_priority = 0 if enabled else -60
+
+func set_shadow_floor(floor_y: float) -> void:
+	if _floor_shadow:
+		_floor_shadow.set_shader_parameter("floor_y", floor_y)
 
 func set_reference_visible(enabled: bool) -> void:
 	var reference := get_node_or_null("ScanReference") as Node3D

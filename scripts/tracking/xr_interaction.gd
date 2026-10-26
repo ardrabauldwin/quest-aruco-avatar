@@ -174,14 +174,47 @@ func _process(delta: float) -> void:
 		for stroke in range(count - _last_count):
 			compression_measured.emit(float(session.get("last_stroke_travel_m")), bpm, true)
 	_last_count = count
-	# The hands drive the chest only while they are on it; letting go releases
-	# it once, so a helper's compressions (NaretBystanderDirector) still show.
-	var driving := cpr_enabled and bool(_zone.get("correct_placement"))
-	if driving:
-		_mannequin.set_compression_depth(float(_zone.get("current_depth_m")))
+	# Real hands on the chest push it down to their own height, in every step,
+	# so they never sink into it. This is display only: counting and depth
+	# feedback stay with the detector above. Letting go releases the chest once,
+	# so a helper's compressions (NaretBystanderDirector) still show.
+	var press: Variant = hand_press_point(_mannequin.get_sternum_transform().origin)
+	if press != null:
+		_mannequin.set_hand_press(press)
 	elif _hands_on_chest:
-		_mannequin.set_compression_depth(0.0)
-	_hands_on_chest = driving
+		_mannequin.release_hand_press()
+	_hands_on_chest = press != null
+
+## A hand counts as on the chest within this distance of the compression point
+## (sideways) and no higher than this above the resting chest surface.
+const PRESS_REACH_M := 0.10
+const PRESS_CONTACT_M := 0.015
+
+func hand_press_point(sternum: Vector3) -> Variant:
+	## Heel of the lowest tracked hand (midway between wrist and palm, minus the
+	## joint radius) in world space, or null without a hand on the chest. With
+	## stacked hands the lower one is the one touching the chest.
+	var lowest: Variant = null
+	for index in range(2):
+		var hand := hand_tracker(index)
+		if hand == null:
+			continue
+		var wrist: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_WRIST)
+		var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM)
+		if wrist == null or palm == null:
+			continue
+		var heel: Vector3 = _origin.global_transform * (((wrist as Transform3D).origin + (palm as Transform3D).origin) * 0.5)
+		heel.y -= (hand.get_hand_joint_radius(XRHandTracker.HAND_JOINT_WRIST) + hand.get_hand_joint_radius(XRHandTracker.HAND_JOINT_PALM)) * 0.5
+		var point: Variant = press_contact(heel, sternum)
+		if point != null and (lowest == null or (point as Vector3).y < (lowest as Vector3).y):
+			lowest = point
+	return lowest
+
+static func press_contact(heel: Vector3, sternum: Vector3) -> Variant:
+	## Pure contact rule, testable without a headset.
+	if Vector2(heel.x - sternum.x, heel.z - sternum.z).length() > PRESS_REACH_M or heel.y > sternum.y + PRESS_CONTACT_M:
+		return null
+	return heel
 
 func _update_head_tilt(delta: float) -> void:
 	var hands: Array = []

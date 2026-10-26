@@ -237,11 +237,15 @@ func _ready() -> void:
 		floor_touch = NaretFloorTouch.new()
 		add_child(floor_touch)
 		floor_touch.measured.connect(_on_floor_measured)
-		floor_touch.failed.connect(func(): _toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language)))
+		floor_touch.failed.connect(func():
+			hand_menu.set_floor_calibrating(false)
+			_toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language)))
 		chest_touch = NaretChestTouch.new()
 		add_child(chest_touch)
 		chest_touch.measured.connect(_on_chest_measured)
-		chest_touch.failed.connect(func(): _toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language)))
+		chest_touch.failed.connect(func():
+			hand_menu.set_chest_calibrating(false)
+			_toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language)))
 		# The physical room/floor remains visible through passthrough.
 		$Room.visible = false
 		# The speakers' shadows fall on that real floor instead. They follow the key
@@ -379,11 +383,13 @@ func _calibrate_floor() -> void:
 	if floor_touch == null:
 		return
 	floor_touch.start(origin, xr_camera)
+	hand_menu.set_floor_calibrating(true)
 	_toast(NaretLanguage.ui("Zeigefinger auf den Boden legen und still halten", "Połóż palec wskazujący na podłodze i trzymaj nieruchomo", _language))
 
 func _on_floor_measured(floor_y: float) -> void:
 	# Stored against the automatic source, so recentring and the next session
 	# keep the correction; a different source later ignores it.
+	hand_menu.set_floor_calibrating(false)
 	var offset := floor_y - _floor_source_y
 	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > 0.3:
 		# No headset floor yet (e.g. room scan still loading) or one far off.
@@ -405,11 +411,13 @@ func _calibrate_chest() -> void:
 		_toast(NaretLanguage.ui("Zuerst Boden kalibrieren", "Najpierw skalibruj podłogę", _language))
 		return
 	chest_touch.start(origin, func() -> Vector3: return mannequin.get_sternum_transform().origin)
+	hand_menu.set_chest_calibrating(true)
 	_toast(NaretLanguage.ui("Hand flach auf den Druckpunkt legen und still halten", "Połóż płasko dłoń na punkcie uciśnięć i trzymaj nieruchomo", _language))
 
 func _on_chest_measured(surface_y: float) -> void:
 	# Stored above the measured floor, not as a room height: it belongs to the
 	# mannequin and survives recentring and other rooms.
+	hand_menu.set_chest_calibrating(false)
 	var height := surface_y - anchor.floor_y
 	if not is_finite(height) or height < 0.05 or height > 0.5:
 		_toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language))

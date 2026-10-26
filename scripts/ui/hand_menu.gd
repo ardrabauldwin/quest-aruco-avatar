@@ -82,6 +82,7 @@ const CUFF_R_M := 0.043
 const CUFF_LEN_M := 0.092
 const CUFF_ROW_Y := [-0.021, -0.050, -0.077]
 const CUFF_ARC_DEG := 200.0
+const DEBUG_KEY_SIZE := Vector2(0.036, 0.026)
 const TAP_ON_M := 0.025
 const TAP_OFF_M := 0.035
 const FINGER_TIPS := [XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP,
@@ -507,6 +508,12 @@ func _build_cuff() -> void:
 	_ring_key = _key("", Vector2(0.024, 0.026), "key", func(): sternum_landmark_apply_requested.emit(), _cuff)
 	_ring_key.label.font_size = 19
 	_place_on_cuff(_ring_key, -38.0, CUFF_ROW_Y[1])
+	# One Debug key on the cuff; its testing toggles pop out to the cuff's right.
+	_debug_menu = _key("Debug", Vector2(0.024, 0.026), "key", func():
+		_debug_choices.visible = not _debug_choices.visible
+		_language_choices.visible = false, _cuff)
+	_debug_menu.label.font_size = 19
+	_place_on_cuff(_debug_menu, 38.0, CUFF_ROW_Y[0])
 
 
 func _build_exercise_controls() -> void:
@@ -555,38 +562,36 @@ func _build_exercise_controls() -> void:
 	_controls.add_child(_notice)
 
 func _build_debug_controls() -> void:
-	# Testing aids, one row below Start: above Languages would reach into the cuff.
-	# Like the languages they pop out to the right, but stay open while
-	# switching, until Debug is pressed again.
-	_debug_menu = _key("Debug", Vector2(0.090, 0.035), "key", func():
-		_debug_choices.visible = not _debug_choices.visible
-		_language_choices.visible = false, _controls)
-	_debug_menu.position = Vector3(0, -0.066, 0)
+	# Testing aids, opened by the cuff's Debug key into a flat 2×2 grid just past
+	# the cuff's right edge. Unlike the languages they stay open while switching,
+	# until Debug is pressed again.
 	_debug_choices = Node3D.new()
-	_controls.add_child(_debug_choices)
+	_cuff.add_child(_debug_choices)
 	_debug_choices.visible = false
 	# Raw detected marker poses as axis gizmos, before the patient offsets.
-	_gizmos_key = _key("", Vector2(0.052, 0.035), "key", func():
+	_gizmos_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		_gizmos_on = not _gizmos_on
 		_refresh_scan()
 		marker_gizmos_toggled.emit(_gizmos_on), _debug_choices)
 	# Meta's tracked hand meshes over the passthrough hands.
-	_hands_key = _key("", Vector2(0.052, 0.035), "key", func():
+	_hands_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		_hands_on = not _hands_on
 		_refresh_scan()
 		hand_meshes_toggled.emit(_hands_on), _debug_choices)
 	# Swaps the full-body patient for the 1:1 mannequin scan, to check the fit.
-	_scan_key = _key("", Vector2(0.052, 0.035), "key", func():
+	_scan_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		_scan_on = not _scan_on
 		_refresh_scan()
 		reference_scan_toggled.emit(_scan_on), _debug_choices)
 	# Real-world occlusion: off → room (patient excluded) → all.
-	_occlusion_key = _key("", Vector2(0.052, 0.035), "key", func():
+	_occlusion_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _debug_choices)
 	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _scan_key, _occlusion_key]
+	# The cuff's +X is the wearer's right; the grid faces out like the cuff's front
+	# and starts 1 cm past the Export key at 76°, so a poke cannot hit both.
 	for i in keys.size():
-		keys[i].position = Vector3(0.075 + i * 0.060, -0.066, 0)
-		keys[i].label.font_size = 20
+		keys[i].position = Vector3(0.078 + (i % 2) * 0.042, CUFF_ROW_Y[0 if i < 2 else 1], CUFF_R_M * 0.3)
+		keys[i].label.font_size = 18
 	_refresh_scan()
 
 func _place_on_cuff(key: Key3D, angle_deg: float, y: float) -> void:
@@ -889,12 +894,22 @@ func set_chest_fit(value: String) -> void:
 	chest_fit = value
 	_refresh_scan()
 
+func set_floor_calibrating(active: bool) -> void:
+	## Green from the press until the fingertip measurement succeeds or fails.
+	_set_lit(_floor_key, active)
+
+func set_chest_calibrating(active: bool) -> void:
+	_set_lit(_chest_key, active)
+
+func _set_lit(key: Key3D, on: bool) -> void:
+	key.set_accent(Color("32d16d") if on else GLOW, Color("16843c") if on else Color.TRANSPARENT)
+
 func _refresh_toggle(key: Key3D, title: String, on: bool) -> void:
 	if key == null:
 		return
 	var state := NaretLanguage.ui("an", "wł.", language) if on else NaretLanguage.ui("aus", "wył.", language)
 	key.set_text(title + "\n" + state)
-	key.set_accent(Color("32d16d") if on else GLOW, Color("16843c") if on else Color.TRANSPARENT)
+	_set_lit(key, on)
 
 func _refresh_mode() -> void:
 	# The key offers the other mode, so its label is what pressing it switches to.

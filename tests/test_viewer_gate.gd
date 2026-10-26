@@ -19,6 +19,10 @@ func run() -> Array[String]:
 	check(result.pose.origin.is_equal_approx(Vector3.ZERO), "initial 4 cm bias is cancelled")
 	raw.origin.x = 0.06
 	check(gate.evaluate(raw, placed, 105).pose.origin.is_equal_approx(Vector3(0.02, 0, 0)), "later 6 cm reading leaves 2 cm motion")
+	var partial_pose := Transform3D(Basis.IDENTITY, Vector3(0.20, 0, 0))
+	check(gate.evaluate(partial_pose, placed, 106, false).is_empty(), "partial evidence holds even after viewpoint bias is established")
+	check(gate.gate_state == "hold_partial", "partial evidence exposes hold state after settling")
+	check(gate.evaluate(raw, placed, 107, true).pose.origin.is_equal_approx(Vector3(0.02, 0, 0)), "full evidence resumes using preserved bias")
 	head.position.x += 0.1
 	gate.tick(0.01)
 	check(gate.evaluate(raw, placed, 106).is_empty(), "head movement holds avatar")

@@ -207,6 +207,22 @@ func _test_room_spots() -> void:
 	# A room fully covered by furniture must place nobody rather than place badly.
 	var narrow := PackedVector2Array([Vector2(-3, -0.2), Vector2(3, -0.2), Vector2(3, 0.2), Vector2(-3, 0.2)])
 	check(NaretRoomLayout.pick_spots(narrow, [], Vector2.ZERO, 2).is_empty(), "narrow floor never bypasses wall clearance")
+	var small_room := PackedVector2Array([Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)])
+	var compact_patient := Rect2(Vector2(-0.35, -1.05), Vector2(0.7, 2.1))
+	var compact_people := NaretRoomLayout.pick_spots(small_room, [compact_patient], Vector2.ZERO, 2, 0.225, PackedVector2Array(), 0.5)
+	check(compact_people.size() == 2, "two half-size speakers fit beside patient in 2m play area")
+	for point in compact_people:
+		check(absf(point.x) <= 0.775 and absf(point.y) <= 0.775, "compact speakers retain boundary clearance")
+
+	var offset_room := PackedVector2Array([Vector2(9, 9), Vector2(12, 9), Vector2(12, 12), Vector2(9, 12)])
+	check(NaretRoomLayout.pick_spots(offset_room, [], Vector2.ZERO, 2).size() == 2, "grid search finds safe floor missed by patient-centred rings")
+	var allowed := PackedVector2Array([Vector2(-2.5, -2), Vector2(0, -2), Vector2(0, 2), Vector2(-2.5, 2)])
+	var bounded := NaretRoomLayout.pick_spots(outline, [], Vector2.ZERO, 2, 0.6, allowed)
+	check(bounded.size() == 2, "room and play-area constraints can both provide two spots")
+	for point in bounded:
+		check(point.x <= -0.6 and point.x >= -1.9 and absf(point.y) <= 1.4, "body envelope fits inside both scanned room and play area")
+	if bounded.size() == 2:
+		check(bounded[0].distance_to(bounded[1]) >= 1.2, "whole-body envelopes do not overlap")
 	var blocked := Rect2(Vector2(-4, -4), Vector2(8, 8))
 	check(NaretRoomLayout.pick_spots(outline, [blocked], Vector2.ZERO, 2).is_empty(), "no free floor means no placement")
 

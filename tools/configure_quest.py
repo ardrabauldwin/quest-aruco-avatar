@@ -19,6 +19,7 @@ import argparse
 import copy
 import hmac
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -38,23 +39,36 @@ class ProvisionError(Exception):
     """Messages are authored locally and never contain remote response bodies."""
 
 
-def build_config(existing: dict, *, offline: bool, key: str = "") -> dict:
+def build_config(existing: dict, *, offline: bool, key: str = "", speech_only: bool = False, asr_timeout_s: float = 0) -> dict:
     result = copy.deepcopy(existing)
+    if not math.isfinite(asr_timeout_s) or asr_timeout_s < 0:
+        raise ProvisionError("--asr-timeout must be a finite non-negative number; 0 means unlimited.")
     api = result.setdefault("api", {})
     if not isinstance(api, dict):
         raise ProvisionError("Existing config has a non-object api section; refusing to overwrite it.")
     # The runtime also accepts flat config files. Remove a legacy flat credential.
     result.pop("api_key", None)
+    if offline and speech_only:
+        raise ProvisionError("Choose either --offline or --speech-only, not both.")
     if offline:
         api.pop("api_key", None)
         api["offline"] = True
     else:
         if not key or any(character in key for character in "\r\n\x00"):
             raise ProvisionError("No valid UNI_API_KEY/API_SECRET found in environment or root .env.")
+        if speech_only:
+            # Empty local URL selects the existing university multipart ASR route.
+            # Keep local dialogue/TTS, CCBM and unrelated device settings intact.
+            api.update({"base_url": BASE_URL, "api_key": key,
+                        "asr_model": MODELS["asr"], "local_asr_url": "",
+                        "asr_timeout_s": asr_timeout_s, "offline": False})
+            return result
         api.update({
             "base_url": BASE_URL,
             "api_key": key,
             "asr_model": MODELS["asr"],
+            "asr_timeout_s": asr_timeout_s,
+            "local_asr_url": "",
             "tts_model": MODELS["tts"],
             "tts_voice": "",
             "llm_model": MODELS["llm"],
@@ -130,7 +144,7 @@ def read_existing(adb: ADB) -> dict:
     return data
 
 
-def provision(adb: ADB, *, offline: bool, key: str) -> str:
+def provision(adb: ADB, *, offline: bool, key: str, speech_only: bool = False, asr_timeout_s: float = 0) -> str:
     adb.run(["get-state"], purpose="checking the connected device")
     location = adb.app(["pwd"], purpose="locating the installed debug application's private directory").stdout.decode("utf-8", errors="replace").strip()
     pattern = r"/data/(?:user/\d+|data)/" + re.escape(PACKAGE)
@@ -141,7 +155,7 @@ def provision(adb: ADB, *, offline: bool, key: str) -> str:
     if linked.returncode == 0:
         raise ProvisionError("App files directory is a symlink; refusing to provision a secret there.")
     adb.sh(["mkdir", "-p", "files"], purpose="creating Godot's private user directory")
-    config = build_config(read_existing(adb), offline=offline, key=key)
+    config = build_config(read_existing(adb), offline=offline, key=key, speech_only=speech_only, asr_timeout_s=asr_timeout_s)
     payload = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
     if len(payload) > MAX_CONFIG_BYTES:
         raise ProvisionError("Merged config exceeds the allowed size.")
@@ -177,17 +191,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--adb", help="Path to adb; defaults to PATH or the Android SDK")
     parser.add_argument("--dry-run", action="store_true", help="Validate local configuration only; never contact or write to a device")
     parser.add_argument("--offline", action="store_true", help="Remove the credential from this config and force offline mode")
+    parser.add_argument("--speech-only", action="store_true", help="Use university large-v3 speech recognition, preserving dialogue/TTS and other settings")
+    parser.add_argument("--asr-timeout", type=float, default=0, metavar="SECONDS", help="Cloud speech timeout; 0 (default) waits until completion, transport failure or cancellation")
     args = parser.parse_args(argv)
     try:
         key = "" if args.offline else read_key()
-        build_config({}, offline=args.offline, key=key)  # Local validation, no output.
+        build_config({}, offline=args.offline, key=key, speech_only=args.speech_only, asr_timeout_s=args.asr_timeout)  # Local validation, no output.
         if args.dry_run:
             print(f"Dry run: {PACKAGE}; target <app-private>/files/config.json; mode {'offline (remove credential)' if args.offline else 'online'}.")
             print("No device contacted. JSON and credentials are withheld; writes use stdin and mode 0600.")
             return 0
         sdk = Path(os.environ.get("ANDROID_HOME") or os.environ.get("ANDROID_SDK_ROOT") or Path.home() / "Library/Android/sdk")
         executable = args.adb or shutil.which("adb") or str(sdk / "platform-tools/adb")
-        location = provision(ADB(executable, args.serial), offline=args.offline, key=key)
+        location = provision(ADB(executable, args.serial), offline=args.offline, key=key, speech_only=args.speech_only, asr_timeout_s=args.asr_timeout)
         print(f"Verified {'offline' if args.offline else 'online'} configuration: {location} (mode 0600).")
         print("Restart NaReT to apply. No credential was printed or embedded in the APK.")
         return 0

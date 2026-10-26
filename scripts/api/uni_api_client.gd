@@ -14,6 +14,7 @@ var tts_model := "omnivoice"
 var llm_model := DEFAULT_LLM
 var tts_voice := "" # ApphubAI omnivoice rejects the OpenAI example voice 'alloy'.
 var timeout_s := 2.0
+var asr_timeout_s := 0.0 # Zero disables the cloud speech deadline; Restart still cancels.
 var offline := false
 # Optional PC recogniser reached through adb reverse. Never send cloud credentials.
 var local_asr_url := ""
@@ -22,6 +23,10 @@ var models_verified := false
 var available_models: Array[String] = []
 var _requests: Dictionary = {}
 var _busy: Dictionary = {}
+var _local_asr_request: HTTPRequest
+var _speech_request_generation := 0
+const LOCAL_ASR_TIMEOUT_S := 8.0 # GPU service is warmed before accepting recordings.
+var _local_tts_requests: Array[HTTPRequest] = []
 
 
 func _ready() -> void:
@@ -29,8 +34,9 @@ func _ready() -> void:
 	for service in ["models", "asr", "tts", "llm"]:
 		var request := HTTPRequest.new()
 		request.name = "HTTP_" + service
-		request.use_threads = true
-		request.timeout = timeout_s
+		# Keep unlimited speech requests cancellable without joining a socket worker.
+		request.use_threads = service != "asr"
+		request.timeout = service_timeout(service)
 		request.body_size_limit = 8 * 1024 * 1024
 		request.max_redirects = 0 # Never forward authorization to a redirected host.
 		add_child(request)
@@ -58,8 +64,10 @@ func configure() -> void:
 	tts_model = str(settings.get("tts_model", "omnivoice"))
 	llm_model = str(settings.get("llm_model", DEFAULT_LLM))
 	tts_voice = str(settings.get("tts_voice", ""))
-	# Runtime fallback deadline is always <= 2 seconds.
+	# Dialogue/voice fallback stays short; speech has its own deadline.
 	timeout_s = clampf(float(settings.get("timeout_s", 2.0)), 0.1, 2.0)
+	asr_timeout_s = maxf(float(settings.get("asr_timeout_s", 0.0)), 0.0)
+	if not is_finite(asr_timeout_s): asr_timeout_s = 0.0
 	api_key = OS.get_environment("UNI_API_KEY")
 	if api_key.is_empty():
 		api_key = OS.get_environment("API_SECRET")
@@ -68,8 +76,12 @@ func configure() -> void:
 	offline = bool(settings.get("offline", false)) or OS.get_environment("NARET_OFFLINE") == "1"
 	if not base_url.begins_with("https://"):
 		offline = true
-	for request: HTTPRequest in _requests.values():
-		request.timeout = timeout_s
+	for service: String in _requests:
+		(_requests[service] as HTTPRequest).timeout = service_timeout(service)
+
+
+func service_timeout(service: String) -> float:
+	return asr_timeout_s if service == "asr" else timeout_s
 
 
 func is_available(model: String = "") -> bool:
@@ -156,16 +168,21 @@ func synthesize(text: String, language: String = "en", speaker: String = "bystan
 
 func _request_local_ai(path: String, payload: Dictionary) -> Dictionary:
 	var request := HTTPRequest.new()
-	request.use_threads = true
-	request.timeout = 45.0
+	# Loopback has no DNS work. Keep socket I/O nonblocking so cancellation
+	# cannot join a worker stuck reading from a dropped USB forwarding socket.
+	request.use_threads = false
+	request.timeout = 8.0 if path == "/audio/speech" else 45.0
 	request.max_redirects = 0
 	request.body_size_limit = 8 * 1024 * 1024
 	add_child(request)
+	if path == "/audio/speech": _local_tts_requests.append(request)
 	var error := request.request(local_ai_url + path, ["Content-Type: application/json"], HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error != OK:
 		request.queue_free()
+		_local_tts_requests.erase(request)
 		return {"ok": false, "error": "local_ai_unavailable"}
 	var response: Array = await request.request_completed
+	_local_tts_requests.erase(request)
 	request.queue_free()
 	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200:
 		return {"ok": false, "error": "local_ai_unavailable"}
@@ -196,35 +213,61 @@ func transcribe(wav: PackedByteArray, language: String) -> Dictionary:
 	body.append_array(("\r\n--%s--\r\n" % boundary).to_utf8_buffer())
 	if not local_asr_url.is_empty():
 		return await _transcribe_local(body, "multipart/form-data; boundary=" + boundary)
-	return await request_bytes("asr", "/audio/transcriptions", body, "multipart/form-data; boundary=" + boundary)
+	var result := await request_bytes("asr", "/audio/transcriptions", body, "multipart/form-data; boundary=" + boundary)
+	if not result.get("ok", false):
+		# Distinguish service failures from a microphone that heard no words.
+		result["error"] = "cloud_asr_timeout" if result.get("error") == "timeout" else "cloud_asr_failed"
+	return result
 
 
 func _transcribe_local(body: PackedByteArray, content_type: String) -> Dictionary:
-	# Separate request preserves the cloud timeout/authentication policy.
 	if _busy.get("asr", false):
 		return {"ok": false, "error": "busy"}
 	_busy["asr"] = true
-	var request := HTTPRequest.new()
-	request.use_threads = true
-	request.timeout = 90.0 # Large-v3 on this CPU needs longer for complete sentences.
-	request.body_size_limit = 1024 * 1024
-	request.max_redirects = 0
-	add_child(request)
-	var err := request.request_raw(local_asr_url, ["Content-Type: " + content_type], HTTPClient.METHOD_POST, body)
-	if err != OK:
-		_busy["asr"] = false
-		request.queue_free()
-		return {"ok": false, "error": "local_asr_connection_failed"}
-	var response: Array = await request.request_completed
+	var generation := _speech_request_generation
+	var response: Array = []
+	for attempt in range(2):
+		response = await _post_local_asr(body, content_type)
+		if generation != _speech_request_generation:
+			_busy["asr"] = false
+			return {"ok": false, "error": "cancelled"}
+		var transport := int(response[0])
+		# Retry only transport failures, with the exact same audio and a fresh
+		# connection. Recognition is read-only; observations are emitted once.
+		if attempt == 0 and transport in [HTTPRequest.RESULT_CANT_CONNECT,
+			HTTPRequest.RESULT_CANT_RESOLVE, HTTPRequest.RESULT_CONNECTION_ERROR,
+			HTTPRequest.RESULT_NO_RESPONSE, HTTPRequest.RESULT_TIMEOUT]:
+			print("NARET_ASR_RETRY attempt=2 transport=", transport)
+			continue
+		break
 	_busy["asr"] = false
-	request.queue_free()
 	if response[0] == HTTPRequest.RESULT_TIMEOUT:
 		return {"ok": false, "error": "local_asr_timeout"}
 	var success := int(response[0]) == HTTPRequest.RESULT_SUCCESS and int(response[1]) == 200
 	var parsed: Variant = JSON.parse_string((response[3] as PackedByteArray).get_string_from_utf8()) if success else null
 	if parsed is Dictionary and parsed.get("text") is String:
 		return {"ok": true, "json": parsed}
-	return {"ok": false, "error": "local_asr_failed"}
+	return {"ok": false, "error": "local_asr_connection_failed" if int(response[1]) == 0 else "local_asr_failed",
+		"transport": int(response[0]), "http_status": int(response[1])}
+
+
+func _post_local_asr(body: PackedByteArray, content_type: String) -> Array:
+	var request := HTTPRequest.new()
+	request.use_threads = false # A lost USB socket must not block the render loop on cancel.
+	request.timeout = LOCAL_ASR_TIMEOUT_S
+	request.body_size_limit = 1024 * 1024
+	request.max_redirects = 0
+	add_child(request)
+	_local_asr_request = request
+	var err := request.request_raw(local_asr_url, ["Content-Type: " + content_type], HTTPClient.METHOD_POST, body)
+	var response: Array
+	if err != OK:
+		response = [HTTPRequest.RESULT_CANT_CONNECT, 0, PackedStringArray(), PackedByteArray()]
+	else:
+		response = await request.request_completed
+	if _local_asr_request == request: _local_asr_request = null
+	request.queue_free()
+	return response
 
 
 static func encode_wav(recording: AudioStreamWAV) -> PackedByteArray:
@@ -253,3 +296,16 @@ static func decode_audio(bytes: PackedByteArray) -> AudioStream:
 	if bytes.size() < 12 or bytes.slice(0, 4).get_string_from_ascii() != "RIFF" or bytes.slice(8, 12).get_string_from_ascii() != "WAVE":
 		return null
 	return AudioStreamWAV.load_from_buffer(bytes)
+
+func cancel_speech_requests() -> void:
+	_speech_request_generation += 1
+	# cancel_request() alone does not complete await request_completed. Resolve the
+	# cancelled awaiters so old work cannot keep the next exercise waiting.
+	var requests: Array[HTTPRequest] = _local_tts_requests.duplicate()
+	if is_instance_valid(_local_asr_request): requests.append(_local_asr_request)
+	for service in ["asr", "tts"]:
+		if _busy.get(service, false) and _requests.has(service): requests.append(_requests[service])
+	for request in requests:
+		if not is_instance_valid(request): continue
+		request.cancel_request()
+		request.request_completed.emit(HTTPRequest.RESULT_REQUEST_FAILED, 0, PackedStringArray(), PackedByteArray())

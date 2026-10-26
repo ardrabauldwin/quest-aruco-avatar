@@ -66,6 +66,12 @@ func evaluate(raw_pose: Transform3D, display: Transform3D, detection_ms: int, fu
 	# with no hand covering the chest. It is not calculated from pose size here.
 	if not full_evidence:
 		_window_partial = true
+		# Missing/covered markers must not drive an already-established anchor.
+		# Previously this flag protected settling, but later biased updates still
+		# passed through to the smoother. Require fresh full evidence to resume.
+		_follow_big_count = 0
+		gate_state = "hold_partial"
+		return {}
 	var offset := raw_pose.origin - display.origin
 	offset.y = 0.0   # height is held separately
 	var offset_deg := rad_to_deg(absf(wrapf(_yaw_of(raw_pose.basis) - _yaw_of(display.basis), -PI, PI)))

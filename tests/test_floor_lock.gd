@@ -150,4 +150,12 @@ func _test_standing_people() -> void:
 				for vertex in NaretSpatialAnchor.posed_vertices(mesh, surface):
 					lowest = minf(lowest, (mesh.global_transform * vertex).y)
 		check(absf(lowest + 0.194) < 0.001, path + ": visible skinned feet touch corrected floor")
+		var old_y := person.global_position.y
+		for bone in person._foot_bones:
+			var pose := person._floor_skeleton.get_bone_global_pose(bone)
+			pose.origin += person._floor_skeleton.global_basis.inverse() * Vector3.UP * 0.05
+			person._floor_skeleton.set_bone_global_pose(bone, pose)
+		person._floor_skeleton.force_update_all_bone_transforms()
+		person._keep_feet_on_floor()
+		check(person.global_position.y < old_y - 0.04, "animation lifting both feet is grounded back to the same floor")
 		person.free()

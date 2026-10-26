@@ -28,7 +28,10 @@ var _player_index := 0
 var _playing := false
 var _instruction_revision := 0
 var _voice_cache: Dictionary = {}
+var _coach_clips: Dictionary = {} # Fixed guidance must never be evicted by dialogue.
 var _recording_start := 0
+var _input_focused := true
+var _capture_generation := 0
 var _transcribing := false
 var _preparing := false
 var _pending: Array[Dictionary] = []
@@ -73,7 +76,7 @@ func _ready() -> void:
 	if coach_manifest is Dictionary:
 		for clip: Dictionary in coach_manifest.get("clips", []):
 			var coach_key := str(clip.language) + ":instructor:" + str(clip.text)
-			_voice_cache[coach_key] = load(str(clip.path))
+			_coach_clips[coach_key] = load(str(clip.path))
 	_microphone = AudioStreamPlayer.new()
 	_microphone.name = "Microphone"
 	_microphone.stream = AudioStreamMicrophone.new()
@@ -125,9 +128,9 @@ func set_listening(enabled: bool) -> void:
 		return
 	listening = enabled
 	if enabled:
-		_microphone.play()
+		if _input_focused: _microphone.play()
 		_reset_vad()
-		status_changed.emit("listening")
+		status_changed.emit("listening" if _input_focused else "microphone_paused")
 	else:
 		if recording:
 			end_recording()
@@ -135,6 +138,23 @@ func set_listening(enabled: bool) -> void:
 		status_changed.emit("listening_off")
 	listening_changed.emit(enabled)
 
+
+func set_input_focus(focused: bool) -> void:
+	if focused == _input_focused: return
+	_input_focused = focused
+	# Discard an interrupted recording; never send a partial background capture.
+	if recording:
+		recording = false
+		_recorder.set_recording_active(false)
+		recording_changed.emit(false)
+	# Keep the stream open, as in the older capture path. Stopping/reopening
+	# AudioStreamMicrophone on every Quest focus transition can interrupt input.
+	# _process() blocks recording while unfocused, and the reset discards audio
+	# accumulated outside the exercise before it can reach recognition.
+	_reset_vad()
+	if listening:
+		if focused and not _microphone.playing and _microphone_available(): _microphone.play()
+		status_changed.emit("listening" if focused else "microphone_paused")
 
 func _microphone_available() -> bool:
 	if OS.get_name() == "Android" and "android.permission.RECORD_AUDIO" not in OS.get_granted_permissions():
@@ -182,12 +202,22 @@ func input_level() -> float:
 
 
 func _process(_delta: float) -> void:
+	_reconcile_playback()
 	if recording and (Time.get_ticks_msec() - _recording_start) >= int(MAX_RECORDING_SECONDS * 1000):
 		end_recording()
 		return
-	if not listening:
+	if not listening or not _input_focused:
 		return
 	update_voice_activity(input_level(), Time.get_ticks_msec())
+
+
+func _reconcile_playback() -> void:
+	# A stopped player need not emit finished (e.g. an interrupted Android
+	# playback). Its stale flag must not suppress all subsequent voice activation.
+	if not _playing: return
+	for player: AudioStreamPlayer in _players:
+		if player.playing: return
+	_on_playback_finished()
 
 
 func update_voice_activity(level: float, now: int) -> void:
@@ -219,6 +249,9 @@ func update_voice_activity(level: float, now: int) -> void:
 
 
 func begin_recording() -> void:
+	if not _input_focused:
+		status_changed.emit("microphone_paused")
+		return
 	if recording:
 		return
 	if _transcribing:
@@ -263,10 +296,15 @@ func end_recording() -> void:
 	if not _recording_prefix.is_empty():
 		captured.data = encode_prefix(_recording_prefix, captured.stereo) + captured.data
 	_recording_prefix.clear()
+	_transcribe_audio(NaretUniAPIClient.encode_wav(captured))
+
+func _transcribe_audio(wav: PackedByteArray) -> void:
 	_ensure_api()
+	var generation := _capture_generation
 	_transcribing = true
 	status_changed.emit("transcribing")
-	var result: Dictionary = await _api.transcribe(NaretUniAPIClient.encode_wav(captured), language)
+	var result: Dictionary = await _api.transcribe(wav, language)
+	if generation != _capture_generation: return
 	_transcribing = false
 	if result.get("ok", false):
 		var transcript: Variant = result.get("json", {}).get("text", "")
@@ -276,10 +314,14 @@ func end_recording() -> void:
 			return
 		status_changed.emit("speech_not_understood")
 		return
-	if result.get("error", "") == "local_asr_timeout":
-		status_changed.emit("speech_recognition_timeout")
-	else:
-		status_changed.emit("asr_offline_use_text")
+	var error := str(result.get("error", ""))
+	print("NARET_ASR_FAILURE code=", error, " transport=", result.get("transport", -1), " http=", result.get("http_status", 0))
+	match error:
+		"local_asr_timeout", "cloud_asr_timeout": status_changed.emit("speech_recognition_timeout")
+		"local_asr_connection_failed": status_changed.emit("speech_connection_failed")
+		"local_asr_failed", "cloud_asr_failed": status_changed.emit("speech_server_error")
+		"busy": status_changed.emit("speech_request_busy")
+		_: status_changed.emit("asr_offline_use_text")
 
 
 func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander") -> void:
@@ -345,7 +387,7 @@ func _prepare_next() -> void:
 		var scripted: bool = item["text"].is_empty() or _clip_texts.get(requested_clip, "") == item["text"]
 		var spoken_text := str(item["text"]) if not str(item["text"]).is_empty() else str(_clip_texts.get(requested_clip, ""))
 		var cache_key := str(item["language"]) + ":" + str(item.get("speaker", "bystander")) + ":" + spoken_text
-		stream = _voice_cache.get(cache_key)
+		stream = _coach_clips.get(cache_key, _voice_cache.get(cache_key))
 		if stream == null and (not scripted or not _api.local_ai_url.is_empty()) and not spoken_text.is_empty() and _api.is_available(_api.tts_model):
 			var result: Dictionary = await _api.synthesize(spoken_text, item["language"], item.get("speaker", "bystander"))
 			if result.get("ok", false):
@@ -404,6 +446,11 @@ func _play_next() -> void:
 
 
 func _on_playback_finished() -> void:
+	# Both buffers share this callback. A late completion from the previous
+	# buffer must not mark the current voice (and its actor) as finished.
+	for player: AudioStreamPlayer in _players:
+		if player.playing:
+			return
 	if _ready_audio.is_empty():
 		_playing = false
 		playback_changed.emit(false)
@@ -441,3 +488,15 @@ static func encode_prefix(frames: PackedVector2Array, stereo: bool) -> PackedByt
 		else:
 			pcm.put_16(int(clampf((frame.x + frame.y) * 0.5, -1.0, 1.0) * 32767.0))
 	return pcm.data_array
+
+func reset_training() -> void:
+	_capture_generation += 1
+	if recording:
+		recording = false
+		_recorder.set_recording_active(false)
+		recording_changed.emit(false)
+	_transcribing = false
+	_recording_prefix.clear()
+	_reset_vad()
+	stop_speech()
+	if is_instance_valid(_api): _api.cancel_speech_requests()

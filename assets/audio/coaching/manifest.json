@@ -179,6 +179,36 @@
       "text": "Kontynuuj RKO do przejęcia przez ratowników, pojawienia się oznak życia lub wyczerpania. W symulacji poproś o przekazanie, gdy instruktor potwierdzi przybycie pomocy.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/handover.wav"
+    },
+    {
+      "text": "Give two rescue breaths, each over about one second, enough for chest rise. Keep the pause under ten seconds and resume compressions promptly. Afterwards, tell me: I have given two rescue breaths. Do not wait for my reply between breaths.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/breaths.wav"
+    },
+    {
+      "text": "Geben Sie zwei Beatmungen, jeweils etwa eine Sekunde bis sich der Brustkorb hebt. Halten Sie die Pause unter zehn Sekunden und setzen Sie die Kompressionen sofort fort. Berichten Sie danach: Ich habe zwei Beatmungen gegeben. Warten Sie zwischen den Beatmungen nicht auf meine Antwort.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/breaths.wav"
+    },
+    {
+      "text": "Wykonaj dwa oddechy ratownicze, każdy przez około sekundę, do uniesienia klatki piersiowej. Przerwa powinna trwać krócej niż dziesięć sekund. Od razu wróć do ucisków. Potem zgłoś: Wykonałem dwa oddechy ratownicze. Nie czekaj na moją odpowiedź między oddechami.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/breaths.wav"
+    },
+    {
+      "text": "Resume chest compressions now. Give the next set of 30 compressions.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/resume_compressions.wav"
+    },
+    {
+      "text": "Setzen Sie jetzt die Herzdruckmassage fort. Geben Sie die n?chsten 30 Kompressionen.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/resume_compressions.wav"
+    },
+    {
+      "text": "Teraz wzn?w uciskanie klatki piersiowej. Wykonaj kolejne 30 uci?ni??.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/resume_compressions.wav"
     }
   ]
 }

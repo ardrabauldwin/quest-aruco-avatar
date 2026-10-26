@@ -5,11 +5,13 @@ const LIFETIME_MS := 30000
 var _action := ""
 var _context := ""
 var _deadline := 0
+var _breaths := 1
 
 func clear() -> void:
 	_action = ""
 	_context = ""
 	_deadline = 0
+	_breaths = 1
 
 func evaluate(text: String, context: String, allowed: Array, now: int) -> Dictionary:
 	if context != _context or now > _deadline:
@@ -19,15 +21,25 @@ func evaluate(text: String, context: String, allowed: Array, now: int) -> Dictio
 		clean = clean.replace(punctuation, "")
 	if clean in ["yes", "yes that is correct", "correct"]:
 		var confirmed := _action
+		var breaths := _breaths
 		clear()
 		if confirmed in allowed:
-			return {"action": confirmed}
+			return {"action": confirmed, "breaths": breaths}
 		return {"message": "No pending report to confirm. Please state the completed check and finding."}
 	if clean in ["no", "no that is wrong", "cancel"]:
 		clear()
 		return {"message": "Report cancelled. Please state the completed check and finding."}
 	# A new utterance replaces any proposal; it cannot silently confirm an old one.
 	clear()
+	# Observed ASR confusion: ask explicitly about the pair. Never replace
+	# arbitrary occurrences of "bread" or silently count an uncertain report.
+	if clean in ["i have given two rescue bread", "i have given two rescue breads",
+		"we have given two rescue bread", "we have given two rescue breads"] and "ventilation" in allowed:
+		_action = "ventilation"
+		_breaths = 2
+		_context = context
+		_deadline = now + LIFETIME_MS
+		return {"proposal": "ventilation", "breaths": 2}
 	var direct := Speech.action_for(text)
 	if not direct.is_empty():
 		return {"action": direct}

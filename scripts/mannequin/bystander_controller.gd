@@ -35,8 +35,13 @@ var _speed := 0.0
 var _hand: BoneAttachment3D
 var _phone: MeshInstance3D
 var _floor_shadow: ShaderMaterial
+var _standing_floor_y := NAN
+var _floor_skeleton: Skeleton3D
+var _foot_bones: Array[int] = []
+var _sole_below_foot_m := 0.0
 
 func _ready() -> void:
+	process_priority = 110 # Ground the feet after RigAnimator applies its pose (100).
 	var model := get_node_or_null("Model") as Node3D
 	if model == null:
 		return
@@ -57,6 +62,8 @@ func _process(delta: float) -> void:
 		_face_scene(camera.global_position, delta)
 	if is_instance_valid(_rig) and _rig.has_gaze() and camera:
 		_rig.look_at_point(_gaze_point(camera.global_position, delta))
+
+	_keep_feet_on_floor()
 
 func _gaze_point(trainee: Vector3, delta: float) -> Vector3:
 	## Talking means eye contact. Otherwise glance between the trainee's face and
@@ -89,7 +96,10 @@ func _face_scene(trainee: Vector3, delta: float) -> void:
 		rotate_y(deg_to_rad(clampf(error, -TURN_SPEED_DEG * delta, TURN_SPEED_DEG * delta)))
 	# Nobody swivels on the spot like a statue: small steps while turning.
 	if is_instance_valid(_rig):
-		_rig.set_posture("walk" if _turning else _task_posture, 0.55 if _turning else 1.0)
+		# A standing speaker still faces the trainee, but a turn must not replace
+		# the talk clip at the start of an instruction. Actual walking uses _walk().
+		var turning_steps := _turning and not speaking
+		_rig.set_posture("walk" if turning_steps else _task_posture, 0.55 if turning_steps else 1.0)
 
 var _route: Array[Vector3] = []
 
@@ -234,6 +244,20 @@ func place_on_floor(spot: Transform3D) -> void:
 				lowest = minf(lowest, (mesh.global_transform * vertex).y)
 	if is_finite(lowest):
 		global_position.y += spot.origin.y - lowest
+		_standing_floor_y = spot.origin.y
+		if _floor_skeleton == null:
+			var skeletons := $Model.find_children("*", "Skeleton3D", true, false)
+			if not skeletons.is_empty():
+				_floor_skeleton = skeletons[0] as Skeleton3D
+				for name in ["foot_l", "foot_r"]:
+					var bone := _floor_skeleton.find_bone(name)
+					if bone >= 0:
+						_foot_bones.append(bone)
+		if not _foot_bones.is_empty():
+			var foot_y := INF
+			for bone in _foot_bones:
+				foot_y = minf(foot_y, (_floor_skeleton.global_transform * _floor_skeleton.get_bone_global_pose(bone)).origin.y)
+			_sole_below_foot_m = spot.origin.y - foot_y
 	if _floor_shadow:
 		_floor_shadow.set_shader_parameter("floor_y", spot.origin.y)
 
@@ -247,3 +271,12 @@ func cast_floor_shadow(light_direction: Vector3) -> void:
 		for mesh: MeshInstance3D in find_children("*", "MeshInstance3D", true, false):
 			mesh.material_overlay = _floor_shadow
 	_floor_shadow.set_shader_parameter("light_direction", light_direction)
+
+func _keep_feet_on_floor() -> void:
+	if not visible or not is_finite(_standing_floor_y) or _floor_skeleton == null or _foot_bones.is_empty():
+		return
+	var foot_y := INF
+	for bone in _foot_bones:
+		foot_y = minf(foot_y, (_floor_skeleton.global_transform * _floor_skeleton.get_bone_global_pose(bone)).origin.y)
+	# Preserve the initial shoe-sole offset as idle/talking/turning poses change.
+	global_position.y += _standing_floor_y - (foot_y + _sole_below_foot_m)

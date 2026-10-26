@@ -38,13 +38,19 @@ static func instruction(key: String, language: String) -> String:
 	var data: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/coach_steps.json"))
 	return str(data.get(language, data.en).get(key, data.en.get(key, "Ask the instructor for the next step.")))
 
+static func current_instruction(scenario: NaretScenario, language: String) -> String:
+	var key := step(scenario)
+	if key == "compressions" and scenario.cycles > 0:
+		key = "resume_compressions"
+	return instruction(key, language)
+
 static func context(scenario: NaretScenario, language: String) -> Dictionary:
 	var key := step(scenario)
 	var guide := {}
 	for topic in ["response", "call", "breathing", "compressions", "breath_one", "breath_two", "compression_only", "handover", "aed"]:
 		guide[topic] = instruction(topic, language)
 	return {"language": language, "scenario_state": scenario.get_state_name(),
-		"next_step": key, "approved_instruction": instruction(key, language),
+		"next_step": key, "approved_instruction": current_instruction(scenario, language),
 		"approved_guide": guide,
 		"compression_count": scenario.cycle_compressions, "breath_reports": scenario.cycle_ventilations,
 		"emergency_call_reported": scenario.emergency_called,

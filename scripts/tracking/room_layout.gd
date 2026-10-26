@@ -149,7 +149,7 @@ func obstacle_footprints() -> Array:
 		result.append(Rect2(minimum, maximum - minimum))
 	return result
 
-func find_spots(center: Vector3, count: int, keep_clear: Array = []) -> Array[Transform3D]:
+func find_spots(center: Vector3, count: int, keep_clear: Array = [], clearance: float = WALL_CLEARANCE, allowed_outline: PackedVector2Array = PackedVector2Array()) -> Array[Transform3D]:
 	## World transforms for `count` bystanders standing on free floor, facing `center`.
 	## `keep_clear` adds world X/Z rectangles the room scan cannot know about, such
 	## as the floor the patient is lying on.
@@ -158,9 +158,12 @@ func find_spots(center: Vector3, count: int, keep_clear: Array = []) -> Array[Tr
 		return spots
 	var blockers := obstacle_footprints()
 	blockers.append_array(keep_clear)
-	var flat := pick_spots(floor_outline(), blockers, Vector2(center.x, center.z), count)
+	var height := floor_height_world()
+	if not is_finite(height):
+		return spots
+	var flat := pick_spots(floor_outline(), blockers, Vector2(center.x, center.z), count, clearance, allowed_outline)
 	for point in flat:
-		var position := Vector3(point.x, floor_height_world(), point.y)
+		var position := Vector3(point.x, height, point.y)
 		var facing := Vector3(center.x - point.x, 0.0, center.z - point.y)
 		if facing.length_squared() < 0.0001:
 			facing = Vector3.BACK
@@ -168,31 +171,48 @@ func find_spots(center: Vector3, count: int, keep_clear: Array = []) -> Array[Tr
 		spots.append(Transform3D(Basis.looking_at(-facing, Vector3.UP), position))
 	return spots
 
-static func pick_spots(outline: PackedVector2Array, obstacles: Array, center: Vector2, count: int) -> Array[Vector2]:
+static func pick_spots(outline: PackedVector2Array, obstacles: Array, center: Vector2, count: int, clearance: float = WALL_CLEARANCE, allowed_outline: PackedVector2Array = PackedVector2Array(), body_scale: float = 1.0) -> Array[Vector2]:
 	## Pure geometry so the placement rules stay testable without a headset.
 	var chosen: Array[Vector2] = []
 	if outline.size() < 3 or count <= 0:
 		return chosen
 	# Inset keeps a standing person off the walls; a narrow room can inset to nothing.
-	var regions := Geometry2D.offset_polygon(outline, -WALL_CLEARANCE)
+	var regions := Geometry2D.offset_polygon(outline, -maxf(clearance, WALL_CLEARANCE * body_scale))
 	if regions.is_empty():
 		return chosen
+	var allowed_regions: Array = []
+	if allowed_outline.size() >= 3:
+		allowed_regions = Geometry2D.offset_polygon(allowed_outline, -maxf(clearance, WALL_CLEARANCE * body_scale))
+		if allowed_regions.is_empty():
+			return chosen
 	var blocked: Array[Rect2] = []
 	for item: Rect2 in obstacles:
-		blocked.append(item.grow(OBSTACLE_CLEARANCE))
+		blocked.append(item.grow(maxf(clearance, OBSTACLE_CLEARANCE * body_scale)))
+	var candidates: Array[Vector2] = []
 	for radius: float in RADII:
 		for step in range(24):
-			if chosen.size() >= count:
-				return chosen
 			var angle := TAU * float(step) / 24.0
-			var candidate := center + Vector2(cos(angle), sin(angle)) * radius
-			if not _inside(regions, candidate):
-				continue
-			if blocked.any(func(rect: Rect2) -> bool: return rect.has_point(candidate)):
-				continue
-			if chosen.any(func(other: Vector2) -> bool: return other.distance_to(candidate) < SPOT_SEPARATION):
-				continue
-			chosen.append(candidate)
+			candidates.append(center + Vector2(cos(angle), sin(angle)) * radius)
+	# Ring-only sampling missed usable corners and smaller rooms. Search the
+	# remaining floor too; all candidates still pass the identical clearance tests.
+	var bounds := Rect2(outline[0], Vector2.ZERO)
+	for point in outline:
+		bounds = bounds.expand(point)
+	for ix in mini(int(ceil(bounds.size.x / 0.25)) + 1, 128):
+		for iz in mini(int(ceil(bounds.size.y / 0.25)) + 1, 128):
+			candidates.append(bounds.position + Vector2(ix, iz) * 0.25)
+	for candidate in candidates:
+		if chosen.size() >= count:
+			return chosen
+		if not _inside(regions, candidate):
+			continue
+		if not allowed_regions.is_empty() and not _inside(allowed_regions, candidate):
+			continue
+		if blocked.any(func(rect: Rect2) -> bool: return rect.has_point(candidate)):
+			continue
+		if chosen.any(func(other: Vector2) -> bool: return other.distance_to(candidate) < maxf(SPOT_SEPARATION * body_scale, 2.0 * clearance)):
+			continue
+		chosen.append(candidate)
 	return chosen
 
 static func _inside(regions: Array, point: Vector2) -> bool:

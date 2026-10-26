@@ -548,7 +548,7 @@ func _build_exercise_controls() -> void:
 		_language_keys[code] = key
 	_refresh_language_selection()
 	_large_start = _key("Start training", Vector2(0.075, 0.045), "key", func():
-		show_notice("Start requested" if not _start_action.is_empty() else "Training already active")
+		show_notice("Restarting training" if _start_action == "restart" else "Starting training")
 		if not _start_action.is_empty(): action_requested.emit(_start_action), _controls)
 	# Start and save share one row, 2.5 cm apart so a poke cannot hit both.
 	_large_start.position = Vector3(-0.050, -0.022, 0)
@@ -776,8 +776,8 @@ func _set_shown(value: bool) -> void:
 
 func update_session(scenario: NaretScenario) -> void:
 	var actions := scenario.get_interface_actions()
-	_start_action = "start" if "start" in actions else ("restart" if "restart" in actions else "")
-	_large_start.set_text("Start training" if _start_action == "start" else ("Restart" if _start_action == "restart" else "Training active"))
+	_start_action = "start" if scenario.state == NaretScenario.State.IDLE else "restart"
+	_large_start.set_text("Start training" if _start_action == "start" else "Restart training")
 	var training_active := scenario.state != NaretScenario.State.IDLE and scenario.state != NaretScenario.State.RECOVERY
 	_large_start.set_accent(Color("32d16d") if training_active else GLOW, Color("16843c") if training_active else Color.TRANSPARENT)
 	if scenario.state == NaretScenario.State.RECOVERY: actions = ["restart", "briefing"]

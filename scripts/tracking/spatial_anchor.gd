@@ -61,6 +61,7 @@ var viewer_gate := NaretViewerMotionGate.new()
 var _viewer_filter: RefCounted
 var _viewer_rest_pose := Transform3D.IDENTITY
 var _viewer_last_ms := -1
+var _tracking_audit_last_ms := -10000
 var startup := NaretStartupPlacement.new()
 var _floor_audit_s := 0.0
 
@@ -149,6 +150,13 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 	_viewer_last_ms = now
 	viewer_gate.head = viewer_head
 	var result := viewer_gate.evaluate(pose, locked_pose, now, full_marker_evidence)
+	var audit := now - _tracking_audit_last_ms >= 1000
+	if audit:
+		_tracking_audit_last_ms = now
+		print("NARET_POSE_GATE state=", viewer_gate.gate_state,
+			" full=", full_marker_evidence, " moving=", viewer_gate.moving,
+			" raw_delta_m=", pose.origin.distance_to(locked_pose.origin),
+			" accepted=", not result.is_empty())
 	if result.is_empty():
 		# HOLD: leave both the patient transform and accepted anchor unchanged.
 		return
@@ -169,6 +177,9 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 		_viewer_rest_pose.origin = target.origin
 	if _viewer_filter.call("rotation_reanchor_ready"):
 		_viewer_rest_pose.basis = target.basis
+	if audit:
+		print("NARET_POSE_UPDATE position_step_m=", corrected.origin.distance_to(locked_pose.origin),
+			" rotation_step_deg=", rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(locked_pose.basis.get_rotation_quaternion())))
 	locked_pose = corrected
 	_apply(corrected)
 	return

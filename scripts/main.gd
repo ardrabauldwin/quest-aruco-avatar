@@ -86,6 +86,10 @@ const EN_STATUS := {
   "offline_clip": "Local speech audio",
   "tts_offline_clip": "Local speech audio",
   "asr_offline_use_text": "Speech recognition unavailable: use buttons or text",
+  "microphone_paused": "Microphone paused: close the Quest menu and return to training",
+  "speech_connection_failed": "Speech connection lost: PC/USB connection needed",
+  "speech_server_error": "Speech server returned an error",
+  "speech_request_busy": "Still processing the previous recording",
   "microphone_permission_required": "Microphone permission needed",
   "recording_empty": "No speech recorded",
   "models_unverified": "Service model list unavailable"
@@ -134,6 +138,13 @@ func _ready() -> void:
 	add_child(audio_manager)
 	audio_manager.transcript_ready.connect(_on_transcript)
 	audio_manager.status_changed.connect(_on_service_status)
+	if xr.active:
+		# The Quest system menu takes input focus; never record or send audio meanwhile.
+		xr.interface.connect("session_focussed", func(): audio_manager.set_input_focus(true))
+		xr.interface.connect("session_visible", func(): audio_manager.set_input_focus(false))
+		xr.interface.connect("session_stopping", func(): audio_manager.set_input_focus(false))
+		if xr.interface.has_method("get_session_state"):
+			audio_manager.set_input_focus(int(xr.interface.call("get_session_state")) == OpenXRInterface.SESSION_STATE_FOCUSED)
 	audio_manager.recording_changed.connect(func(active: bool):
 		if interaction: interaction.set_audio_busy(active or bool(audio_manager.get("_playing")))
 		if dashboard: dashboard.set_recording(active)
@@ -145,6 +156,7 @@ func _ready() -> void:
 		if hand_menu: hand_menu.show_notice("Playing " + _lang.to_upper() + " audio")
 		$Bystanders/Anna.speaking = speaker in ["bystander", "anna"]
 		$Instructor.speaking = speaker == "instructor"
+		_record_speech_status("voice_started_" + speaker)
 		if speaker in ["bystander", "anna"]: _show_reply(text, source)
 		else: _toast(text))
 	audio_manager.playback_changed.connect(func(active: bool):
@@ -608,12 +620,30 @@ func _save_alignment() -> void:
 	else:
 		_toast("Save failed")
 
+func _clear_training_session() -> void:
+	llm.cancel_pending()
+	audio_manager.reset_training()
+	_last_coach_step = ""
+	_unclassified_spoken_step = ""
+	_last_heard_report = ""
+	_aed_announced = false
+	_last_compression_ms = 0
+	if interaction: interaction.rearm_cpr_cycle()
+	logger.reset()
+	score.reset()
+
 func _on_action(action: String, details: Dictionary = {}) -> void:
 	if action in ["start", "restart", "reset"]:
 		_speech_confirmation.clear()
 	print("NARET_ACTION ", action, " placed=", anchor.locked, " calibrated=", anchor.calibrated)
 	if action in ["start", "restart", "reset"] and observation_interpreter:
 		observation_interpreter.cancel_pending()
+	if action == "reset":
+		_clear_training_session()
+		audio_manager.set_listening(false)
+		scenario.reset()
+		_show_reply("")
+		return
 	if action in ["start", "restart"]:
 		if xr.active and not anchor.locked:
 			var placement_message := {"en": "Waiting for marker placement. Look at the mannequin markers; your saved alignment is retained.", "de": "Warte auf Markerplatzierung. Schauen Sie auf die Marker der Puppe; die gespeicherte Ausrichtung bleibt erhalten.", "pl": "Oczekiwanie na umieszczenie markerów. Spójrz na markery manekina; zapisane ustawienie pozostaje zachowane."}
@@ -622,12 +652,9 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 		if xr.active and not anchor.calibrated:
 			_toast("Save the patient alignment before starting training.")
 			return
-		llm.cancel_pending()
-		audio_manager.stop_speech()
+		_clear_training_session()
 		# A previous microphone toggle must not silently disable the new exercise.
 		audio_manager.set_listening(true)
-		logger.reset()
-		score.reset()
 		scenario.start()
 		_show_reply(_opening_line())
 		return
@@ -738,7 +765,8 @@ func _apply_language() -> void:
 	_speech_confirmation.clear()
 	if observation_interpreter: observation_interpreter.cancel_pending()
 	llm.cancel_pending()
-	audio_manager.set_language(bystander_language())
+	# Recognition follows the trainee's selection; Anna may speak another language.
+	audio_manager.set_language(_language)
 	audio_manager.stop_speech()
 	if dashboard:
 		dashboard.set_language(_language)
@@ -755,6 +783,8 @@ func _apply_language() -> void:
 func _on_transcript(text: String) -> void:
 	if text.strip_edges().is_empty(): return
 	if preload("res://scripts/scenario/spoken_observation.gd").reports_breath_pair(text):
+		_last_heard_report = text.left(100)
+		_record_speech_status("heard")
 		print("NARET_TRANSCRIPT ", text.left(160))
 		_speech_confirmation.clear()
 		ccbm.observe_breath_pair()
@@ -767,17 +797,23 @@ func _on_transcript(text: String) -> void:
 		_on_conversation(text)
 		return
 	_last_heard_report = text.left(100)
+	_record_speech_status("heard")
 	_toast("Heard: " + text.left(160))
 	print("NARET_TRANSCRIPT ", text.left(160))
 	if bystander_language() == "en":
-		var context := str(scenario.state) + ":" + str(scenario.get_available_actions())
+		var context := str(scenario.state) + ":" + str(scenario.get_available_actions()) + ":" + str(scenario.cycle_compressions) + ":" + str(scenario.cycle_ventilations)
 		var interpreted: Dictionary = _speech_confirmation.evaluate(text, context, scenario.get_available_actions(), Time.get_ticks_msec())
 		if interpreted.has("action"):
-			ccbm.observe_action(str(interpreted.action))
+			if interpreted.get("breaths", 1) == 2:
+				ccbm.observe_breath_pair()
+			else:
+				ccbm.observe_action(str(interpreted.action))
 			return
 		if interpreted.has("proposal"):
 			var candidate := str(interpreted.proposal)
 			var questions := {"begin_check": "Did you say the scene is safe? Say yes or no.", "check_responsiveness": "Did you report that he is not responding? Say yes or no.", "check_breathing": "Did you report that he is not breathing normally? Say yes or no.", "ventilation": "Did you complete one rescue breath? Say yes or no."}
+			if interpreted.get("breaths", 1) == 2:
+				questions["ventilation"] = "Did you complete two rescue breaths? Say yes or no."
 			_toast(str(questions[candidate]))
 			audio_manager.speak(str(questions[candidate]), "en", "confirm_" + candidate, "instructor")
 			return
@@ -822,7 +858,7 @@ func _announce_coach_step() -> void:
 	_unclassified_spoken_step = ""
 	print("NARET_COACH_STEP ", key, " count=", scenario.cycle_compressions)
 	# Critical instructions use approved text. The LLM handles follow-up questions.
-	var instruction := NaretTrainingCoach.instruction(key, _language)
+	var instruction := NaretTrainingCoach.current_instruction(scenario, _language)
 	_toast(instruction)
 	audio_manager.speak(instruction, _language, "", "instructor")
 	# Repeat guidance only when requested; timed repeats interrupt conversation.
@@ -838,6 +874,7 @@ func _on_reply(reply: Dictionary) -> void:
 
 func _on_ccbm_status(status: String) -> void:
 	print("NARET_CCBM_STATUS ", status)
+	_record_speech_status(status)
 	var messages := {
 		"ccbm_unavailable": ["CCBM nicht verbunden. Schritt nicht bestätigt.", "CCBM nie jest połączony. Krok niepotwierdzony.", "CCBM unavailable: step not confirmed."],
 		"ccbm_busy_repeat": ["Bitte warten, dann wiederholen.", "Poczekaj, potem powtórz.", "Please wait, then repeat."],
@@ -916,10 +953,36 @@ func _on_tracking_status(status: String) -> void:
 	if dashboard: dashboard.set_tracking(text)
 	if xr_info: xr_info.set_tracking(text)
 
+func _record_speech_status(status: String) -> void:
+	# Retain bounded diagnostics: logcat's native tracking output can overwrite
+	# the speech failure before the connected PC has a chance to inspect it.
+	var path := "user://speech_diagnostics.jsonl"
+	var trace := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) else FileAccess.WRITE)
+	if trace:
+		if trace.get_length() > 262144:
+			trace.close()
+			trace = FileAccess.open(path, FileAccess.WRITE)
+		if trace:
+			trace.seek_end()
+			trace.store_line(JSON.stringify({"time_ms": Time.get_ticks_msec(), "status": status,
+				"step": NaretTrainingCoach.step(scenario) if scenario else "setup",
+				"heard": _last_heard_report, "focused": audio_manager._input_focused if audio_manager else false,
+				"listening": audio_manager.listening if audio_manager else false,
+				"recording": audio_manager.recording if audio_manager else false,
+				"playing": audio_manager._playing if audio_manager else false,
+				"preparing": audio_manager._preparing if audio_manager else false,
+				"recognising": audio_manager._transcribing if audio_manager else false}))
+			trace.close()
+
 func _on_service_status(status: String) -> void:
 	print("NARET_SPEECH_STATUS ", status)
 	_last_service_status = status
+	_record_speech_status(status)
 	var labels := {"online": ["Uni-Cloud verbunden", "Połączono z chmurą uczelni"],
+		"microphone_paused": ["Mikrofon pausiert: Quest-Menü schließen", "Mikrofon wstrzymany: zamknij menu Quest"],
+		"speech_connection_failed": ["Sprachverbindung unterbrochen: PC/USB prüfen", "Brak połączenia głosowego: sprawdź PC/USB"],
+		"speech_server_error": ["Fehler beim Spracherkennungsserver", "Błąd serwera rozpoznawania mowy"],
+		"speech_request_busy": ["Vorherige Aufnahme wird verarbeitet", "Poprzednie nagranie jest przetwarzane"],
 		"offline": ["Offline · lokale Sprachclips", "Offline · lokalne nagrania"],
 		"recording": ["Mikrofonaufnahme", "Nagrywanie mikrofonu"],
 		"transcribing": ["Sprache wird erkannt …", "Rozpoznawanie mowy …"],
@@ -1064,8 +1127,8 @@ func _smoke_test() -> void:
 			_set_mode(mode)
 			_set_language(language)
 			var expected: String = language if mode == "own" else ("pl" if language == "de" else "de")
-			if bystander_language() != expected or audio_manager.language != expected:
-				push_error("Bystander language does not follow the training mode")
+			if bystander_language() != expected or audio_manager.language != language:
+				push_error("Anna must follow training mode; recognition must follow the trainee language")
 				get_tree().quit(1)
 				return
 			await _smoke_run()

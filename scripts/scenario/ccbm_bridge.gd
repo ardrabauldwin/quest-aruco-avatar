@@ -32,6 +32,10 @@ func _ready() -> void:
 
 func reset() -> void:
 	_generation += 1
+	if _pending and is_instance_valid(_http):
+		_http.cancel_request()
+		_http.request_completed.emit(HTTPRequest.RESULT_REQUEST_FAILED, 0, PackedStringArray(), PackedByteArray())
+	_pending = false
 	_history.clear()
 	_compression_observed = false
 	_mode_observed = false
@@ -79,8 +83,9 @@ func observe_accepted(event: Dictionary) -> void:
 
 func observe_breath_pair() -> bool:
 	# Each reported breath still requires its own CCBM decision and scenario guard.
-	# Never count two again if one was already accepted in this cycle.
-	if _pending or "ventilation" not in _scenario.get_available_actions() or _scenario.cycle_ventilations != 0:
+	# A completed-pair report after a first individual report credits only the
+	# remaining breath. Repeating the report after the cycle resets is rejected.
+	if _pending or "ventilation" not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_out_of_order")
 		return false
 	_request_breath_pair()
@@ -88,6 +93,9 @@ func observe_breath_pair() -> bool:
 
 func _request_breath_pair() -> void:
 	var generation := _generation
+	if _scenario.cycle_ventilations == 1:
+		await _request("ventilation")
+		return
 	await _request("ventilation")
 	if generation != _generation or _scenario.cycle_ventilations != 1:
 		return # Failed first decision or session changed: do not fabricate a second.

@@ -24,6 +24,7 @@ func run() -> Array[String]:
 	check(Coach.step(scenario) == "breaths", "First accepted breath does not trigger a second voice prompt")
 	scenario.submit_action("ventilation")
 	check(Coach.step(scenario) == "compressions", "Repeat cycle")
+	check(Coach.current_instruction(scenario, "en").begins_with("Resume"), "Completed breath pair explicitly prompts resuming compressions")
 	for language in ["en", "de", "pl"]:
 		for key in ["setup", "safety", "response", "call", "breathing", "compressions", "breaths", "breath_one", "breath_two", "compression_only", "finish", "handover", "aed"]:
 			check(not Coach.instruction(key, language).is_empty(), language + " instruction " + key)

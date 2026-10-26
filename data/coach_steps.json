@@ -12,7 +12,8 @@
     "finish": "Training has ended. Review your sequence, timing and communication in the results.",
     "aed": "Use an AED as soon as it is available and follow its prompts. AED interaction is outside this selected exercise.",
     "handover": "Continue CPR until professional help takes over, the person shows signs of life, or you cannot continue. In this simulation, request handover when the trainer confirms help has arrived.",
-    "breaths": "Give two rescue breaths, each over about one second, enough for chest rise. Keep the pause under ten seconds and resume compressions promptly. Afterwards, tell me: I have given two rescue breaths. Do not wait for my reply between breaths."
+    "breaths": "Give two rescue breaths, each over about one second, enough for chest rise. Keep the pause under ten seconds and resume compressions promptly. Afterwards, tell me: I have given two rescue breaths. Do not wait for my reply between breaths.",
+    "resume_compressions": "Resume chest compressions now. Give the next set of 30 compressions."
   },
   "de": {
     "setup": "Patient platzieren, die Controller-Anpassung mit A speichern und das Training starten.",
@@ -27,7 +28,8 @@
     "finish": "Das Training ist beendet. Prüfen Sie Ablauf, Zeit und Kommunikation in den Ergebnissen.",
     "aed": "Einen AED sobald verfügbar benutzen und seinen Anweisungen folgen. Die AED-Bedienung liegt außerhalb dieser Übung.",
     "handover": "CPR fortsetzen, bis professionelle Hilfe übernimmt, Lebenszeichen auftreten oder Sie nicht mehr können. In der Simulation die Übergabe anfordern, wenn die Lehrperson das Eintreffen der Hilfe bestätigt.",
-    "breaths": "Geben Sie zwei Beatmungen, jeweils etwa eine Sekunde bis sich der Brustkorb hebt. Halten Sie die Pause unter zehn Sekunden und setzen Sie die Kompressionen sofort fort. Berichten Sie danach: Ich habe zwei Beatmungen gegeben. Warten Sie zwischen den Beatmungen nicht auf meine Antwort."
+    "breaths": "Geben Sie zwei Beatmungen, jeweils etwa eine Sekunde bis sich der Brustkorb hebt. Halten Sie die Pause unter zehn Sekunden und setzen Sie die Kompressionen sofort fort. Berichten Sie danach: Ich habe zwei Beatmungen gegeben. Warten Sie zwischen den Beatmungen nicht auf meine Antwort.",
+    "resume_compressions": "Setzen Sie jetzt die Herzdruckmassage fort. Geben Sie die n?chsten 30 Kompressionen."
   },
   "pl": {
     "setup": "Ustaw pacjenta, zapisz dopasowanie przyciskiem A i rozpocznij trening.",
@@ -42,6 +44,7 @@
     "finish": "Ćwiczenie zakończone. Sprawdź kolejność, czas i komunikację w wynikach.",
     "aed": "Użyj AED, gdy jest dostępny, i wykonuj jego polecenia. Obsługa AED jest poza zakresem tego ćwiczenia.",
     "handover": "Kontynuuj RKO do przejęcia przez ratowników, pojawienia się oznak życia lub wyczerpania. W symulacji poproś o przekazanie, gdy instruktor potwierdzi przybycie pomocy.",
-    "breaths": "Wykonaj dwa oddechy ratownicze, każdy przez około sekundę, do uniesienia klatki piersiowej. Przerwa powinna trwać krócej niż dziesięć sekund. Od razu wróć do ucisków. Potem zgłoś: Wykonałem dwa oddechy ratownicze. Nie czekaj na moją odpowiedź między oddechami."
+    "breaths": "Wykonaj dwa oddechy ratownicze, każdy przez około sekundę, do uniesienia klatki piersiowej. Przerwa powinna trwać krócej niż dziesięć sekund. Od razu wróć do ucisków. Potem zgłoś: Wykonałem dwa oddechy ratownicze. Nie czekaj na moją odpowiedź między oddechami.",
+    "resume_compressions": "Teraz wzn?w uciskanie klatki piersiowej. Wykonaj kolejne 30 uci?ni??."
   }
 }

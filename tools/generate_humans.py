@@ -400,7 +400,9 @@ def make_character(name, gender, patient=False):
     for mesh in meshes:
         for group in list(mesh.vertex_groups):
             if group.name not in rig.data.bones:mesh.vertex_groups.remove(group)
-    sternum=body_surface(body,0,rig.data.bones['spine_03'].head_local.z+.075)
+    # CPR compression point (ERC 2025: centre of the chest = lower half of the
+    # sternum, about the nipple line). +.075 sat at the xiphoid, 5 cm too low.
+    sternum=body_surface(body,0,rig.data.bones['spine_03'].head_local.z+.125)
     mouth=body_surface(body,0,rig.data.bones['head'].head_local.z-.008)
     forehead=body_surface(body,0,rig.data.bones['head'].head_local.z+.082)
     eye_z=rig.data.bones['head'].head_local.z+.051

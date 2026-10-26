@@ -305,9 +305,9 @@ func set_compression_depth(depth_m: float) -> void:
 
 func _apply_compression(depth: float) -> void:
 	_current_compression = depth
-	# In human_patient.glb, the scaled mesh compression target yields 0.0282m depression at weight 1.0.
-	# A target depth of 0.05m (5 cm) corresponds to weight 1.77 for realistic AHA/ERC depth.
-	var weight := clampf(depth / 0.0282, 0.0, 2.2)
+	# In human_patient.glb, the mesh compression target yields 0.0277m depression at weight 1.0
+	# (field re-centred on the ERC compression point). 0.05m (5 cm) is weight 1.8.
+	var weight := clampf(depth / 0.0277, 0.0, 2.2)
 	_rig.set_compression_amount(weight)
 	zone.position.y = _zone_rest_position.y - depth * 0.8
 	heart.squeeze(depth)

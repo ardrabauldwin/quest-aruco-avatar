@@ -40,7 +40,7 @@ radius = 0.055
 
 [node name="Mannequin" type="Node3D" unique_id=45203466]
 script = ExtResource("1")
-sternum_landmark_offset = Vector3(0, 0, -0.06)
+sternum_landmark_offset = Vector3(0, 0, -0.01)
 
 [node name="Model" parent="." unique_id=1467904106 instance=ExtResource("2")]
 transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 0, 0)

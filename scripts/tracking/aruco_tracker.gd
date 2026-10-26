@@ -83,6 +83,10 @@ func bind_provider(provider: Node) -> bool:
 	_set_status("scanning_marker")
 	return true
 
+## The detector node, or null on the desktop preview. Debug overlays read raw poses from it.
+func get_provider() -> Node:
+	return _provider
+
 func set_view_camera(camera: Camera3D) -> void:
 	_camera = camera
 

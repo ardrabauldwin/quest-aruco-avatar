@@ -77,6 +77,7 @@ func _initialize() -> void:
 			if _scenario.state == NaretScenario.State[state.to_upper()]:
 				break
 	_menu.set_listening("--mic" in args)
+	_menu._debug_choices.visible = "--debug" in args
 	var ekg := NaretEKG.new()
 	ekg.set_rhythm(NaretEKG.Rhythm.VF if state == "cpr" else NaretEKG.Rhythm.SINUS)
 	ekg.advance(3.0)

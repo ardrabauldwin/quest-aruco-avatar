@@ -304,6 +304,7 @@ func _build_xr_ui() -> void:
 	hand_menu.alignment_save_requested.connect(_save_alignment)
 	hand_menu.reference_scan_toggled.connect(mannequin.set_reference_visible)
 	hand_menu.hand_meshes_toggled.connect(xr.set_hands_visible)
+	hand_menu.marker_gizmos_toggled.connect(_set_marker_gizmos)
 	hand_menu.chest_calibration_requested.connect(_calibrate_chest)
 	hand_menu.chest_fit_requested.connect(_set_chest_fit)
 	hand_menu.set_chest_fit(anchor.chest_fit)
@@ -427,8 +428,24 @@ func _set_chest_fit(fit: String) -> void:
 	hand_menu.set_chest_fit(fit)
 	print("NARET_CHEST fit=%s height=%.3f thickness=%.3f" % [fit, anchor.chest_height_m, mannequin.thickness])
 
+func _set_marker_gizmos(shown: bool) -> void:
+	## Debug key: axis gizmos at the raw detected marker poses. Built only while on.
+	var gizmos := get_node_or_null("MarkerGizmos")
+	if not shown:
+		if gizmos: gizmos.queue_free()
+		return
+	var provider: Node = tracker.get_provider() if tracker else null
+	if provider == null:
+		_toast("No marker camera: gizmos need the headset detector")
+		return
+	if gizmos == null:
+		gizmos = load("res://scripts/tracking/marker_gizmos.gd").new()
+		gizmos.name = "MarkerGizmos"
+		add_child(gizmos)
+		gizmos.bind(provider)
+
 func _set_occlusion(mode: String) -> void:
-	## Cuff key: real-world occlusion off, for the room only, or for the patient too.
+	## Debug key: real-world occlusion off, for the room only, or for the patient too.
 	xr.set_occlusion(mode)
 	mannequin.set_occludable(xr.occlusion == "all")
 	hand_menu.set_occlusion(xr.occlusion)

@@ -25,6 +25,7 @@ signal chest_calibration_requested
 signal chest_fit_requested(fit: String)
 signal sternum_landmark_apply_requested
 signal occlusion_requested(mode: String)
+signal marker_gizmos_toggled(visible: bool)
 var _controls: Node3D
 var _large_align: Key3D
 var _floor_key: Key3D
@@ -42,6 +43,10 @@ const OCCLUSION_CYCLE := ["off", "room", "all"]
 var _language_keys: Dictionary = {}
 var _language_menu: Key3D
 var _language_choices: Node3D
+var _debug_menu: Key3D
+var _debug_choices: Node3D
+var _gizmos_key: Key3D
+var _gizmos_on := false
 var _large_start: Key3D
 var _start_action := ""
 var _notice: Label3D
@@ -487,20 +492,6 @@ func _build_cuff() -> void:
 	_export_key = _key("Export", Vector2(0.024, 0.026), "tile", func(): export_requested.emit(), _cuff)
 	_build_export_icon(_export_key.icon)
 	_place_on_cuff(_export_key, 76.0, -0.021)
-	# Swaps the full-body patient for the 1:1 mannequin scan, to check the fit.
-	_scan_key = _key("", Vector2(0.024, 0.026), "key", func():
-		_scan_on = not _scan_on
-		_refresh_scan()
-		reference_scan_toggled.emit(_scan_on), _cuff)
-	_scan_key.label.font_size = 19
-	_place_on_cuff(_scan_key, 38.0, -0.021)
-	# Testing aid: Meta's tracked hand meshes over the passthrough hands.
-	_hands_key = _key("", Vector2(0.024, 0.026), "key", func():
-		_hands_on = not _hands_on
-		_refresh_scan()
-		hand_meshes_toggled.emit(_hands_on), _cuff)
-	_hands_key.label.font_size = 19
-	_place_on_cuff(_hands_key, 0.0, CUFF_ROW_Y[1])
 	# A flat hand on the compression point measures the real chest height.
 	# Calibration tiles share the target icon: floor above, chest below it.
 	_chest_key = _key("", Vector2(0.024, 0.026), "tile", func(): chest_calibration_requested.emit(), _cuff)
@@ -516,12 +507,6 @@ func _build_cuff() -> void:
 	_ring_key = _key("", Vector2(0.024, 0.026), "key", func(): sternum_landmark_apply_requested.emit(), _cuff)
 	_ring_key.label.font_size = 19
 	_place_on_cuff(_ring_key, -38.0, CUFF_ROW_Y[1])
-	# Real-world occlusion: off → room (patient excluded) → all.
-	_occlusion_key = _key("", Vector2(0.024, 0.026), "key", func():
-		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _cuff)
-	_occlusion_key.label.font_size = 19
-	_place_on_cuff(_occlusion_key, 38.0, CUFF_ROW_Y[1])
-	_refresh_scan()
 
 
 func _build_exercise_controls() -> void:
@@ -531,7 +516,8 @@ func _build_exercise_controls() -> void:
 	_rig.add_child(_controls)
 	# The languages pop out to the right of this key only while chosen, then fold away again.
 	_language_menu = _key("Languages", Vector2(0.090, 0.035), "key", func():
-		_language_choices.visible = not _language_choices.visible, _controls)
+		_language_choices.visible = not _language_choices.visible
+		_debug_choices.visible = false, _controls)
 	_language_menu.position = Vector3(0, 0.022, 0)
 	_language_choices = Node3D.new()
 	_controls.add_child(_language_choices)
@@ -547,6 +533,7 @@ func _build_exercise_controls() -> void:
 		key.label.font_size = 22
 		_language_keys[code] = key
 	_refresh_language_selection()
+	_build_debug_controls()
 	_large_start = _key("Start training", Vector2(0.075, 0.045), "key", func():
 		show_notice("Restarting training" if _start_action == "restart" else "Starting training")
 		if not _start_action.is_empty(): action_requested.emit(_start_action), _controls)
@@ -564,8 +551,43 @@ func _build_exercise_controls() -> void:
 	_lang_key.visible = false
 	_mode_key.visible = true
 	_notice = make_label("", 21, INK)
-	_notice.position = Vector3(0.0, -0.060, 0.002)
+	_notice.position = Vector3(0.0, -0.104, 0.002)
 	_controls.add_child(_notice)
+
+func _build_debug_controls() -> void:
+	# Testing aids, one row below Start: above Languages would reach into the cuff.
+	# Like the languages they pop out to the right, but stay open while
+	# switching, until Debug is pressed again.
+	_debug_menu = _key("Debug", Vector2(0.090, 0.035), "key", func():
+		_debug_choices.visible = not _debug_choices.visible
+		_language_choices.visible = false, _controls)
+	_debug_menu.position = Vector3(0, -0.066, 0)
+	_debug_choices = Node3D.new()
+	_controls.add_child(_debug_choices)
+	_debug_choices.visible = false
+	# Raw detected marker poses as axis gizmos, before the patient offsets.
+	_gizmos_key = _key("", Vector2(0.052, 0.035), "key", func():
+		_gizmos_on = not _gizmos_on
+		_refresh_scan()
+		marker_gizmos_toggled.emit(_gizmos_on), _debug_choices)
+	# Meta's tracked hand meshes over the passthrough hands.
+	_hands_key = _key("", Vector2(0.052, 0.035), "key", func():
+		_hands_on = not _hands_on
+		_refresh_scan()
+		hand_meshes_toggled.emit(_hands_on), _debug_choices)
+	# Swaps the full-body patient for the 1:1 mannequin scan, to check the fit.
+	_scan_key = _key("", Vector2(0.052, 0.035), "key", func():
+		_scan_on = not _scan_on
+		_refresh_scan()
+		reference_scan_toggled.emit(_scan_on), _debug_choices)
+	# Real-world occlusion: off → room (patient excluded) → all.
+	_occlusion_key = _key("", Vector2(0.052, 0.035), "key", func():
+		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _debug_choices)
+	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _scan_key, _occlusion_key]
+	for i in keys.size():
+		keys[i].position = Vector3(0.075 + i * 0.060, -0.066, 0)
+		keys[i].label.font_size = 20
+	_refresh_scan()
 
 func _place_on_cuff(key: Key3D, angle_deg: float, y: float) -> void:
 	var basis := Basis(Vector3.UP, deg_to_rad(angle_deg))
@@ -846,6 +868,7 @@ func _refresh_scan() -> void:
 	# Like the mode key: a short name over the state, green while switched on.
 	_refresh_toggle(_scan_key, NaretLanguage.ui("Scan", "Skan", language), _scan_on)
 	_refresh_toggle(_hands_key, NaretLanguage.ui("Hände", "Dłonie", language), _hands_on)
+	_refresh_toggle(_gizmos_key, NaretLanguage.ui("Gizmos", "Gizmo", language), _gizmos_on)
 	if _ring_key:
 		_ring_key.set_text(NaretLanguage.ui("Ring\nanwenden", "Pierścień\nzastosuj", language))
 	if _occlusion_key:

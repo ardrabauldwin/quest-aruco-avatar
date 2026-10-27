@@ -10,6 +10,9 @@ var _rig: NaretRigAnimator
 var ragdoll: NaretRagdoll
 var _recovered := false
 var _breath_clock := 0.0
+## Chest depression of the human_patient.glb compression morph at weight 1.0
+## (field re-centred on the ERC compression point, commit 294275d).
+const MORPH_DEPTH_M := 0.0277
 var _current_compression := 0.0
 var _target_compression := 0.0
 var _zone_rest_position := Vector3.ZERO
@@ -307,7 +310,7 @@ func _apply_compression(depth: float) -> void:
 	_current_compression = depth
 	# In human_patient.glb, the mesh compression target yields 0.0277m depression at weight 1.0
 	# (field re-centred on the ERC compression point). 0.05m (5 cm) is weight 1.8.
-	var weight := clampf(depth / 0.0277, 0.0, 2.2)
+	var weight := clampf(depth / MORPH_DEPTH_M, 0.0, 2.2)
 	_rig.set_compression_amount(weight)
 	zone.position.y = _zone_rest_position.y - depth * 0.8
 	heart.squeeze(depth)
@@ -347,7 +350,7 @@ func compress(depth: float = 0.045) -> void:
 	if is_instance_valid(_recoil_tween) and _recoil_tween.is_running():
 		_recoil_tween.kill()
 	_current_compression = 0.0
-	var weight := clampf(depth / 0.0282, 0.5, 2.2)
+	var weight := clampf(depth / MORPH_DEPTH_M, 0.5, 2.2)
 	if not _rig.play_action("compression", weight):
 		breathing.compress(depth)
 	heart.squeeze(depth)

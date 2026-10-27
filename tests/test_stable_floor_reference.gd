@@ -93,10 +93,10 @@ func _test_unstable_input() -> void:
 	interrupted.height_world(NAN, Transform3D.IDENTITY, 600)
 	check(not is_finite(interrupted.height_world(0.0, Transform3D.IDENTITY, 1100)), "missing input restarts continuous window")
 	var sparse := Floor.new()
-	for i in 20:
-		sparse.height_world(0.0, Transform3D.IDENTITY, i * 500)
-	check(not sparse.ready, "long sampling gaps cannot count as a stable window")
+	check(not is_finite(sparse.height_world(0.0, Transform3D.IDENTITY, 0)), "setup starts with a reading")
+	check(not is_finite(sparse.height_world(0.002, Transform3D.IDENTITY, 500)), "half a second is insufficient")
+	check(is_equal_approx(sparse.height_world(0.004, Transform3D.IDENTITY, 1000), 0.002), "one second is sufficient without a sample-count or gap limit")
 	var duplicate := Floor.new()
 	for i in 20:
-		duplicate.height_world(0.0, Transform3D.IDENTITY, 0)
-	check(not is_finite(duplicate.height_world(0.0, Transform3D.IDENTITY, 1000)), "repeated timestamps and a later single sample cannot lock")
+		duplicate.height_world(0.002, Transform3D.IDENTITY, 0)
+	check(is_equal_approx(duplicate.height_world(0.0, Transform3D.IDENTITY, 1000), 0.001), "duplicate callbacks do not overweight the average")

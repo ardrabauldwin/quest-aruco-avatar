@@ -31,6 +31,7 @@ var chest_touch: NaretChestTouch
 ## Automatic floor height and its source, before the fingertip offset.
 var _floor_source := ""
 var _floor_source_y := NAN
+var _stable_floor := preload("res://scripts/tracking/stable_floor_reference.gd").new()
 var qcpr: NaretQcprManager
 var qcpr_debug_panel: NaretQcprDebugPanel
 var _info_viewport: SubViewport
@@ -358,13 +359,11 @@ func _on_room_status(status: String) -> void:
 		_place_bystanders()
 
 func _refresh_floor_reference() -> void:
-	# The room scan is preferred; the original LOCAL_FLOOR provider is the fallback.
-	# If neither is valid, keep the last valid reference rather than snapping to 0.
-	var height := room.floor_height_world() if room and room.available else NAN
-	var source := "room_scan"
-	if not is_finite(height):
-		height = xr.floor_height_world(origin)
-		source = "local_floor"
+	# Use one height source. Room scanning still supplies walls/obstacles, never
+	# patient floor height. Later samples cannot jitter the accepted floor plane.
+	var frame := origin.global_transform * XRServer.get_reference_frame()
+	var height := _stable_floor.height_world(xr.floor_height_world(origin), frame)
+	var source := "local_floor"
 	if not is_finite(height):
 		return
 	_floor_source = source
@@ -376,7 +375,7 @@ func _refresh_floor_reference() -> void:
 		anchor.floor_y = height
 		anchor.refresh()
 		_bystanders_placed_at = Vector3(INF, INF, INF)
-		print("NARET_FLOOR_SOURCE source=%s world_y=%.3f touch_offset=%.3f reference_y=%.3f play_area=%d" % [source, height, height - _floor_source_y, XRServer.get_reference_frame().origin.y, xr.interface.get_play_area_mode()])
+		print("NARET_FLOOR_SOURCE source=%s world_y=%.3f touch_offset=%.3f reference_y=%.3f play_area=%d" % [source, height, height - _floor_source_y, XRServer.get_reference_frame().origin.y, xr.interface.get_play_area_mode() if xr.interface else -1])
 
 func _calibrate_floor() -> void:
 	## Hand-menu key: the next fingertip resting on the floor sets its height.

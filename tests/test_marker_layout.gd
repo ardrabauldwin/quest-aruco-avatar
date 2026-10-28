@@ -33,6 +33,7 @@ func run() -> Array[String]:
 	cfg.save(path)
 	check(layout.load_profile(path) == ERR_INVALID_DATA, "legacy profile cannot silently assume common point is sternum")
 	cfg.set_value("layout", "common_to_sternum", layout.common_to_sternum)
+	cfg.set_value("layout", "common_frame", "patient_y_up")
 	cfg.set_value("layout", "marker_size_m", 0.10)
 	cfg.save(path)
 	check(layout.load_profile(path) == OK and is_equal_approx(layout.marker_size_m, 0.10), "explicit measured layout loads")

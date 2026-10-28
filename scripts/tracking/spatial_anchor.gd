@@ -44,6 +44,9 @@ var _floor_offset_y := 0.0
 @export var marker_to_mannequin := Transform3D.IDENTITY
 # user:// is the app's writable data directory, including on the headset.
 @export var calibration_file := "user://calibration.cfg"
+## Main scene uses patient-style anchors. False retains the historical API for
+## stand-alone/legacy scenes; saved alignments carry their convention explicitly.
+@export var patient_anchor_axes := false
 # Used only for the default sternum offset, not added again to saved calibration.
 @export var marker_thickness_m := 0.002
 # Model-only orientation adjustment. Keep marker fusion and its gravity axes intact.
@@ -110,7 +113,10 @@ func sternum_offset() -> Transform3D:
 	var rotation := Basis.from_euler(default_model_rotation_degrees * (PI / 180.0))
 	# Rotate about the chest landmark, not the model origin: R*point + offset
 	# stays at -marker_thickness_m on the anchor's vertical axis.
-	return Transform3D(rotation, -(rotation * point + Vector3.UP * marker_thickness_m))
+	# Preserve the previous world-space 2 mm placement when changing the anchor
+	# convention; the old anchor's +Y pointed down before the model's 180° flip.
+	var thickness_axis := Vector3.DOWN if patient_anchor_axes else Vector3.UP
+	return Transform3D(rotation, -(rotation * point + thickness_axis * marker_thickness_m))
 
 func update_pose(pose: Transform3D, now_ms := -1) -> void:
 	# Shared robust startup. Only the headset has a tracked viewer for motion gating.
@@ -221,6 +227,7 @@ func save_calibration() -> Error:
 	# Marker size/id share the profile; preserve their section on every offset save.
 	config.load(calibration_file)
 	config.set_value("calibration", "version", 1)
+	config.set_value("calibration", "alignment_frame", "patient_y_up" if patient_anchor_axes else "legacy_anchor")
 	config.set_value("calibration", "marker_to_mannequin", marker_to_mannequin)
 	config.set_value("calibration", "calibrated", calibrated)
 	config.set_value("calibration", "floor_adjustment_m", floor_adjustment_m)
@@ -247,6 +254,13 @@ func load_calibration() -> Error:
 	var pose: Variant = config.get_value("calibration", "marker_to_mannequin", Transform3D.IDENTITY)
 	if not pose is Transform3D or not pose.is_finite() or absf(pose.basis.determinant()) < 0.01:
 		return ERR_INVALID_DATA
+	var frame := str(config.get_value("calibration", "alignment_frame", "legacy_anchor"))
+	if frame not in ["legacy_anchor", "patient_y_up"]:
+		return ERR_INVALID_DATA
+	if (frame == "patient_y_up") != patient_anchor_axes:
+		# The anchor rotates 180°; left-rotate its model offset by the inverse
+		# (the same exact rotation). Their world-space product is unchanged.
+		pose = NaretMarkerLayout.LEGACY_ANCHOR_FLIP * (pose as Transform3D)
 	marker_to_mannequin = pose
 	calibrated = bool(config.get_value("calibration", "calibrated", false))
 	floor_adjustment_m = clampf(float(config.get_value("calibration", "floor_adjustment_m", 0.0)), -0.3, 0.3)

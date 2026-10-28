@@ -71,7 +71,7 @@ near = 0.03
 
 [node name="SpatialAnchor" type="Node3D" parent="." unique_id=274629464]
 script = ExtResource("4")
-default_model_rotation_degrees = Vector3(180, 0, 0)
+patient_anchor_axes = true
 
 [node name="Mannequin" parent="SpatialAnchor" unique_id=775750655 instance=ExtResource("2")]
 

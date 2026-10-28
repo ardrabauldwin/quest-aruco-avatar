@@ -7,11 +7,18 @@ extends RefCounted
 # When enabled, keep the body horizontal. This changes rotation, not height.
 var floor_orientation := false
 var marker_size_m := 0.10
-# For each marker ID: the saved transform from that marker to the common anchor.
+# All in-memory common anchors use patient-style axes: +Y up, +Z along the
+# body, -Z toward the head (before any separately saved model rotation).
+# For each marker ID: the transform from that marker to this common anchor.
 var offsets: Dictionary = {}
-# Converts the common anchor's coordinate system to the patient's sternum anchor.
+# Optional physical common-to-chest calibration, not a required axis adapter.
 # The patient's model alignment is handled separately by spatial_anchor.gd.
 var common_to_sternum := Transform3D.IDENTITY
+const PATIENT_FRAME := "patient_y_up"
+const LEGACY_FRAME := "legacy_z_down"
+# Used only while importing an old profile, never in the standard fusion path.
+const LEGACY_TO_PATIENT := Transform3D(Basis(Vector3.RIGHT, Vector3(0, 0, -1), Vector3(0, 1, 0)), Vector3.ZERO)
+const LEGACY_ANCHOR_FLIP := Transform3D(Basis(Vector3.RIGHT, Vector3.DOWN, Vector3.FORWARD), Vector3.ZERO)
 
 static func rigid(pose: Transform3D) -> bool:
 	# Reject invalid numbers, mirrored axes and scaling. We need position + rotation only.
@@ -23,10 +30,14 @@ func load_profile(path: String) -> Error:
 	var error := cfg.load(path)
 	if error != OK:
 		return error
-	# 1. Read and validate the common-to-sternum transform and physical marker size.
-	if not cfg.has_section_key("layout", "common_to_sternum"):
+	# 1. New profiles already use patient axes. Unlabelled older profiles need
+	# their explicit bridge so their output pose can be preserved on import.
+	var frame := str(cfg.get_value("layout", "common_frame", LEGACY_FRAME))
+	if frame not in [PATIENT_FRAME, LEGACY_FRAME]:
 		return ERR_INVALID_DATA
-	var bridge: Variant = cfg.get_value("layout", "common_to_sternum")
+	if frame == LEGACY_FRAME and not cfg.has_section_key("layout", "common_to_sternum"):
+		return ERR_INVALID_DATA
+	var bridge: Variant = cfg.get_value("layout", "common_to_sternum", Transform3D.IDENTITY)
 	var size := float(cfg.get_value("layout", "marker_size_m", 0.0))
 	if not bridge is Transform3D or not rigid(bridge) or not is_finite(size) or size < 0.01 or size > 0.30:
 		return ERR_INVALID_DATA
@@ -41,6 +52,10 @@ func load_profile(path: String) -> Error:
 			loaded_offsets[id] = offset
 	if loaded_offsets.is_empty():
 		return ERR_INVALID_DATA
+	if frame == LEGACY_FRAME:
+		for id in loaded_offsets:
+			loaded_offsets[id] = (loaded_offsets[id] as Transform3D) * LEGACY_TO_PATIENT
+		bridge = LEGACY_TO_PATIENT.affine_inverse() * (bridge as Transform3D) * LEGACY_ANCHOR_FLIP
 	# 3. Replace the current calibration only after the entire file passes validation.
 	floor_orientation = bool(cfg.get_value("layout", "floor_orientation", false))
 	offsets = loaded_offsets
@@ -74,12 +89,12 @@ func fuse(world_poses: Dictionary) -> Dictionary:
 		spread = maxf(spread, pose.origin.distance_to(common.origin))
 	if floor_orientation:
 		# 4. Flatten the body direction onto the horizontal plane.
-		# In the old marker frame, local Y points along the body and local Z down.
-		var along := common.basis.y.slide(Vector3.UP)
+		# Common and patient anchors now share +Y up and +Z along the body.
+		var along := common.basis.z.slide(Vector3.UP)
 		if along.length_squared() < 0.000001:
 			return {} # A nearly vertical body axis gives no reliable horizontal heading.
 		along = along.normalized()
-		common.basis = Basis(along.cross(Vector3.DOWN).normalized(), along, Vector3.DOWN)
+		common.basis = Basis(Vector3.UP.cross(along).normalized(), Vector3.UP, along)
 	# 5. Return the patient's anchor, contributing marker IDs and disagreement.
 	return {
 		"pose": common * common_to_sternum,

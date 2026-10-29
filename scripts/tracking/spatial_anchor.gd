@@ -64,6 +64,10 @@ var locked_pose := Transform3D.IDENTITY
 var viewer_head: Node3D
 var full_marker_evidence := true
 var viewer_gate := NaretViewerMotionGate.new()
+## Opt-in comparison version; launch with -- --placement-checkpoints.
+@export var checkpoint_updates := false
+var _checkpoint_target := Transform3D.IDENTITY
+var _checkpoint_transition := false
 var _viewer_filter: RefCounted
 var _viewer_rest_pose := Transform3D.IDENTITY
 var _viewer_last_ms := -1
@@ -87,8 +91,18 @@ func _process(delta: float) -> void:
 			patient.visible = locked
 		viewer_gate.head = viewer_head
 		viewer_gate.tick(delta)
+		if checkpoint_updates and _checkpoint_transition and locked:
+			if viewer_gate.moving or not full_marker_evidence or viewer_head.global_position.distance_to(locked_pose.origin) > viewer_gate.JUDGE_MOVE_MAX_RANGE_M:
+				_checkpoint_transition = false
+			else:
+				var amount := 1.0 - exp(-maxf(delta, 0.0) / 1.2)
+				locked_pose = locked_pose.interpolate_with(_checkpoint_target, amount)
+				_apply(locked_pose)
 
 func _ready() -> void:
+	checkpoint_updates = checkpoint_updates or "--placement-checkpoints" in OS.get_cmdline_user_args()
+	if checkpoint_updates:
+		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
 	# Saved alignment wins. Without it, start with the model's sternum-node offset.
 	load_calibration()
 	if not calibrated:
@@ -172,6 +186,14 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 	var corrected: Transform3D = result.pose
 	# Height stays at the startup anchor height; this is not snapping the mesh to floor.
 	corrected.origin.y = locked_pose.origin.y
+	if checkpoint_updates:
+		# Confirmation is the only authority for changing rest in this mode.
+		# No raw poses or old rest pull can drag the displayed patient meanwhile.
+		_viewer_rest_pose = corrected
+		_checkpoint_target = corrected
+		_checkpoint_transition = true
+		print("Checkpoint placement: confirmed after ", result.samples, " readings.")
+		return
 	if _viewer_filter == null:
 		# Start smoothing from the current accepted placement, preventing a reset jump.
 		_viewer_filter = load("res://addons/naret_upstream/avatar/simple_pose_stabilizer.gd").new()
@@ -208,6 +230,9 @@ func unlock() -> void:
 	# and smoothing history. Keep the model-specific calibration offset unchanged.
 	startup = NaretStartupPlacement.new()
 	viewer_gate = NaretViewerMotionGate.new()
+	if checkpoint_updates:
+		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
+	_checkpoint_transition = false
 	_viewer_filter = null
 	_viewer_last_ms = -1
 	locked = false

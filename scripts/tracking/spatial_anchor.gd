@@ -47,6 +47,9 @@ var _floor_offset_y := 0.0
 ## Main scene uses patient-style anchors. False retains the historical API for
 ## stand-alone/legacy scenes; saved alignments carry their convention explicitly.
 @export var patient_anchor_axes := false
+## Revision 2 resets pre-pivot manual translation/rotation once. Subsequent
+## explicit alignments saved with this revision remain usable.
+@export var patient_alignment_revision := 1
 # Used only for the default sternum offset, not added again to saved calibration.
 @export var marker_thickness_m := 0.002
 # Model-only orientation adjustment. Keep marker fusion and its gravity axes intact.
@@ -89,7 +92,7 @@ func _ready() -> void:
 	# Saved alignment wins. Without it, start with the model's sternum-node offset.
 	load_calibration()
 	if not calibrated:
-		marker_to_mannequin = sternum_offset()
+		marker_to_mannequin = sternum_offset(marker_to_mannequin.basis.get_scale())
 
 func body_changed() -> void:
 	## The patient's mesh moved inside the anchor (sternum landmark offset):
@@ -98,7 +101,7 @@ func body_changed() -> void:
 	_floor_projection = Vector3(INF, INF, INF)
 	refresh()
 
-func sternum_offset() -> Transform3D:
+func sternum_offset(model_scale: Vector3 = Vector3.ONE) -> Transform3D:
 	## Marker frame = patient frame moved onto the sternum surface (+ marker thickness).
 	# Locate the model's sternum relative to this anchor node, then move the model
 	# by the opposite amount. This places its sternum at the supplied chest anchor.
@@ -110,7 +113,7 @@ func sternum_offset() -> Transform3D:
 	var point: Vector3 = mannequin.transform * sternum.position
 	# Current scene assumption: sternum.position is expressed in mannequin space.
 	# If the model hierarchy changes, this coordinate relationship must be reviewed.
-	var rotation := Basis.from_euler(default_model_rotation_degrees * (PI / 180.0))
+	var rotation := Basis.from_euler(default_model_rotation_degrees * (PI / 180.0)) * Basis.from_scale(model_scale)
 	# Rotate about the chest landmark, not the model origin: R*point + offset
 	# stays at -marker_thickness_m on the anchor's vertical axis.
 	# Preserve the previous world-space 2 mm placement when changing the anchor
@@ -226,7 +229,15 @@ func save_calibration() -> Error:
 	var config := ConfigFile.new()
 	# Marker size/id share the profile; preserve their section on every offset save.
 	config.load(calibration_file)
+	if int(config.get_value("calibration", "patient_alignment_revision", 1)) < patient_alignment_revision \
+			and config.has_section_key("calibration", "marker_to_mannequin") \
+			and not config.has_section("previous_patient_alignment"):
+		# Retain the original data before any floor/chest save replaces the pose.
+		for key in ["marker_to_mannequin", "alignment_frame", "calibrated", "patient_alignment_revision"]:
+			if config.has_section_key("calibration", key):
+				config.set_value("previous_patient_alignment", key, config.get_value("calibration", key))
 	config.set_value("calibration", "version", 1)
+	config.set_value("calibration", "patient_alignment_revision", patient_alignment_revision)
 	config.set_value("calibration", "alignment_frame", "patient_y_up" if patient_anchor_axes else "legacy_anchor")
 	config.set_value("calibration", "marker_to_mannequin", marker_to_mannequin)
 	config.set_value("calibration", "calibrated", calibrated)
@@ -263,6 +274,12 @@ func load_calibration() -> Error:
 		pose = NaretMarkerLayout.LEGACY_ANCHOR_FLIP * (pose as Transform3D)
 	marker_to_mannequin = pose
 	calibrated = bool(config.get_value("calibration", "calibrated", false))
+	var saved_revision := int(config.get_value("calibration", "patient_alignment_revision", 1))
+	if saved_revision < patient_alignment_revision:
+		# Remove old positional/rotational nudges, retaining scale. Default
+		# geometry alignment puts the patient pivot at the supplied anchor.
+		marker_to_mannequin = sternum_offset((pose as Transform3D).basis.get_scale())
+		calibrated = false # Require explicit confirmation before starting training.
 	floor_adjustment_m = clampf(float(config.get_value("calibration", "floor_adjustment_m", 0.0)), -0.3, 0.3)
 	manual_floor_correction_m = clampf(float(config.get_value("calibration", "manual_floor_correction_m", 0.0)), -1.5, 1.5)
 	floor_touch_offset_m = clampf(float(config.get_value("calibration", "floor_touch_offset_m", 0.0)), -0.3, 0.3)

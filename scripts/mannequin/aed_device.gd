@@ -16,7 +16,7 @@ signal requested(action: String)
 signal spoke(key: String, language: String)
 signal pad_missed(name: String)
 
-## Electrode placement in mannequin space (supine, head -Z, patient's left +X):
+## Electrode placement in the authored BodyFrame (supine, head -Z, left +X):
 ## right pad below the right clavicle, left pad on the left mid-axillary line.
 ## ponytail: fixed chest poses for the one patient model; raycast if models vary.
 const PAD_POSES := {
@@ -311,7 +311,7 @@ func _power_on() -> void:
 
 func _pad_target(pose: String) -> Transform3D:
 	var at: Array = PAD_POSES[pose]
-	return _mannequin.global_transform * Transform3D(Basis.from_euler(at[1] * PI / 180.0), at[0])
+	return _mannequin.get_body_transform() * Transform3D(Basis.from_euler(at[1] * PI / 180.0), at[0])
 
 func _drop(pad: Node3D) -> void:
 	var best := ""

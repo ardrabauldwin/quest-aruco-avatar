@@ -5,6 +5,9 @@ extends Node3D
 @onready var pupils: NaretPupils = $Pupils
 @onready var breathing: NaretBreathing = $Breathing
 @onready var sternum: Marker3D = $Sternum
+## Authored body-coordinate datum for footprints, AED pads and thickness. It is
+## distinct from the patient pivot, which now coincides with the sternum.
+@onready var body_frame: Marker3D = $BodyFrame
 @onready var zone: MeshInstance3D = $Sternum/Highlight
 var _rig: NaretRigAnimator
 var ragdoll: NaretRagdoll
@@ -232,11 +235,30 @@ func set_thickness(value: float) -> void:
 	thickness = value
 	var model := $Model as Node3D
 	model.scale.y = _base_model_scale_y * value
-	heart.position.y = _base_heart_y * value
+	var datum_y := body_frame.position.y
+	heart.position.y = datum_y + (_base_heart_y - datum_y) * value
 	var anatomical_sternum := model.find_child("Sternum", true, false) as Node3D
 	if anatomical_sternum:
 		sternum.position.y = to_local(anatomical_sternum.global_position).y + _applied_landmark_offset.y
 	_sync_landmarks()
+	_rebase_to_sternum()
+
+func _rebase_to_sternum() -> void:
+	# Thickness fitting can move the chest landmark. Keep the pivot there while
+	# preserving every child's world transform and the authored body datum.
+	var shift := sternum.position
+	if shift.is_zero_approx():
+		return
+	position += basis * shift
+	for child in get_children():
+		if child is Node3D:
+			(child as Node3D).position -= shift
+	_neutral_forehead -= shift
+	_neutral_chin -= shift
+	_base_heart_y -= shift.y
+
+func get_body_transform() -> Transform3D:
+	return body_frame.global_transform
 
 func _collect_skin(node: Node) -> void:
 	## Own copies of the body's skin materials, so the tint never leaks into
@@ -424,7 +446,7 @@ func cast_floor_shadow(light_direction: Vector3) -> void:
 	if _floor_shadow == null:
 		_floor_shadow = ShaderMaterial.new()
 		_floor_shadow.shader = preload("res://assets/floor_shadow.gdshader")
-		_floor_shadow.set_shader_parameter("floor_y", global_position.y)
+		_floor_shadow.set_shader_parameter("floor_y", get_body_transform().origin.y)
 		for root: Node in [$Model, get_node_or_null("ScanReference")]:
 			if root == null:
 				continue

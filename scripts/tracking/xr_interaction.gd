@@ -249,7 +249,7 @@ func _patient_contact_detected() -> bool:
 func _point_near_patient(world_point: Vector3) -> bool:
 	# Conservative contact envelope around the whole supine patient, not just sternum.
 	# This can invalidate clearance; absence of tracked contact cannot prove clearance.
-	var point := _mannequin.to_local(world_point)
+	var point := _mannequin.get_body_transform().affine_inverse() * world_point
 	return absf(point.x) < 0.34 and point.y > -0.04 and point.y < 0.44 and point.z > -0.95 and point.z < 1.10
 
 func has_active_menu_press() -> bool:

@@ -475,7 +475,7 @@ func _local_rect(xs: Array, zs: Array) -> Rect2:
 	var maximum := Vector2(-INF, -INF)
 	for x: float in xs:
 		for z: float in zs:
-			var corner := mannequin.global_transform * Vector3(x, 0.0, z)
+			var corner := mannequin.get_body_transform() * Vector3(x, 0.0, z)
 			minimum = minimum.min(Vector2(corner.x, corner.z))
 			maximum = maximum.max(Vector2(corner.x, corner.z))
 	return Rect2(minimum, maximum - minimum)
@@ -484,7 +484,7 @@ func _place_bystanders() -> void:
 	## Bystanders belong on real free floor, never inside the trainee's furniture.
 	if xr.active and not anchor.locked:
 		return
-	var centre := mannequin.global_position
+	var centre := _patient_floor_centre()
 	# Scanned anchors stream in one by one, so a placement made on the first few
 	# has not seen the furniture that arrives after it.
 	var anchors := room.anchor_count() if room else 0
@@ -528,7 +528,7 @@ func _place_bystanders() -> void:
 			boundary.append(Vector2(world.x, world.z))
 		var flat := NaretRoomLayout.pick_spots(boundary, [_local_rect([-0.35, 0.35], [-1.05, 1.05])], Vector2(centre.x, centre.z), 2)
 		for point in flat:
-			spots.append(_speaker_floor_pose(Vector3(point.x, anchor.floor_y + anchor.manual_floor_correction_m, point.y), centre))
+			spots.append(_speaker_floor_pose(Vector3(point.x, anchor.floor_y, point.y), centre))
 		if flat.is_empty():
 			# Missing or too-small play area: retain a patient-relative arrangement.
 			# This makes the speakers visible, but cannot promise wall avoidance.
@@ -538,7 +538,7 @@ func _place_bystanders() -> void:
 			var side := forward.cross(Vector3.UP)
 			for direction: float in [-1.0, 1.0]:
 				var position := centre + forward * 1.2 + side * direction * 0.6
-				position.y = anchor.floor_y + anchor.manual_floor_correction_m
+				position.y = anchor.floor_y
 				spots.append(_speaker_floor_pose(position, centre))
 		print("NARET_ROOM fallback boundary_points=", boundary.size(), " speakers=", spots.size())
 	if spots.is_empty():
@@ -557,7 +557,13 @@ func _place_bystanders() -> void:
 			person.place_on_floor(spots[index])
 	print("NARET_ROOM placed speakers=", mini(spots.size(), people.size()),
 		" anna=", $Bystanders/Anna.global_position, " instructor=", $Instructor.global_position,
-		" viewer=", xr_camera.global_position, " corrected_floor=", anchor.floor_y + anchor.manual_floor_correction_m)
+		" viewer=", xr_camera.global_position, " corrected_floor=", anchor.floor_y)
+
+func _patient_floor_centre() -> Vector3:
+	var centre := mannequin.get_body_transform().origin
+	if anchor.floor_locked:
+		centre.y = anchor.floor_y
+	return centre
 
 func _speaker_floor_pose(position: Vector3, centre: Vector3) -> Transform3D:
 	var facing := centre - position

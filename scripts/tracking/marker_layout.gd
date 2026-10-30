@@ -14,6 +14,10 @@ var offsets: Dictionary = {}
 # Optional physical common-to-chest calibration, not a required axis adapter.
 # The patient's model alignment is handled separately by spatial_anchor.gd.
 var common_to_sternum := Transform3D.IDENTITY
+# Where a "marker_centroid" profile moved the common point, in its saved frame.
+var common_shift := Vector3.ZERO
+const SAVED_COMMON_POINT := "as_saved"
+const MARKER_CENTROID := "marker_centroid"
 const PATIENT_FRAME := "patient_y_up"
 const LEGACY_FRAME := "legacy_z_down"
 # Used only while importing an old profile, never in the standard fusion path.
@@ -37,6 +41,9 @@ func load_profile(path: String) -> Error:
 		return ERR_INVALID_DATA
 	if frame == LEGACY_FRAME and not cfg.has_section_key("layout", "common_to_sternum"):
 		return ERR_INVALID_DATA
+	var common_point := str(cfg.get_value("layout", "common_point", SAVED_COMMON_POINT))
+	if common_point not in [SAVED_COMMON_POINT, MARKER_CENTROID]:
+		return ERR_INVALID_DATA
 	var bridge: Variant = cfg.get_value("layout", "common_to_sternum", Transform3D.IDENTITY)
 	var size := float(cfg.get_value("layout", "marker_size_m", 0.0))
 	if not bridge is Transform3D or not rigid(bridge) or not is_finite(size) or size < 0.01 or size > 0.30:
@@ -56,12 +63,24 @@ func load_profile(path: String) -> Error:
 		for id in loaded_offsets:
 			loaded_offsets[id] = (loaded_offsets[id] as Transform3D) * LEGACY_TO_PATIENT
 		bridge = LEGACY_TO_PATIENT.affine_inverse() * (bridge as Transform3D) * LEGACY_ANCHOR_FLIP
-	# 3. Replace the current calibration only after the entire file passes validation.
+	# 3. Saved offsets may all point at one marker. Move them to the middle of the
+	# marker centres, so the common point stays there whichever markers are visible.
+	var shift := _marker_centroid(loaded_offsets) if common_point == MARKER_CENTROID else Vector3.ZERO
+	for id in loaded_offsets:
+		loaded_offsets[id] = (loaded_offsets[id] as Transform3D) * Transform3D(Basis.IDENTITY, shift)
+	# 4. Replace the current calibration only after the entire file passes validation.
 	floor_orientation = bool(cfg.get_value("layout", "floor_orientation", false))
 	offsets = loaded_offsets
+	common_shift = shift
 	marker_size_m = size
 	common_to_sternum = bridge
 	return OK
+
+func _marker_centroid(marker_offsets: Dictionary) -> Vector3:
+	var sum := Vector3.ZERO
+	for id in marker_offsets:
+		sum += (marker_offsets[id] as Transform3D).affine_inverse().origin
+	return sum / marker_offsets.size()
 
 func fuse(world_poses: Dictionary) -> Dictionary:
 	# 1. Make every visible marker estimate the SAME common anchor.

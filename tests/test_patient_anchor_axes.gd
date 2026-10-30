@@ -7,6 +7,9 @@ func run() -> Array[String]:
 	check(standard.load_profile("res://data/user_marker_layout.cfg") == OK, "patient-axis profile loads without an axis bridge")
 	check(legacy.load_profile("res://tests/fixtures/marker_layout_legacy.cfg") == OK, "old profile imports without editing saved calibration")
 	check(standard.common_to_sternum.is_equal_approx(Transform3D.IDENTITY), "standard profile has no remaining axis conversion")
+	# The axis checks below compare the saved point; test_marker_layout.gd covers the centroid.
+	for id in standard.offsets:
+		standard.offsets[id] = (standard.offsets[id] as Transform3D) * Transform3D(Basis.IDENTITY, -standard.common_shift)
 	var original := ConfigFile.new()
 	original.load("res://tests/fixtures/marker_layout_legacy.cfg")
 	for id in standard.offsets:

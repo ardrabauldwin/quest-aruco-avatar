@@ -97,6 +97,7 @@ Der virtuelle Patient wird ohne Scan und ohne Vermessung auf **jede** Übungspup
   - Eine neue ruhige Pose, die mehr als 1,5 cm / 5° abweicht, legt den Patienten neu an. Das bedeutet: Die Puppe wurde verschoben.
   - `unlock()` erzwingt Neuerfassung.
 - **Genauigkeit:** exakt am Druckpunkt, sonst nur ungefähr. Schulterbreite, Wölbung und Halslänge der Puppe werden nicht gemessen. Die Genauigkeit hängt an Markergröße, Kamera und Handtracking (etwa 1 cm).
+- **Mehrere Marker:** Mit `common_point="marker_centroid"` im Marker-Layout ist der gemeinsame Punkt die Mitte aller Markerzentren statt Marker 0. Jeder sichtbare Marker schätzt diese Mitte, auch allein.
 - **Desktop/Simulator:** Die Vorschaupose ist die Pose, die der Marker auf dem Brustbein hätte (`preview_pose = Patientenort * marker_to_mannequin⁻¹`). Der Patient steht dort wie bisher.
 
 ## Hände, Interaktion und CPR

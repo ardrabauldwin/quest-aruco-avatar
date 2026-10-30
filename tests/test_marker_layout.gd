@@ -63,5 +63,23 @@ func run() -> Array[String]:
 	check(published.size() == 1 and not tracker.tracked, "stale results neither place patient nor stay tracked")
 	check(tracker.configure_marker(0.05, 0) == ERR_UNAVAILABLE, "single marker controls cannot silently corrupt layout geometry")
 	world.free()
+	cfg.set_value("layout", "common_point", "marker_seven")
+	cfg.save(path)
+	check(layout.load_profile(path) == ERR_INVALID_DATA, "an unknown common point is rejected")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	_test_marker_centroid()
 	return failures
+
+func _test_marker_centroid() -> void:
+	var layout := NaretMarkerLayout.new()
+	check(layout.load_profile("res://data/user_marker_layout.cfg") == OK, "three-marker profile loads")
+	var common := Transform3D(Basis(Vector3.UP, 0.7), Vector3(1, 0.2, -2))
+	var markers := {}
+	var middle := Vector3.ZERO
+	for id in layout.offsets:
+		markers[id] = common * (layout.offsets[id] as Transform3D).affine_inverse()
+		middle += (markers[id] as Transform3D).origin / float(layout.offsets.size())
+	check(layout.common_shift.length() > 0.05, "the common point leaves marker zero")
+	check(layout.fuse(markers).pose.origin.is_equal_approx(middle), "the common point is the mean of the three marker centres")
+	for id in markers:
+		check(layout.fuse({id: markers[id]}).pose.origin.is_equal_approx(middle), "marker %d alone reaches the same middle point" % id)

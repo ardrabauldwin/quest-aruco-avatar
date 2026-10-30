@@ -284,7 +284,7 @@ func _test_hand_menu(tree: SceneTree) -> void:
 	# Actions are real 3D targets above the fingertips: the other hand's poke must reach the scenario.
 	var start_node: Node3D = menu._large_start
 	var index_tip := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP).origin
-	check(start_node.visible and start_node.label.text == "Start training", "idle scenario offers the start node")
+	check(start_node.visible and start_node.label.text == "Training starten", "idle scenario offers the start node")
 	check(not menu._action_keys[0].visible, "Start is not duplicated in the dynamic action list")
 	var hit: Dictionary = interaction._poke_panel(start_node.global_transform * Vector3(0, 0, 0.002))
 	check(hit.get("target") == start_node, "fingertip in front of the start node pokes that node, not the palm panel")

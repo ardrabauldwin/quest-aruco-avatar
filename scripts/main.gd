@@ -310,6 +310,7 @@ func _build_xr_ui() -> void:
 	hand_menu.reference_scan_toggled.connect(mannequin.set_reference_visible)
 	hand_menu.hand_meshes_toggled.connect(xr.set_hands_visible)
 	hand_menu.marker_gizmos_toggled.connect(_set_marker_gizmos)
+	hand_menu.head_tilt_gizmos_toggled.connect(_set_head_tilt_gizmos)
 	hand_menu.chest_calibration_requested.connect(_calibrate_chest)
 	hand_menu.chest_fit_requested.connect(_set_chest_fit)
 	hand_menu.set_chest_fit(anchor.chest_fit)

@@ -125,6 +125,18 @@ func run() -> Array[String]:
 	scenario.compressions = 17
 	menu.update_session(scenario)
 	check(menu._large_start.label.text == "Restart training", "active exercise always offers Restart instead of an inert Training active button")
+	# A language switch relabels every key at once, without waiting for the next session update.
+	var labels := {
+		"de": {"start": "Training neu starten", "languages": "Sprachen: Deutsch", "tilt": "Kopfneigung\nZonen\naus", "hands": "Hände\nan"},
+		"pl": {"start": "Rozpocznij od nowa", "languages": "Języki: Polski", "tilt": "Strefy\nodchylenia\nwył.", "hands": "Dłonie\nwł."},
+		"en": {"start": "Restart training", "languages": "Languages: English", "tilt": "Head tilt\nzones\noff", "hands": "Hands\non"},
+	}
+	for code: String in labels:
+		menu.set_language(code)
+		check(menu._large_start.label.text == labels[code].start, code + ": the start key switches language")
+		check(menu._language_menu.label.text == labels[code].languages, code + ": the languages key switches language")
+		check(menu._tilt_gizmos_key.label.text == labels[code].tilt, code + ": the head tilt zones key switches language")
+		check(menu._hands_key.label.text == labels[code].hands, code + ": the hands key switches language")
 	menu._large_start.pressed.emit()
 	check(actions.back() == "restart", "restart request is available during an unfinished exercise")
 	scenario.start()

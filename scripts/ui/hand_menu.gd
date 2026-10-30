@@ -26,6 +26,7 @@ signal chest_fit_requested(fit: String)
 signal sternum_landmark_apply_requested
 signal occlusion_requested(mode: String)
 signal marker_gizmos_toggled(visible: bool)
+signal head_tilt_gizmos_toggled(visible: bool)
 var _controls: Node3D
 var _large_align: Key3D
 var _floor_key: Key3D
@@ -47,6 +48,8 @@ var _debug_menu: Key3D
 var _debug_choices: Node3D
 var _gizmos_key: Key3D
 var _gizmos_on := false
+var _tilt_gizmos_key: Key3D
+var _tilt_gizmos_on := false
 var _large_start: Key3D
 var _start_action := ""
 var _notice: Label3D
@@ -541,8 +544,8 @@ func _build_exercise_controls() -> void:
 		_language_keys[code] = key
 	_refresh_language_selection()
 	_build_debug_controls()
-	_large_start = _key("Start training", Vector2(0.075, 0.045), "key", func():
-		show_notice("Restarting training" if _start_action == "restart" else "Starting training")
+	_large_start = _key(NaretLanguage.ui("Training starten", "Rozpocznij trening", language), Vector2(0.075, 0.045), "key", func():
+		show_notice(NaretLanguage.ui("Training wird neu gestartet", "Ponowne uruchamianie treningu", language) if _start_action == "restart" else NaretLanguage.ui("Training wird gestartet", "Uruchamianie treningu", language))
 		if not _start_action.is_empty(): action_requested.emit(_start_action), _controls)
 	# Start and save share one row, 2.5 cm apart so a poke cannot hit both.
 	_large_start.position = Vector3(-0.050, -0.022, 0)
@@ -562,7 +565,7 @@ func _build_exercise_controls() -> void:
 	_controls.add_child(_notice)
 
 func _build_debug_controls() -> void:
-	# Testing aids, opened by the cuff's Debug key into a flat 2×2 grid just past
+	# Testing aids, opened by the cuff's Debug key into a flat 3×2 grid just past
 	# the cuff's right edge. Unlike the languages they stay open while switching,
 	# until Debug is pressed again.
 	_debug_choices = Node3D.new()
@@ -578,6 +581,11 @@ func _build_debug_controls() -> void:
 		_hands_on = not _hands_on
 		_refresh_scan()
 		hand_meshes_toggled.emit(_hands_on), _debug_choices)
+	# The forehead and chin areas of the head-tilt gesture.
+	_tilt_gizmos_key = _key("", DEBUG_KEY_SIZE, "key", func():
+		_tilt_gizmos_on = not _tilt_gizmos_on
+		_refresh_scan()
+		head_tilt_gizmos_toggled.emit(_tilt_gizmos_on), _debug_choices)
 	# Swaps the full-body patient for the 1:1 mannequin scan, to check the fit.
 	_scan_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		_scan_on = not _scan_on
@@ -586,11 +594,11 @@ func _build_debug_controls() -> void:
 	# Real-world occlusion: off → room (patient excluded) → all.
 	_occlusion_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _debug_choices)
-	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _scan_key, _occlusion_key]
+	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _tilt_gizmos_key, _scan_key, _occlusion_key]
 	# The cuff's +X is the wearer's right; the grid faces out like the cuff's front
 	# and starts 1 cm past the Export key at 76°, so a poke cannot hit both.
 	for i in keys.size():
-		keys[i].position = Vector3(0.078 + (i % 2) * 0.042, CUFF_ROW_Y[0 if i < 2 else 1], CUFF_R_M * 0.3)
+		keys[i].position = Vector3(0.078 + (i % 3) * 0.042, CUFF_ROW_Y[0 if i < 3 else 1], CUFF_R_M * 0.3)
 		keys[i].label.font_size = 18
 	_refresh_scan()
 
@@ -804,7 +812,7 @@ func _set_shown(value: bool) -> void:
 func update_session(scenario: NaretScenario) -> void:
 	var actions := scenario.get_interface_actions()
 	_start_action = "start" if scenario.state == NaretScenario.State.IDLE else "restart"
-	_large_start.set_text("Start training" if _start_action == "start" else "Restart training")
+	_refresh_start()
 	var training_active := scenario.state != NaretScenario.State.IDLE and scenario.state != NaretScenario.State.RECOVERY
 	_large_start.set_accent(Color("32d16d") if training_active else GLOW, Color("16843c") if training_active else Color.TRANSPARENT)
 	if scenario.state == NaretScenario.State.RECOVERY: actions = ["restart", "briefing"]
@@ -850,9 +858,14 @@ func set_language(value: String) -> void:
 	_export_key.set_text(NaretLanguage.ui("Export", "Eksport", language))
 	_large_align.set_text(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language))
 	_floor_key.set_text(NaretLanguage.ui("Boden", "Podłoga", language))
+	_refresh_start()
 	_refresh_scan()
 	_refresh_mode()
 	_refresh_mic()
+
+
+func _refresh_start() -> void:
+	_large_start.set_text(NaretLanguage.ui("Training neu starten", "Rozpocznij od nowa", language) if _start_action == "restart" else NaretLanguage.ui("Training starten", "Rozpocznij trening", language))
 
 
 func set_mode(value: String) -> void:
@@ -864,7 +877,7 @@ func set_mode(value: String) -> void:
 func _refresh_language_selection() -> void:
 	if _language_menu:
 		var title: String = {"en": "English", "de": "Deutsch", "pl": "Polski"}.get(language, language)
-		_language_menu.set_text("Languages: " + title)
+		_language_menu.set_text(NaretLanguage.ui("Sprachen: ", "Języki: ", language) + title)
 	for code: String in _language_keys:
 		var selected := code == language
 		_language_keys[code].set_accent(Color("32d16d") if selected else GLOW, Color("16843c") if selected else Color.TRANSPARENT)
@@ -874,6 +887,7 @@ func _refresh_scan() -> void:
 	_refresh_toggle(_scan_key, NaretLanguage.ui("Scan", "Skan", language), _scan_on)
 	_refresh_toggle(_hands_key, NaretLanguage.ui("Hände", "Dłonie", language), _hands_on)
 	_refresh_toggle(_gizmos_key, NaretLanguage.ui("Gizmos", "Gizmo", language), _gizmos_on)
+	_refresh_toggle(_tilt_gizmos_key, NaretLanguage.ui("Kopfneigung\nZonen", "Strefy\nodchylenia", language), _tilt_gizmos_on)
 	if _ring_key:
 		_ring_key.set_text(NaretLanguage.ui("Ring\nanwenden", "Pierścień\nzastosuj", language))
 	if _occlusion_key:

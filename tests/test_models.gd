@@ -51,8 +51,8 @@ func _verify_skin(model: Node3D) -> void:
 	check(weighted_meshes > 0, model.name + ": mesh weights bind geometry to skeleton")
 
 func _test_ragdoll() -> void:
-	## A tugged shoulder has to actually move, and the torso has to stay put: it is
-	## registered to the physical mannequin and may not drift under physics.
+	## A tugged hand has to actually move, and the torso has to stay put: it is
+	## registered to the physical mannequin, so touching the shoulders moves nothing.
 	var model := _load_actor("res://assets/models/human_patient.glb")
 	if model == null:
 		return
@@ -69,30 +69,54 @@ func _test_ragdoll() -> void:
 	# them in; the grab has to work from there.
 	await _tree().create_timer(0.4).timeout
 	var shoulder := ragdoll.limb_point("upperarm_l")
-	var spine := ragdoll.limb_point("spine_03")
+	var wrist := ragdoll.limb_point("hand_l")
 	check(shoulder != Vector3.ZERO, "the shoulder resolves to a physical bone")
-	check(not ragdoll.grab("far", shoulder + Vector3(0, 2, 0)), "a hand out of reach grabs nothing")
-	check(ragdoll.grab("hand", shoulder), "a hand at the shoulder takes hold of it")
+	check(not ragdoll.grab("far", wrist + Vector3(0, 2, 0)), "a hand out of reach grabs nothing")
+	for bone: String in NaretRagdoll.UNGRABBABLE_BONES:
+		check(not ragdoll.grab("hand", ragdoll.limb_point(bone)), "a hand on " + bone + " moves nothing")
+	check(ragdoll.grab("hand", wrist), "a hand at the wrist takes hold of the arm")
 	# The headless runner advances physics frames but does not integrate these
 	# bodies, so this asserts the command NaReT issues, not Godot's solver. The
-	# resulting motion is reviewed in the Meta XR Simulator (make xr-shot --tug),
-	# where the same pull moves the limb about 0.11 m.
-	var target := shoulder + Vector3(0.12, 0.30, 0.0)
+	# resulting motion is reviewed in the Meta XR Simulator (make xr-shot --tug).
+	var target := wrist + Vector3(0.12, 0.30, 0.0)
 	ragdoll.move("hand", target)
 	check(ragdoll.held_target("hand").distance_to(target) < 0.001, "a limb is pulled toward the hand")
-	check(ragdoll._torso_target_angle == 0.0, "a single hand on one shoulder cannot sit the person up")
-	var shoulder_r := ragdoll.limb_point("upperarm_r")
-	check(ragdoll.grab("hand2", shoulder_r), "second hand takes hold of right shoulder")
-	ragdoll.move("hand2", shoulder_r + Vector3(0.0, 0.30, 0.0))
-	check(ragdoll._torso_target_angle > 20.0, "grasping both shoulders with two hands sits the person up")
-	ragdoll.release("hand2")
-	check(ragdoll._torso_target_angle == 0.0, "releasing one shoulder drops the sit-up target back to zero")
 	# Reach is bounded so a failed joint can never stretch the patient across the room.
-	ragdoll.move("hand", shoulder + Vector3(0.0, 8.0, 0.0))
-	check(ragdoll.held_target("hand").distance_to(shoulder) <= NaretRagdoll.REACH_M + 0.001, "a limb cannot be dragged past its reach")
+	ragdoll.move("hand", wrist + Vector3(0.0, 8.0, 0.0))
+	check(ragdoll.held_target("hand").distance_to(wrist) <= NaretRagdoll.REACH_M + 0.001, "a limb cannot be dragged past its reach")
 	check(ragdoll.held_target("spine_03") == Vector3.ZERO, "the registered torso is never driven")
 	ragdoll.release("hand")
 	check(not ragdoll.holds("hand"), "releasing lets go of the limb")
+	var skeleton: Skeleton3D = ragdoll._skeleton
+	var head := skeleton.find_bone("head")
+	var neck := skeleton.find_bone("neck_01")
+	var head_rest := skeleton.get_bone_global_pose(head)
+	var neck_rest := skeleton.get_bone_global_pose(neck)
+	ragdoll._head_tilt = 20.0
+	ragdoll._apply_to_skeleton()
+	var tilted := skeleton.get_bone_global_pose(head)
+	check((tilted * ragdoll._head_pivot).distance_to(NaretRagdoll.EAR_LINE_POINT) < 0.001, "the head turns about the line through the ears")
+	check(skeleton.get_bone_global_pose(neck).is_equal_approx(neck_rest), "tilting the head leaves the neck at rest")
+	check(tilted.basis.y.z > head_rest.basis.y.z + 0.2, "a positive tilt turns the crown toward the face")
+	ragdoll._head_tilt = 0.0
+	ragdoll._apply_to_skeleton()
+	check(skeleton.get_bone_global_pose(head).is_equal_approx(head_rest), "the head returns to rest")
+	# A hand on the forehead, turned around the ear line in skeleton space.
+	var on_forehead := func(degrees: float) -> Vector3:
+		var lever := Vector3(0, 0.05, 0.11).rotated(Vector3.RIGHT, deg_to_rad(degrees))
+		return skeleton.global_transform * (NaretRagdoll.EAR_LINE_POINT + lever)
+	check(ragdoll.grab("head_hand", on_forehead.call(0.0)), "a hand on the forehead takes hold of the head")
+	check(ragdoll._head_target_tilt == 0.0, "taking hold does not move the head")
+	ragdoll.move("head_hand", on_forehead.call(-20.0))
+	check(absf(ragdoll._head_target_tilt + 20.0) < 0.5, "the hand tilts the head back as far as it turns")
+	ragdoll.move("head_hand", on_forehead.call(15.0))
+	check(absf(ragdoll._head_target_tilt - 15.0) < 0.5, "the same hold bends the head forward")
+	ragdoll.move("head_hand", on_forehead.call(-90.0))
+	check(ragdoll._head_target_tilt == -NaretRagdoll.MAX_HEAD_EXTENSION_DEG, "tilting back stops at its limit")
+	ragdoll.move("head_hand", skeleton.global_transform * NaretRagdoll.EAR_LINE_POINT)
+	check(ragdoll._head_target_tilt == -NaretRagdoll.MAX_HEAD_EXTENSION_DEG, "a hand on the ear line leaves the tilt alone")
+	ragdoll.release("head_hand")
+	check(ragdoll._head_target_tilt == 0.0, "letting go returns the head")
 	model.queue_free()
 	stage.queue_free()
 	await _tree().process_frame

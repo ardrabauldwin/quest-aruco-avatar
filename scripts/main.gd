@@ -451,6 +451,18 @@ func _set_marker_gizmos(shown: bool) -> void:
 		add_child(gizmos)
 		gizmos.bind(provider)
 
+func _set_head_tilt_gizmos(shown: bool) -> void:
+	## Debug key: the forehead and chin areas of the head-tilt gesture. Built only while on.
+	var gizmos := get_node_or_null("HeadTiltGizmos")
+	if not shown:
+		if gizmos: gizmos.queue_free()
+		return
+	if gizmos == null and interaction != null:
+		gizmos = load("res://scripts/tracking/head_tilt_gizmos.gd").new()
+		gizmos.name = "HeadTiltGizmos"
+		add_child(gizmos)
+		gizmos.bind(mannequin, interaction.head_tilt_gesture)
+
 func _set_occlusion(mode: String) -> void:
 	## Debug key: real-world occlusion off, for the room only, or for the patient too.
 	xr.set_occlusion(mode)

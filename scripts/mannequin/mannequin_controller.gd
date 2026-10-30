@@ -34,8 +34,6 @@ const WRONG := Color("d11909")
 const TILT := {"neck_01": 10.0, "head": 10.0}
 var _tilt_modifier: HeadTilt
 var _eyes: Array[Node3D] = []
-var _neutral_forehead := Vector3.ZERO
-var _neutral_chin := Vector3.ZERO
 ## Physical mannequin fit. Length means crown to waist, not full adult height.
 ## Zero disables fitting for another mannequin. Thickness is kept unchanged.
 @export var fit_head_to_waist_m := 0.0
@@ -206,12 +204,6 @@ func _sync_landmarks() -> void:
 		var marker := model.find_child(pair[0], true, false) as Node3D
 		if marker:
 			(pair[1] as Node3D).position = to_local(marker.global_position)
-	# Capture neutral landmarks at rest. Animation must not move its own hit zones.
-	var forehead_marker := model.find_child("Forehead", true, false) as Node3D
-	var mouth_marker := model.find_child("Mouth", true, false) as Node3D
-	if forehead_marker and mouth_marker:
-		_neutral_forehead = to_local(forehead_marker.global_position)
-		_neutral_chin = to_local(mouth_marker.global_position) + Vector3(0, -0.025, 0.04) * model.scale
 
 func apply_sternum_landmark_offset() -> bool:
 	## Hand-menu key for tuning: applies sternum_landmark_offset as last edited,
@@ -253,8 +245,6 @@ func _rebase_to_sternum() -> void:
 	for child in get_children():
 		if child is Node3D:
 			(child as Node3D).position -= shift
-	_neutral_forehead -= shift
-	_neutral_chin -= shift
 	_base_heart_y -= shift.y
 
 func get_body_transform() -> Transform3D:
@@ -402,10 +392,11 @@ func forehead() -> Vector3:
 	return eyes + global_basis.y.normalized() * 0.02 - global_basis.z.normalized() * 0.05
 
 func gesture_forehead() -> Vector3:
-	return global_transform * _neutral_forehead
+	## Children of Model, not of the head bone: animation must not move its own hit zones.
+	return ($Model/HeadTiltForehead as Node3D).global_position
 
 func gesture_chin() -> Vector3:
-	return global_transform * _neutral_chin
+	return ($Model/HeadTiltChin as Node3D).global_position
 
 func set_recovered(recovered: bool) -> void:
 	_recovered = recovered

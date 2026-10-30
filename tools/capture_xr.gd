@@ -96,7 +96,7 @@ func _aim_camera() -> void:
 	_camera.look_at(focus, Vector3.UP)
 
 func _apply_tug(delta: float) -> void:
-	## Scripted pull on a shoulder, so the ragdoll can be reviewed without hands.
+	## Scripted pull on a hand, so the ragdoll can be reviewed without hands.
 	if not "--tug" in OS.get_cmdline_user_args():
 		return
 	var mannequin: Node = _scene.get_node_or_null("SpatialAnchor/Mannequin")
@@ -106,9 +106,9 @@ func _apply_tug(delta: float) -> void:
 	if _frames < 90:
 		return
 	if _frames == 90:
-		_tug_from = ragdoll.limb_point("upperarm_l")
+		_tug_from = ragdoll.limb_point("hand_l")
 		ragdoll.grab("review", _tug_from)
-		print("CAPTURE_XR tugging upperarm_l from ", _tug_from)
+		print("CAPTURE_XR tugging hand_l from ", _tug_from)
 	var progress := clampf(float(_frames - 90) / 90.0, 0.0, 1.0)
 	ragdoll.move("review", _tug_from + Vector3(0.10, 0.34, 0.16) * progress)
 

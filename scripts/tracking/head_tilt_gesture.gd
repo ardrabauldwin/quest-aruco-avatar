@@ -5,12 +5,16 @@ extends RefCounted
 ## No score, airway confirmation, or scenario observation is produced here.
 const FOREHEAD_RADIUS_M := 0.06
 const CHIN_RADIUS_M := 0.045
+const ACTIVE_RADIUS_FACTOR := 1.4
 const HOLD_S := 0.35
 const MOVE_WINDOW_S := 2.0
 const MOTION_CONFIRM_S := 0.12
 const LOST_GRACE_S := 0.25
 var active := false
 var state := "waiting"
+# Whether each zone's own hand condition holds this frame; only debug overlays read these.
+var forehead_met := false
+var chin_met := false
 var _forehead_hand := -1
 var _hold := 0.0
 var _move_time := 0.0
@@ -37,7 +41,8 @@ func observe(hands: Array, forehead: Vector3, chin: Vector3, up: Vector3, toward
 			if _matches(hands, index, forehead, chin, 1.0):
 				role = index
 				break
-	var radius_factor := 1.4 if active else 1.0
+	var radius_factor := ACTIVE_RADIUS_FACTOR if active else 1.0
+	_update_gates(hands, forehead, chin, radius_factor)
 	if role < 0 or not _matches(hands, role, forehead, chin, radius_factor):
 		_lost += dt
 		# A short dropout can hold an existing animation, never start a new one.
@@ -83,6 +88,20 @@ func observe(hands: Array, forehead: Vector3, chin: Vector3, up: Vector3, toward
 		active = true
 		state = "gesture_detected"
 	return active
+
+func _update_gates(hands: Array, forehead: Vector3, chin: Vector3, factor: float) -> void:
+	var palms: Array[int] = []
+	var fingers: Array[int] = []
+	for index in hands.size():
+		if hands[index].is_empty():
+			continue
+		if hands[index].palm.distance_to(forehead) <= FOREHEAD_RADIUS_M * factor:
+			palms.append(index)
+		if hands[index].finger.distance_to(chin) <= CHIN_RADIUS_M * factor:
+			fingers.append(index)
+	forehead_met = not palms.is_empty()
+	# One hand cannot hold both roles, so its fingertip does not count for the chin.
+	chin_met = not fingers.is_empty() and not (fingers.size() == 1 and palms == fingers)
 
 func _matches(hands: Array, role: int, forehead: Vector3, chin: Vector3, factor: float) -> bool:
 	return hands.size() == 2 and not hands[role].is_empty() and not hands[1 - role].is_empty() \

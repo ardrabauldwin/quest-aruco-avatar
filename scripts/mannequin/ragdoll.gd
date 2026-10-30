@@ -1,12 +1,17 @@
 class_name NaretRagdoll
 extends Node
-## Anatomical posing of the CPR mannequin: sit-up, hinge-limited arm IK and head tilt.
+## Anatomical posing of the CPR mannequin: hinge-limited arm IK and head tilt.
 
 const GRAB_RANGE_M := 0.22
 const REACH_M := 0.52
-const MAX_SITUP_DEG := 80.0
 const MAX_ELBOW_FLEX_DEG := 140.0
-const MAX_HEAD_TILT_DEG := 35.0
+# Head tilt is signed: positive bends the head forward, negative tilts it back.
+const MAX_HEAD_FLEXION_DEG := 35.0
+const MAX_HEAD_EXTENSION_DEG := 35.0
+# Closer to the ear line than this, the hand's angle around it is only noise.
+const HEAD_MIN_LEVER_M := 0.03
+# Midpoint of the ears on the rest mesh, in skeleton space (ears at x = ±0.085).
+const EAR_LINE_POINT := Vector3(0.0, 1.615, 0.040)
 
 const BONES := [
 	"spine_01", "spine_02", "spine_03", "clavicle_l", "clavicle_r",
@@ -14,32 +19,31 @@ const BONES := [
 	"neck_01", "head",
 ]
 # Grab candidates per part, checked in this order; a later part only wins when strictly closer.
-# Upper arm and shoulder belong to the torso so touching them moves the shoulder girdle, not the hand.
 const GRAB_PARTS := {
-	"torso": ["spine_03", "clavicle_l", "clavicle_r", "upperarm_l", "upperarm_r"],
 	"arm_l": ["hand_l", "lowerarm_l"],
 	"arm_r": ["hand_r", "lowerarm_r"],
 	"head": ["head", "neck_01"],
 }
-const SPINE_WEIGHTS := {"spine_01": 0.45, "spine_02": 0.35, "spine_03": 0.20}
+# A hand nearer one of these than any limb holds nothing, so reaching for the
+# chest or shoulder does not catch the head or an elbow within GRAB_RANGE_M.
+const UNGRABBABLE_BONES := ["spine_03", "clavicle_l", "clavicle_r", "upperarm_l", "upperarm_r"]
+const SPINE_BONES := ["spine_01", "spine_02", "spine_03"]
 
 var _skeleton: Skeleton3D
 var _bones: Dictionary = {}
 var _home: Dictionary = {}
 var _rest_quats: Dictionary = {}
 var _held: Dictionary = {}
-var _held_targets: Dictionary = {}
 var _targets: Dictionary = {}
 
 # Articulation states
-var _torso_angle := 0.0
-var _torso_target_angle := 0.0
-var _torso_velocity := 0.0
-var _torso_roll := 0.0
-var _torso_target_roll := 0.0
 var _head_tilt := 0.0
 var _head_target_tilt := 0.0
 var _head_held := false
+var _head_posed := false
+var _head_pivot := Vector3.ZERO
+var _neck_pivot := Vector3.ZERO
+var _head_rest_position := Vector3.ZERO
 # Per-arm state keyed by grab part; the side suffix ("l"/"r") is part.right(1).
 var _arms := {
 	"arm_l": {"flexion": 0.0, "rot": Quaternion.IDENTITY, "target": Vector3.ZERO, "held": false},
@@ -77,6 +81,12 @@ func configure(model: Node3D) -> void:
 		_l1 = s.distance_to(e)
 		_l2 = e.distance_to(w)
 
+	if _home.has("head"):
+		_head_pivot = _skeleton.get_bone_global_rest(_home["head"]).affine_inverse() * EAR_LINE_POINT
+		_head_rest_position = _skeleton.get_bone_rest(_home["head"]).origin
+	if _home.has("neck_01"):
+		_neck_pivot = _skeleton.get_bone_global_rest(_home["neck_01"]).affine_inverse() * EAR_LINE_POINT
+
 	reset_to_skeleton()
 	process_priority = 200
 	process_physics_priority = 200
@@ -101,16 +111,11 @@ func held_target(id: String) -> Vector3:
 
 func reset_to_skeleton() -> void:
 	_held.clear()
-	_held_targets.clear()
 	_targets.clear()
-	_torso_angle = 0.0
-	_torso_target_angle = 0.0
-	_torso_velocity = 0.0
-	_torso_roll = 0.0
-	_torso_target_roll = 0.0
 	_head_tilt = 0.0
 	_head_target_tilt = 0.0
 	_head_held = false
+	_head_posed = false
 	for arm: Dictionary in _arms.values():
 		arm.flexion = 0.0
 		arm.rot = Quaternion.IDENTITY
@@ -137,69 +142,22 @@ func grab(id: String, world_point: Vector3) -> bool:
 
 	if chosen_part.is_empty():
 		return false
+	for name: String in UNGRABBABLE_BONES:
+		if limb_point(name).distance_to(world_point) < best_dist:
+			return false
 
 	_held[id] = {"part": chosen_part, "anchor": anchor_name}
-	_held_targets[id] = world_point
 	_targets[id] = world_point
 
-	if chosen_part == "torso":
-		_update_torso_targets()
-	elif chosen_part == "head":
+	if chosen_part == "head":
 		_head_held = true
+		_head_target_tilt = _head_tilt
+		_held[id]["angle"] = _head_hand_angle(world_point)
 	else:
 		_arms[chosen_part].held = true
 		_arms[chosen_part].target = world_point
 
 	return true
-
-func _get_shoulder_holders() -> Dictionary:
-	var left_id := ""
-	var right_id := ""
-	for id: String in _held:
-		var info: Dictionary = _held[id]
-		if info.get("part") == "torso":
-			var anchor: String = info.get("anchor", "")
-			if anchor in ["clavicle_l", "upperarm_l"]:
-				left_id = id
-			elif anchor in ["clavicle_r", "upperarm_r"]:
-				right_id = id
-	return {"left": left_id, "right": right_id}
-
-func has_both_shoulders_held() -> bool:
-	var holders := _get_shoulder_holders()
-	var left_id: String = holders.get("left", "")
-	var right_id: String = holders.get("right", "")
-	return not left_id.is_empty() and not right_id.is_empty() and left_id != right_id
-
-func _update_torso_targets() -> void:
-	var holders := _get_shoulder_holders()
-	var left_id: String = holders.get("left", "")
-	var right_id: String = holders.get("right", "")
-
-	# Sitting up ("Aufrichten") strictly requires 2 hands grasping both shoulders.
-	if has_both_shoulders_held():
-		var p_left: Vector3 = _held_targets.get(left_id, _rest_point("upperarm_l"))
-		var p_right: Vector3 = _held_targets.get(right_id, _rest_point("upperarm_r"))
-		var avg_y: float = (p_left.y + p_right.y) * 0.5
-		var pelvis_p := limb_point("pelvis")
-		var lift: float = avg_y - pelvis_p.y
-		var ratio := clampf((lift - 0.08) / 0.42, 0.0, 1.0)
-		_torso_target_angle = ratio * MAX_SITUP_DEG
-		_torso_target_roll = clampf((p_left.y - p_right.y) * 35.0, -12.0, 12.0)
-	elif not left_id.is_empty() or not right_id.is_empty():
-		# Only one shoulder is held: cannot sit the person up!
-		# Torso pitch stays flat (0.0). Allows slight realistic roll (shaking shoulder for consciousness check).
-		_torso_target_angle = 0.0
-		var pelvis_p := limb_point("pelvis")
-		if not left_id.is_empty():
-			var p: Vector3 = _held_targets.get(left_id, _rest_point("upperarm_l"))
-			_torso_target_roll = clampf((p.y - pelvis_p.y - 0.08) * 45.0, 0.0, 14.0)
-		else:
-			var p: Vector3 = _held_targets.get(right_id, _rest_point("upperarm_r"))
-			_torso_target_roll = -clampf((p.y - pelvis_p.y - 0.08) * 45.0, 0.0, 14.0)
-	else:
-		_torso_target_angle = 0.0
-		_torso_target_roll = 0.0
 
 func move(id: String, world_point: Vector3) -> void:
 	if not _held.has(id):
@@ -212,12 +170,8 @@ func move(id: String, world_point: Vector3) -> void:
 	var home := _rest_point(anchor_name)
 	var bounded_target := home + (world_point - home).limit_length(REACH_M)
 	_targets[id] = bounded_target
-	_held_targets[id] = world_point
 
-	if part == "torso":
-		_update_torso_targets()
-
-	elif _arms.has(part):
+	if _arms.has(part):
 		var side := part.right(1)
 		var target := bounded_target
 		if anchor_name == "lowerarm_" + side:
@@ -228,9 +182,22 @@ func move(id: String, world_point: Vector3) -> void:
 		_arms[part].target = target
 
 	elif part == "head":
-		var neck_p := limb_point("neck_01")
-		var tilt_delta := (world_point.y - neck_p.y) * 90.0
-		_head_target_tilt = clampf(tilt_delta, 0.0, MAX_HEAD_TILT_DEG)
+		# The head follows the hand around the ear line from wherever it was grabbed.
+		var angle := _head_hand_angle(world_point)
+		if is_finite(angle):
+			var previous: float = info.angle
+			if is_finite(previous):
+				var turned := rad_to_deg(wrapf(angle - previous, -PI, PI))
+				_head_target_tilt = clampf(_head_target_tilt + turned, -MAX_HEAD_EXTENSION_DEG, MAX_HEAD_FLEXION_DEG)
+			info.angle = angle
+
+func _head_hand_angle(world_point: Vector3) -> float:
+	## The hand's angle around the ear line, in the plane of the tilt; NAN too close to it.
+	var neck := _skeleton.global_transform * _skeleton.get_bone_global_pose(_home["neck_01"])
+	var lever := neck.affine_inverse() * world_point - _neck_pivot
+	if Vector2(lever.y, lever.z).length() < HEAD_MIN_LEVER_M:
+		return NAN
+	return atan2(lever.z, lever.y)
 
 func release(id: String) -> void:
 	if not _held.has(id):
@@ -238,10 +205,7 @@ func release(id: String) -> void:
 	var info: Dictionary = _held[id]
 	var part: String = info.get("part", "")
 	_held.erase(id)
-	_held_targets.erase(id)
 	_targets.erase(id)
-
-	_update_torso_targets()
 
 	# Check if any remaining grab holds this part
 	var still_holding := false
@@ -260,7 +224,6 @@ func release(id: String) -> void:
 func _process(delta: float) -> void:
 	if not is_active():
 		return
-	_update_torso_dynamics(delta)
 	_update_arm_ik(delta)
 	_update_head_dynamics(delta)
 	_apply_to_skeleton()
@@ -269,20 +232,6 @@ func _process(delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	# Running in both steps guarantees fresh bone transforms for physics raycasts and frames
 	_process(delta)
-
-func _update_torso_dynamics(delta: float) -> void:
-	if has_both_shoulders_held():
-		_torso_angle = move_toward(_torso_angle, _torso_target_angle, 140.0 * delta)
-		_torso_velocity = 0.0
-	else:
-		# Gravity return back down to mat with realistic damping
-		if _torso_angle > 0.0:
-			_torso_velocity += 180.0 * delta
-			_torso_angle = maxf(0.0, _torso_angle - _torso_velocity * delta)
-			if _torso_angle == 0.0:
-				_torso_velocity = 0.0
-
-	_torso_roll = move_toward(_torso_roll, _torso_target_roll, 80.0 * delta)
 
 func _update_head_dynamics(delta: float) -> void:
 	if _head_held:
@@ -341,19 +290,20 @@ func _apply_to_skeleton() -> void:
 	if _skeleton == null:
 		return
 
-	# 1. Torso Aufrichten across spine bones (pivoting at hips)
-	var situp_rad := deg_to_rad(_torso_angle)
-	var roll_rad := deg_to_rad(_torso_roll)
-	for name: String in SPINE_WEIGHTS:
+	# 1. The torso stays at rest.
+	for name: String in SPINE_BONES:
 		if _home.has(name):
-			var w: float = SPINE_WEIGHTS[name]
-			var q := Quaternion(Vector3.RIGHT, situp_rad * w) * Quaternion(Vector3.FORWARD, roll_rad * w)
-			_skeleton.set_bone_pose_rotation(_home[name], _rest_quats[name] * q)
+			_skeleton.set_bone_pose_rotation(_home[name], _rest_quats[name])
 
-	# 2. Head Tilt
+	# 2. Head Tilt: the head alone turns about the line through the ears; the neck stays at rest.
 	if _home.has("neck_01"):
-		var neck_rad := deg_to_rad(_head_tilt)
-		_skeleton.set_bone_pose_rotation(_home["neck_01"], _rest_quats["neck_01"] * Quaternion(Vector3.RIGHT, neck_rad))
+		_skeleton.set_bone_pose_rotation(_home["neck_01"], _rest_quats["neck_01"])
+	if _home.has("head") and (_head_tilt != 0.0 or _head_posed):
+		var tilt := Quaternion(Vector3.RIGHT, deg_to_rad(_head_tilt))
+		var head_rest: Quaternion = _rest_quats["head"]
+		_skeleton.set_bone_pose_rotation(_home["head"], head_rest * tilt)
+		_skeleton.set_bone_pose_position(_home["head"], _head_rest_position + head_rest * (_head_pivot - tilt * _head_pivot))
+		_head_posed = _head_tilt != 0.0
 
 	# 3. Arms
 	for part: String in _arms:

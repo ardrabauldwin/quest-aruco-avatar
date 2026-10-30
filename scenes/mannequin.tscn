@@ -39,14 +39,22 @@ radius = 0.04
 radius = 0.055
 
 [node name="Mannequin" type="Node3D" unique_id=45203466]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.207, -0.08)
 script = ExtResource("1")
-position = Vector3(0, 0.207, -0.08)
 
-[node name="BodyFrame" type="Marker3D" parent="."]
-position = Vector3(0, -0.207, 0.08)
+[node name="BodyFrame" type="Marker3D" parent="." unique_id=1031655427]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.207, 0.08)
 
 [node name="Model" parent="." unique_id=1467904106 instance=ExtResource("2")]
 transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, -0.207, 0.08)
+
+[node name="HeadTiltForehead" type="Marker3D" parent="Model" unique_id=1464494115]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21051179, -0.526369)
+gizmo_extents = 0.067
+
+[node name="HeadTiltChin" type="Marker3D" parent="Model" unique_id=701074440]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.23780705, -0.35789946)
+gizmo_extents = 0.05
 
 [node name="ScanReference" parent="." unique_id=523028087 instance=ExtResource("7")]
 transform = Transform3D(0.69, 0, 0, 0, 0.69, 0, 0, 0, 0.69, 0, -0.1440142, 0.0552)
@@ -59,7 +67,7 @@ script = ExtResource("4")
 [node name="Model" parent="Heart" unique_id=1150092490 instance=ExtResource("3")]
 
 [node name="Pupils" type="Node3D" parent="." unique_id=1702940993]
-position = Vector3(0, -0.207, 0.08)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.207, 0.08)
 script = ExtResource("5")
 
 [node name="Left" type="MeshInstance3D" parent="Pupils" unique_id=1801798564]
@@ -74,7 +82,6 @@ mesh = SubResource("PupilMesh")
 script = ExtResource("6")
 
 [node name="Sternum" type="Marker3D" parent="." unique_id=1492019186]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [node name="Highlight" type="MeshInstance3D" parent="Sternum" unique_id=2082281371]
 material_override = SubResource("ZoneMaterial")
@@ -89,6 +96,7 @@ shape = SubResource("ChestShape")
 
 [node name="MouthZone" type="Area3D" parent="." unique_id=1112606644 groups=["mouth_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.059, -0.268)
+visible = false
 collision_layer = 2
 collision_mask = 0
 
@@ -97,6 +105,7 @@ shape = SubResource("MouthShape")
 
 [node name="ForeheadZone" type="Area3D" parent="." unique_id=148068373 groups=["forehead_zone"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.017, -0.395)
+visible = false
 collision_layer = 2
 collision_mask = 0
 

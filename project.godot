@@ -57,4 +57,5 @@ openxr/extensions/meta/passthrough=true
 openxr/extensions/meta/hand_tracking_mesh=true
 openxr/extensions/meta/anchor_api=true
 openxr/extensions/meta/scene_api=true
-openxr/extensions/meta/environment_depth=true
+; Disabled after Quest runtime aborted importing the environment-depth swapchain.
+openxr/extensions/meta/environment_depth=false

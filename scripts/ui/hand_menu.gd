@@ -26,6 +26,8 @@ signal chest_fit_requested(fit: String)
 signal sternum_landmark_apply_requested
 signal occlusion_requested(mode: String)
 signal marker_gizmos_toggled(visible: bool)
+## Forget floor/chest measurements and placement and begin afresh, in the app.
+signal fresh_start_requested
 var _controls: Node3D
 var _large_align: Key3D
 var _floor_key: Key3D
@@ -48,6 +50,7 @@ var _debug_choices: Node3D
 var _gizmos_key: Key3D
 var _gizmos_on := false
 var _large_start: Key3D
+var _fresh_key: Key3D
 var _start_action := ""
 var _notice: Label3D
 var _notice_until_ms := 0
@@ -67,7 +70,9 @@ const INK := Color("eef3ff")
 const DIM := Color("9fb3e6")
 const PULSE := Color("ff6a5c")
 ## Palm-facing hysteresis: opening needs a deliberate turn, closing tolerates jitter.
-const OPEN_DOT := 0.55
+## 0.55 -> 0.4 on headset review 2026-10-29: the menu often stayed hidden when the
+## palm faced the wearer at roughly 60 degrees.
+const OPEN_DOT := 0.4
 const CLOSE_DOT := 0.3
 ## ponytail: fixed anatomical offsets, tune on a worn headset if panels crowd the hand.
 const PALM_SIZE := Vector2(0.076, 0.088)
@@ -514,6 +519,14 @@ func _build_cuff() -> void:
 		_language_choices.visible = false, _cuff)
 	_debug_menu.label.font_size = 19
 	_place_on_cuff(_debug_menu, 38.0, CUFF_ROW_Y[0])
+	# Headset review 2026-10-29: a wrong floor touch put everything on the ceiling with
+	# no way back but reinstalling. One key resets measurements and placement.
+	_fresh_key = _key(NaretLanguage.ui("Neu-
+start", "Od
+nowa", language), Vector2(0.024, 0.026), "key", func(): fresh_start_requested.emit(), _cuff)
+	_fresh_key.label.font_size = 19
+	_fresh_key.set_accent(RED, Color.TRANSPARENT)
+	_place_on_cuff(_fresh_key, 0.0, CUFF_ROW_Y[1])
 
 
 func _build_exercise_controls() -> void:
@@ -684,7 +697,9 @@ func _process(delta: float) -> void:
 	var hand := NaretXRInteraction.hand_tracker(hand_index)
 	var pose: Variant = _joint(hand, XRHandTracker.HAND_JOINT_PALM, true) if hand != null else null
 	var wrist: Variant = _joint(hand, XRHandTracker.HAND_JOINT_WRIST) if hand != null else null
-	if camera == null or pose == null or wrist == null:
+	# The wrist is the first joint Quest stops tracking (edge of view, under the other
+	# hand). It only supplies the forearm direction, so a tracked palm is enough (2026-10-29).
+	if camera == null or pose == null:
 		_show_control_fallback(camera)
 		return
 	var palm: Transform3D = pose
@@ -701,7 +716,10 @@ func _process(delta: float) -> void:
 	_pop = minf(_pop + delta / 0.18, 1.0)
 	var pop: float = Tween.interpolate_value(0.7, 0.3, _pop, 1.0, Tween.TRANS_BACK, Tween.EASE_OUT)
 	# Frames come from geometry, not joint conventions: fingers up, palm normal out.
-	var forearm := ((wrist as Transform3D).origin - palm.origin).normalized()
+	# +Y runs along the fingers in Godot's OpenXR hand convention, so the forearm is -Y
+	# when the wrist joint is only estimated; the cuff then sits 7 cm down the palm.
+	var forearm := ((wrist as Transform3D).origin - palm.origin).normalized() if wrist != null else -palm.basis.y.normalized()
+	var wrist_origin: Vector3 = (wrist as Transform3D).origin if wrist != null else palm.origin + forearm * 0.07
 	var fingers := (-forearm - normal * (-forearm).dot(normal)).normalized()
 	var palm_basis := Basis(fingers.cross(normal), fingers, normal)
 	_palm.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + normal * PALM_LIFT_M)
@@ -709,7 +727,7 @@ func _process(delta: float) -> void:
 		# 20 cm up the forearm puts the top (language) row past the wrist cuff.
 		_controls.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + forearm * 0.21 + normal * 0.025)
 	var cuff_out := (normal - forearm * normal.dot(forearm)).normalized()
-	_cuff.global_transform = Transform3D(Basis((-forearm).cross(cuff_out), -forearm, cuff_out).scaled(Vector3.ONE * pop), (wrist as Transform3D).origin)
+	_cuff.global_transform = Transform3D(Basis((-forearm).cross(cuff_out), -forearm, cuff_out).scaled(Vector3.ONE * pop), wrist_origin)
 	var thumb: Variant = _joint(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
 	var to_palm := _palm.global_transform.affine_inverse()
 	var row_y := 0.0
@@ -850,6 +868,10 @@ func set_language(value: String) -> void:
 	_export_key.set_text(NaretLanguage.ui("Export", "Eksport", language))
 	_large_align.set_text(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language))
 	_floor_key.set_text(NaretLanguage.ui("Boden", "Podłoga", language))
+	if _fresh_key:
+		_fresh_key.set_text(NaretLanguage.ui("Neu-
+start", "Od
+nowa", language))
 	_refresh_scan()
 	_refresh_mode()
 	_refresh_mic()
@@ -885,6 +907,11 @@ func _refresh_scan() -> void:
 	if _fit_key:
 		# Shows the active fit; pressing switches to the other one.
 		_fit_key.set_text(NaretLanguage.ui("Brust\nflach", "Klatka\npłaska", language) if chest_fit == "flatten" else NaretLanguage.ui("Brust\ntiefer", "Klatka\nniżej", language))
+
+func set_gizmos_on(on: bool) -> void:
+	## Reflects a gizmo state set by main (e.g. on by default while reviewing placement).
+	_gizmos_on = on
+	_refresh_scan()
 
 func set_occlusion(value: String) -> void:
 	occlusion = value

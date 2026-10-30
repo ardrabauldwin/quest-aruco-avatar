@@ -13,7 +13,7 @@ const HOLD_S := 2.0
 const STILL_M := 0.01
 ## Joints of a flat hand that touch the chest; their spread rejects a bent hand.
 const MIN_JOINTS := 6
-const SPREAD_M := 0.015
+const SPREAD_M := 0.025 # 1.5 -> 2.5 cm (2026-10-29): a flat hand on a curved chest is not a plane
 ## Palm normal must point this steeply down, the palm this close to the sternum.
 const PALM_DOWN := 0.7
 const NEAR_STERNUM_M := 0.2
@@ -28,6 +28,9 @@ var _origin: XROrigin3D
 var _sternum: Callable
 var _elapsed := 0.0
 var _samples: Array = [[], []]
+## Once-per-second diagnostic while measuring (headset review 2026-10-29: a silent
+## 30 s wait gave no clue why a hand on the chest was not accepted).
+var _log_s := 0.0
 
 func start(origin: XROrigin3D, sternum_position: Callable) -> void:
 	## `sternum_position` returns the virtual sternum in world space; only a hand
@@ -36,7 +39,9 @@ func start(origin: XROrigin3D, sternum_position: Callable) -> void:
 	_sternum = sternum_position
 	_elapsed = 0.0
 	_samples = [[], []]
+	_log_s = 0.0
 	active = true
+	print("NARET_CHEST_TOUCH start sternum=%s" % str(sternum_position.call()))
 
 func _process(delta: float) -> void:
 	if not active or _origin == null:
@@ -44,27 +49,45 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 	if _elapsed > TIMEOUT_S:
 		active = false
+		print("NARET_CHEST_TOUCH timeout")
 		failed.emit()
 		return
 	var sternum: Vector3 = _sternum.call()
+	_log_s += delta
+	var report := _log_s >= 1.0
+	if report:
+		_log_s = 0.0
+	var reasons := []
 	for index in 2:
 		var hand := NaretXRInteraction.hand_tracker(index)
 		var palm: Variant = NaretXRInteraction.tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM, true) if hand else null
 		if palm == null:
 			_samples[index].clear()
+			reasons.append("h%d:no_palm" % index)
 			continue
 		var palm_world: Transform3D = _origin.global_transform * (palm as Transform3D)
 		# +Z is the palm surface on Godot's OpenXR hands (see hand_menu.gd).
 		var flat := Vector2(palm_world.origin.x - sternum.x, palm_world.origin.z - sternum.z)
-		if palm_world.basis.z.normalized().y > -PALM_DOWN or flat.length() > NEAR_STERNUM_M:
+		var down := palm_world.basis.z.normalized().y
+		if down > -PALM_DOWN or flat.length() > NEAR_STERNUM_M:
 			_samples[index].clear()
+			reasons.append("h%d:palm_down=%.2f dist=%.2f" % [index, down, flat.length()])
 			continue
 		var estimates := PackedFloat32Array()
 		for joint: int in JOINTS:
 			var pose: Variant = NaretXRInteraction.tracked_joint(hand, joint)
 			if pose != null:
 				estimates.append((_origin.global_transform * (pose as Transform3D).origin).y - hand.get_hand_joint_radius(joint))
+		var low := INF
+		var high := -INF
+		for value in estimates:
+			low = minf(low, value)
+			high = maxf(high, value)
+		reasons.append("h%d:joints=%d spread_cm=%.1f held_s=%.1f y=%.2f" % [index, estimates.size(), (high - low) * 100.0 if estimates.size() > 0 else 0.0, (_elapsed - float(_samples[index][0].t)) if not _samples[index].is_empty() else 0.0, palm_world.origin.y])
 		var surface_y := feed(_samples[index], estimates, palm_world.origin, _elapsed)
+		if report:
+			print("NARET_CHEST_TOUCH t=%.0f %s" % [_elapsed, " | ".join(reasons)])
+			report = false
 		if is_finite(surface_y):
 			active = false
 			print("NARET_CHEST_TOUCH hand=%d joints=%d surface_y=%.3f" % [index, estimates.size(), surface_y])

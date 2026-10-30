@@ -42,6 +42,9 @@ var _ui_layer: CanvasLayer
 var _bystanders_placed_at := Vector3(INF, INF, INF)
 var _bystanders_placed_anchors := -1
 var _spot_timer := 0.0
+const SpeakerPlacement = preload("res://scripts/tracking/speaker_placement.gd")
+var _speaker_envelope := preload("res://scripts/tracking/speaker_body_envelope.gd").new()
+var _speaker_issue := ""
 const CONTROLLER_NUDGE_MPS := 0.04
 const CONTROLLER_YAW_DPS := 10.0
 const CONTROLLER_DEAD_ZONE := 0.20
@@ -66,7 +69,7 @@ const EN_STATUS := {
   "room_scan_ready": "Room scan ready: placing the witness",
   "room_scan_waiting": "Looking for room scan...",
   "room_scan_missing": "No room scan: configure your room",
-  "room_scan_unsupported": "Room scan unavailable: using default placement",
+  "room_scan_unsupported": "Room scan unavailable: speakers require scanned free space",
   "desktop_preview": "Desktop preview: no marker tracking",
   "marker_tracked": "ArUco: marker detected",
   "marker_lost_pose_held": "Marker lost: holding placement",
@@ -98,6 +101,10 @@ const EN_STATUS := {
 
 
 func _ready() -> void:
+	var speaker_guard := preload("res://scripts/tracking/speaker_placement_guard.gd").new()
+	speaker_guard.name = "SpeakerPlacementGuard"
+	speaker_guard.validate = _validate_speakers
+	add_child(speaker_guard)
 	_smoke_mode = "--smoke-test" in OS.get_cmdline_user_args()
 	_build_room()
 	xr = NaretOpenXRSetup.new()
@@ -310,11 +317,18 @@ func _build_xr_ui() -> void:
 	hand_menu.reference_scan_toggled.connect(mannequin.set_reference_visible)
 	hand_menu.hand_meshes_toggled.connect(xr.set_hands_visible)
 	hand_menu.marker_gizmos_toggled.connect(_set_marker_gizmos)
+	if xr.active:
+		# Placement review 2026-10-29: show the raw detected marker poses from the start,
+		# so a wrong patient position can be told apart from a wrong detection. The Debug
+		# row's Gizmos key still switches them off.
+		hand_menu.set_gizmos_on(true)
+		_set_marker_gizmos.call_deferred(true)
 	hand_menu.chest_calibration_requested.connect(_calibrate_chest)
 	hand_menu.chest_fit_requested.connect(_set_chest_fit)
 	hand_menu.set_chest_fit(anchor.chest_fit)
 	hand_menu.sternum_landmark_apply_requested.connect(_apply_sternum_landmark)
 	hand_menu.occlusion_requested.connect(_set_occlusion)
+	hand_menu.fresh_start_requested.connect(_fresh_start)
 	_set_occlusion(xr.occlusion)
 	hand_menu.menu_shown_changed.connect(func(shown: bool): interaction.set_menu_hand(0 if shown else -1))
 	_info_viewport = SubViewport.new()
@@ -368,6 +382,7 @@ func _refresh_floor_reference() -> void:
 		return
 	_floor_source = source
 	_floor_source_y = height
+	anchor.floor_source_y = height
 	if anchor.floor_touch_source == source:
 		height += anchor.floor_touch_offset_m
 	if not anchor.floor_locked or not is_equal_approx(anchor.floor_y, height):
@@ -390,8 +405,10 @@ func _on_floor_measured(floor_y: float) -> void:
 	# keep the correction; a different source later ignores it.
 	hand_menu.set_floor_calibrating(false)
 	var offset := floor_y - _floor_source_y
-	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > 0.3:
-		# No headset floor yet (e.g. room scan still loading) or one far off.
+	# Up to 1.5 m (2026-10-29): the headset's stage floor was 0.9 m below the real floor
+	# after a stale Space Setup, and the old 0.3 m limit refused the only available fix.
+	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > 1.5:
+		# No headset floor yet (e.g. room scan still loading) or one absurdly far off.
 		print("NARET_FLOOR_TOUCH rejected source=%s source_y=%.3f touch_y=%.3f offset=%.3f" % [_floor_source if not _floor_source.is_empty() else "none", _floor_source_y, floor_y, offset])
 		_toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language))
 		return
@@ -417,15 +434,20 @@ func _on_chest_measured(surface_y: float) -> void:
 	# Stored above the measured floor, not as a room height: it belongs to the
 	# mannequin and survives recentring and other rooms.
 	hand_menu.set_chest_calibrating(false)
-	var height := surface_y - anchor.floor_y
-	if not is_finite(height) or height < 0.05 or height > 0.5:
+	# Stored against the raw headset floor, so a fingertip floor correction made before
+	# or after this never moves the hand-measured chest (2026-10-29). The range allows a
+	# mannequin on a bed and a headset floor that is itself up to ~1 m off.
+	var raw_floor := anchor.floor_source_y if is_finite(anchor.floor_source_y) else anchor.floor_y
+	var height := surface_y - raw_floor
+	var above_floor := surface_y - anchor.floor_y
+	if not is_finite(height) or height < -0.5 or height > 2.0:
 		_toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language))
 		return
 	anchor.chest_height_m = height
 	anchor.refresh()
 	var saved := anchor.save_calibration() == OK
-	print("NARET_CHEST height=%.3f fit=%s thickness=%.3f" % [height, anchor.chest_fit, mannequin.thickness])
-	_toast(NaretLanguage.ui("Brust: ", "Klatka: ", _language) + "%.1f" % (height * 100.0) + NaretLanguage.ui(" cm über Boden", " cm nad podłogą", _language) + ("" if saved else " (Save failed)"))
+	print("NARET_CHEST height_raw=%.3f above_floor=%.3f fit=%s thickness=%.3f" % [height, above_floor, anchor.chest_fit, mannequin.thickness])
+	_toast(NaretLanguage.ui("Brust: ", "Klatka: ", _language) + "%.1f" % (above_floor * 100.0) + NaretLanguage.ui(" cm über Boden", " cm nad podłogą", _language) + ("" if saved else " (Save failed)"))
 
 func _set_chest_fit(fit: String) -> void:
 	## Switches live between a flattened body and one lowered into the floor.
@@ -481,89 +503,139 @@ func _local_rect(xs: Array, zs: Array) -> Rect2:
 	return Rect2(minimum, maximum - minimum)
 
 func _place_bystanders() -> void:
-	## Bystanders belong on real free floor, never inside the trainee's furniture.
-	if xr.active and not anchor.locked:
+	# Desktop keeps its authored preview. Headset placement has no unverified
+	# boundary-only or patient-relative fallback: require the scanned geometry.
+	if not xr.active:
 		return
-	var centre := _patient_floor_centre()
-	# Scanned anchors stream in one by one, so a placement made on the first few
-	# has not seen the furniture that arrives after it.
-	var anchors := room.anchor_count() if room else 0
-	var speakers_in_view := true
-	if xr.active:
-		var forward := -xr_camera.global_basis.z
-		forward.y = 0.0
-		forward = forward.normalized()
-		# Preserve standing positions while either speaker is ahead. If both
-		# are hidden behind the wearer, recalculate instead of keeping them lost.
-		speakers_in_view = false
-		for person: Node3D in [$Bystanders/Anna, $Instructor]:
-			if person.visible and forward.dot(person.global_position - xr_camera.global_position) > 0.0:
-				speakers_in_view = true
-	if speakers_in_view and centre.distance_to(_bystanders_placed_at) < 0.4 and anchors == _bystanders_placed_anchors:
+	if not anchor.locked:
+		$Bystanders/Anna.visible = false
+		$Instructor.visible = false
 		return
-	# The scanned room knows nothing about the patient, so the floor they occupy is
-	# excluded explicitly; nobody stands where the trainee kneels (the patient's
-	# right side) either: they belong across the patient or at the feet, in view.
-	var spots: Array[Transform3D] = []
-	if room and room.available:
-		spots = room.find_spots(centre, 4, [_local_rect([-0.35, 0.35], [-1.05, 1.05]), _local_rect([-1.4, -0.3], [-1.1, 1.1])])
-		if anchor.floor_locked:
-			# Stand on the reference floor, which includes a fingertip correction.
-			for index in spots.size():
-				spots[index].origin.y = anchor.floor_y
-		if xr.active:
-			# Choose among free scanned spots by viewing direction at placement.
-			# Once placed, the existing cache holds Anna there as the head moves.
-			var view_forward := -xr_camera.global_basis.z
-			view_forward.y = 0.0
-			view_forward = view_forward.normalized()
-			spots.sort_custom(func(a: Transform3D, b: Transform3D):
-				return view_forward.dot((a.origin - xr_camera.global_position).normalized()) > view_forward.dot((b.origin - xr_camera.global_position).normalized()))
-	if spots.is_empty() and xr.active and not (room and room.available):
-		# A scene scan is optional. The play-area polygon can still constrain
-		# placement, though it describes the boundary rather than furniture.
-		var boundary := PackedVector2Array()
-		for point: Vector3 in xr.interface.get_play_area():
-			var world := origin.global_transform * (XRServer.get_reference_frame() * point)
-			boundary.append(Vector2(world.x, world.z))
-		var flat := NaretRoomLayout.pick_spots(boundary, [_local_rect([-0.35, 0.35], [-1.05, 1.05])], Vector2(centre.x, centre.z), 2)
-		for point in flat:
-			spots.append(_speaker_floor_pose(Vector3(point.x, anchor.floor_y, point.y), centre))
-		if flat.is_empty():
-			# Missing or too-small play area: retain a patient-relative arrangement.
-			# This makes the speakers visible, but cannot promise wall avoidance.
-			var forward := -xr_camera.global_basis.z
-			forward.y = 0.0
-			forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
-			var side := forward.cross(Vector3.UP)
-			for direction: float in [-1.0, 1.0]:
-				var position := centre + forward * 1.2 + side * direction * 0.6
-				position.y = anchor.floor_y
-				spots.append(_speaker_floor_pose(position, centre))
-		print("NARET_ROOM fallback boundary_points=", boundary.size(), " speakers=", spots.size())
-	if spots.is_empty():
-		if xr.active:
-			# Without scanned free space we cannot know where real walls are.
-			$Bystanders/Anna.visible = false
-			$Instructor.visible = false
-		return
-	_bystanders_placed_at = centre
-	_bystanders_placed_anchors = anchors
-	var people: Array[NaretBystander] = [$Bystanders/Anna, $Instructor]
-	for index in people.size():
-		var person := people[index]
-		person.visible = index < spots.size()
-		if person.visible:
-			person.place_on_floor(spots[index])
-	print("NARET_ROOM placed speakers=", mini(spots.size(), people.size()),
-		" anna=", $Bystanders/Anna.global_position, " instructor=", $Instructor.global_position,
-		" viewer=", xr_camera.global_position, " corrected_floor=", anchor.floor_y)
+	_place_speakers_strict()
 
 func _patient_floor_centre() -> Vector3:
 	var centre := mannequin.get_body_transform().origin
 	if anchor.floor_locked:
 		centre.y = anchor.floor_y
 	return centre
+
+
+func _speaker_geometry() -> Dictionary:
+	if room == null or not room.available or not anchor.floor_locked or not anchor.locked:
+		return {}
+	var forward := Vector2(-xr_camera.global_basis.z.x, -xr_camera.global_basis.z.z)
+	if forward.length_squared() < 0.001: return {}
+	var blockers := room.obstacle_footprints()
+	blockers.append_array([_local_rect([-0.35, 0.35], [-1.05, 1.05]), _local_rect([-1.0, -0.3], [-0.75, 0.75])])
+	return {"floor": room.floor_outline(), "blockers": blockers,
+		"eye": Vector2(xr_camera.global_position.x, xr_camera.global_position.z),
+		"forward": forward.normalized()}
+
+
+func _speakers_fit(geometry: Dictionary, radii: Vector2) -> bool:
+	if geometry.is_empty(): return false
+	var people: Array[Node3D] = [$Bystanders/Anna, $Instructor]
+	var points: Array[Vector2] = []
+	for i in people.size():
+		var point := Vector2(people[i].global_position.x, people[i].global_position.z)
+		if not SpeakerPlacement.valid(point, radii[i], geometry.floor, geometry.blockers, geometry.eye, geometry.forward):
+			return false
+		points.append(point)
+	return points[0].distance_to(points[1]) > radii.x + radii.y
+
+
+func _hide_speakers(reason: String) -> void:
+	$Bystanders/Anna.visible = false
+	$Instructor.visible = false
+	if reason != _speaker_issue:
+		_speaker_issue = reason
+		print("NARET_SPEAKER_PLACEMENT ", reason)
+		var messages := {
+			"scan_or_floor_missing": {
+				"en": "Room scan and floor calibration are needed to place both speakers clear of walls.",
+				"de": "Raumscan und Bodenkalibrierung fehlen f?r die sichere Platzierung beider Personen.",
+				"pl": "Skan pomieszczenia i kalibracja pod?ogi s? potrzebne do ustawienia obu postaci."},
+			"no_front_pair": {
+				"en": "Not enough scanned space for both speakers in front. Face a clearer area.",
+				"de": "Vorne ist nicht genug freie Fl?che f?r beide Personen. Blicke in einen freieren Bereich.",
+				"pl": "Z przodu brakuje miejsca dla obu postaci. Sp?jrz w stron? wi?kszej wolnej przestrzeni."}}
+		if messages.has(reason):
+			_toast(str(messages[reason].get(_language, messages[reason].en)))
+
+
+func _place_speakers_strict() -> void:
+	var geometry := _speaker_geometry()
+	if geometry.is_empty():
+		# Headset review 2026-10-29: in an unscanned room both speakers were hidden for
+		# the whole exercise. Fall back to the pre-scan placement; strict placement
+		# takes over as soon as scanned geometry and the floor lock are available.
+		_place_speakers_fallback()
+		return
+	var radii := Vector2(_speaker_envelope.radius($Bystanders/Anna), _speaker_envelope.radius($Instructor))
+	# Cache only if BOTH complete animated envelopes still satisfy all rules.
+	if $Bystanders/Anna.visible and $Instructor.visible and _speakers_fit(geometry, radii):
+		return
+	var centre := _patient_floor_centre()
+	var spots := SpeakerPlacement.pair(geometry.floor, geometry.blockers,
+		Vector2(centre.x, centre.z), radii, geometry.eye, geometry.forward)
+	if spots.size() < 2:
+		_hide_speakers("no_front_pair")
+		return
+	var people: Array[NaretBystander] = [$Bystanders/Anna, $Instructor]
+	for i in people.size():
+		people[i].place_on_floor(_speaker_floor_pose(Vector3(spots[i].x, anchor.floor_y, spots[i].y), centre))
+	# Grounding/turning must not invalidate a pose that was only valid before placement.
+	radii = Vector2(_speaker_envelope.radius(people[0]), _speaker_envelope.radius(people[1]))
+	if not _speakers_fit(geometry, radii):
+		_hide_speakers("no_front_pair")
+		return
+	for person in people: person.visible = true
+	_speaker_issue = ""
+
+
+func _place_speakers_fallback() -> void:
+	## No room scan or floor lock yet: both stand across the patient, in front of the
+	## wearer, as the app did before 2026-10-29. Walls are unknown here, so this is
+	## not wall-aware; it only avoids an empty scene. Re-placed when the patient moves.
+	var centre := _patient_floor_centre()
+	if _speaker_issue != "fallback_patient_relative" or centre.distance_to(_bystanders_placed_at) > 0.4:
+		var forward := -xr_camera.global_basis.z
+		forward.y = 0.0
+		forward = forward.normalized() if forward.length_squared() > 0.001 else Vector3.FORWARD
+		var side := forward.cross(Vector3.UP)
+		var people: Array[NaretBystander] = [$Bystanders/Anna, $Instructor]
+		var floor_y := _speaker_floor_y()
+		for i in people.size():
+			var position := centre + forward * 1.2 + side * (-0.6 if i == 0 else 0.6)
+			position.y = floor_y
+			people[i].place_on_floor(_speaker_floor_pose(position, centre))
+		_bystanders_placed_at = centre
+		print("NARET_SPEAKER_PLACEMENT fallback_patient_relative")
+	$Bystanders/Anna.visible = true
+	$Instructor.visible = true
+	_speaker_issue = "fallback_patient_relative"
+
+func _speaker_floor_y() -> float:
+	## The wearer's floor, never the patient's height: a mannequin on a bed or table
+	## must not lift the speakers. Order: locked headset floor, live headset floor,
+	## XR origin (floor-based reference spaces put it on the floor).
+	if anchor.floor_locked:
+		return anchor.floor_y
+	var live := xr.floor_height_world(origin) if xr != null else NAN
+	if is_finite(live):
+		return live
+	return origin.global_position.y
+
+func _validate_speakers() -> void:
+	if xr == null or not xr.active: return
+	if not $Bystanders/Anna.visible and not $Instructor.visible: return
+	var geometry := _speaker_geometry()
+	if geometry.is_empty(): return # Fallback placement has no scan to validate against.
+	var radii := Vector2(_speaker_envelope.radius($Bystanders/Anna), _speaker_envelope.radius($Instructor))
+	if not _speakers_fit(geometry, radii):
+		# An animation, head turn or newly loaded obstacle invalidated placement.
+		# Hide before rendering; the next placement pass searches for a valid pair.
+		_hide_speakers("no_front_pair")
 
 func _speaker_floor_pose(position: Vector3, centre: Vector3) -> Transform3D:
 	var facing := centre - position
@@ -661,6 +733,29 @@ func _clear_training_session() -> void:
 	if interaction: interaction.rearm_cpr_cycle()
 	logger.reset()
 	score.reset()
+
+func _fresh_start() -> void:
+	## Hand-menu key (2026-10-29): forget every hand measurement and placement and
+	## begin as after a clean install, without leaving the app. The marker alignment
+	## (marker_to_mannequin) and the marker layout are kept: they do not depend on a
+	## hand measurement.
+	print("NARET_FRESH_START")
+	anchor.floor_touch_offset_m = 0.0
+	anchor.floor_touch_source = ""
+	anchor.chest_height_m = 0.0
+	anchor.manual_floor_correction_m = 0.0
+	anchor.save_calibration()
+	if xr.active:
+		_refresh_floor_reference()
+	anchor.unlock()
+	if tracker and tracker.has_method("forget_pose"):
+		tracker.forget_pose()
+	_bystanders_placed_at = Vector3(INF, INF, INF)
+	$Bystanders/Anna.visible = false
+	$Instructor.visible = false
+	_speaker_issue = ""
+	_on_action("reset")
+	_toast(NaretLanguage.ui("Neustart: Boden, Brust und Platzierung zurückgesetzt", "Od nowa: podłoga, klatka i ustawienie zresetowane", _language))
 
 func _on_action(action: String, details: Dictionary = {}) -> void:
 	if action in ["start", "restart", "reset"]:
@@ -895,6 +990,7 @@ func _announce_coach_step() -> void:
 
 func _on_reply(reply: Dictionary) -> void:
 	var speaker := str(reply.get("speaker", "bystander"))
+	print("NARET_REPLY speaker=", speaker, " source=", reply.get("source", ""), " action=", reply.get("action", ""), " next=", reply.get("next_step", ""), " text=", str(reply.get("text", "")).left(120))
 	if speaker == "instructor" and reply.get("next_step", "") != NaretTrainingCoach.step(scenario): return
 	if speaker == "bystander" and reply.get("action", "none") in ["calm", "thank"]:
 		$Bystanders/Anna.set_emotion("calm")
@@ -971,6 +1067,7 @@ func _on_xr_action(action: String) -> void:
 
 func _on_tracking_status(status: String) -> void:
 	_last_tracking_status = status
+	print("NARET_TRACKING ", status)
 	var labels := {
 		"desktop_preview": ["Desktop-Vorschau · kein Marker-Tracking", "Podgląd komputera · bez śledzenia znacznika"],
 		"marker_tracked": ["ArUco · Marker erfasst", "ArUco · znacznik wykryty"],

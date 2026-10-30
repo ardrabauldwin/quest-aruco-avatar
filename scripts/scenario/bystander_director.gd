@@ -104,8 +104,9 @@ func advance(delta: float) -> void:
 	if scenario == null:
 		return
 	var state := scenario.state
-	# 1.1 Nobody moves: Anna pleads.
-	if state == NaretScenario.State.INTRO and _t - _state_t > URGE_AFTER_S:
+	# 1.1 Nobody moves: Anna pleads. Switched off on headset review 2026-10-29: the
+	# "Please, do something!" line interrupted trainees who were already acting.
+	if false and state == NaretScenario.State.INTRO and _t - _state_t > URGE_AFTER_S:
 		_say_once("anna_urge")
 	# 1.5 Nobody has been sent to call 112 yet: Marek offers.
 	if state == NaretScenario.State.CALL_HELP and not scenario.emergency_called and _t - _state_t > PROMPT_CALL_S:

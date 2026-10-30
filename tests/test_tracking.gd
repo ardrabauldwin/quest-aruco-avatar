@@ -139,6 +139,7 @@ func run() -> Array[String]:
 	check(clicks[0] == 0, "A poke outside the panel bounds presses nothing")
 	_test_grab_gestures(interaction)
 	_test_room_spots()
+	_test_scored_spots()
 	_test_marker_on_sternum(tree)
 	await _test_hand_menu(tree)
 	await _test_cpr_stacked_hands(tree)
@@ -195,8 +196,8 @@ func _test_room_spots() -> void:
 	var spots := NaretRoomLayout.pick_spots(outline, [table], Vector2.ZERO, 2)
 	check(spots.size() == 2, "room scan yields a standing spot per bystander")
 	for spot in spots:
-		check(absf(spot.x) <= 2.1 and absf(spot.y) <= 1.6, "standing spot keeps clear of the scanned walls")
-		check(not table.grow(0.3).has_point(spot), "standing spot avoids scanned furniture")
+		check(absf(spot.x) <= 2.5 - NaretRoomLayout.WALL_CLEARANCE + 0.001 and absf(spot.y) <= 2.0 - NaretRoomLayout.WALL_CLEARANCE + 0.001, "standing spot keeps clear of the scanned walls")
+		check(not table.grow(NaretRoomLayout.OBSTACLE_CLEARANCE - 0.01).has_point(spot), "standing spot avoids scanned furniture")
 	if spots.size() == 2:
 		check(spots[0].distance_to(spots[1]) >= NaretRoomLayout.SPOT_SEPARATION, "bystanders do not share one spot")
 	check(NaretRoomLayout.pick_spots(PackedVector2Array(), [], Vector2.ZERO, 2).is_empty(), "no room scan means no placement")
@@ -225,6 +226,40 @@ func _test_room_spots() -> void:
 		check(bounded[0].distance_to(bounded[1]) >= 1.2, "whole-body envelopes do not overlap")
 	var blocked := Rect2(Vector2(-4, -4), Vector2(8, 8))
 	check(NaretRoomLayout.pick_spots(outline, [blocked], Vector2.ZERO, 2).is_empty(), "no free floor means no placement")
+
+func _test_scored_spots() -> void:
+	# 2 x 2 m room: the strict search gives up beside the patient (a 2.2 m room
+	# already passes it); the scored search still seats both speakers on real floor.
+	var room := PackedVector2Array([Vector2(-1.0, -1.0), Vector2(1.0, -1.0), Vector2(1.0, 1.0), Vector2(-1.0, 1.0)])
+	var patient := Rect2(Vector2(-0.35, -1.05), Vector2(0.7, 2.1))
+	var trainee := Rect2(Vector2(-1.0, -0.75), Vector2(0.7, 1.5))
+	check(NaretRoomLayout.pick_spots(room, [patient, trainee], Vector2.ZERO, 2).is_empty(), "strict search finds no standing room in a 2 m room")
+	var scored := NaretRoomLayout.score_spots(room, [patient, trainee], Vector2.ZERO, 2)
+	check(scored.size() == 2, "scored search still places both speakers in a 2 m room")
+	for item in scored:
+		var point: Vector2 = item.position
+		check(Geometry2D.is_point_in_polygon(point, room), "scored spot lies on the floor")
+		check(not patient.has_point(point) and not trainee.has_point(point), "scored spot avoids patient and trainee")
+		check(float(item.clearance_m) >= NaretRoomLayout.STAND_CLEARANCE_M, "scored spot keeps standing clearance")
+	if scored.size() == 2:
+		check((scored[0].position as Vector2).distance_to(scored[1].position) >= NaretRoomLayout.MIN_SCORED_SEPARATION_M, "scored speakers keep apart")
+	# A 0.45 m strip beside the patient: no point is 0.25 m from both the patient
+	# and the wall, so a standing speaker would clip one of them. Place nobody.
+	var strip := PackedVector2Array([Vector2(-1.1, -1.1), Vector2(0.8, -1.1), Vector2(0.8, 1.1), Vector2(-1.1, 1.1)])
+	check(NaretRoomLayout.score_spots(strip, [patient, trainee], Vector2.ZERO, 2).is_empty(), "a strip narrower than a standing body places nobody")
+	# A 5 x 4 m room: scoring agrees with the strict search and lets both stand.
+	var big := PackedVector2Array([Vector2(-2.5, -2), Vector2(2.5, -2), Vector2(2.5, 2), Vector2(-2.5, 2)])
+	var roomy := NaretRoomLayout.score_spots(big, [patient, trainee], Vector2.ZERO, 2)
+	check(roomy.size() == 2, "a 5 x 4 m room gets two scored spots")
+	for item in roomy:
+		check(float(item.clearance_m) >= NaretRoomLayout.STAND_CLEARANCE_M, "standing spot has standing clearance")
+		check(absf((item.position as Vector2).distance_to(Vector2.ZERO) - NaretRoomLayout.PREFERRED_DISTANCE_M) <= 0.6, "roomy spot stays near the preferred distance")
+	# Floor fully covered: the scored search places nobody rather than inside furniture.
+	check(NaretRoomLayout.score_spots(big, [Rect2(Vector2(-4, -4), Vector2(8, 8))], Vector2.ZERO, 2).is_empty(), "no free floor means no scored placement")
+	# Never inside a scanned table, even ungrown: that rule stays hard.
+	var table := Rect2(Vector2(0.35, -0.6), Vector2(0.75, 1.2))
+	for item in NaretRoomLayout.score_spots(room, [patient, trainee, table], Vector2.ZERO, 2):
+		check(not table.has_point(item.position), "scored spot never lies inside furniture")
 
 func _palm_basis(looking_at: Vector3) -> Basis:
 	# +Z is the palm surface, matching Godot's OpenXR humanoid hand conversion.

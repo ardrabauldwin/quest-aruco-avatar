@@ -39,6 +39,10 @@ func interpret(text: String, language: String) -> void:
 			var message: Variant = choices[0].get("message", {})
 			if message is Dictionary and message.get("content") is String:
 				parsed = parse(message.content, text)
+	# Headset review 2026-10-29: log the verdict, so a refused sentence can be traced to
+	# recognition, interpretation or the step order. The transcript itself is already
+	# printed by main (NARET_TRANSCRIPT); this line adds only the structured result.
+	print("NARET_INTERPRET ok=", result.get("ok", false), " parsed=", parsed, " accepted=", accepted_action(parsed, text) if not parsed.is_empty() else "")
 	if parsed.is_empty():
 		clarification.emit(clarification_text(language))
 	elif parsed.kind in ["conversation", "question"]:

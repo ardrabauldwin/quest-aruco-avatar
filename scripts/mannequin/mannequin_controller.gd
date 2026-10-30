@@ -156,7 +156,8 @@ class HeadTilt extends SkeletonModifier3D:
 				continue
 			var pose := skeleton.get_bone_pose_rotation(bone)
 			# -X extends the neck on this rig (+X flexes, as for the spine).
-			skeleton.set_bone_pose_rotation(bone, pose * Quaternion(Vector3.RIGHT, deg_to_rad(-TILT[bone_name] * amount)))
+			# Sign flipped on headset review 2026-10-29: the head tilted the wrong way (flexion).
+			skeleton.set_bone_pose_rotation(bone, pose * Quaternion(Vector3.RIGHT, deg_to_rad(TILT[bone_name] * amount)))
 
 func _ready() -> void:
 	var model := $Model as Node3D
@@ -434,10 +435,10 @@ func _process(delta: float) -> void:
 		_breath_clock = 0.0
 		ventilate()
 
-func set_hand_feedback(correct: bool) -> void:
-	var mat := zone.material_override as StandardMaterial3D
-	mat.albedo_color = GLOW if correct else WRONG
-	mat.emission = mat.albedo_color
+func set_hand_feedback(_correct: bool) -> void:
+	## Headset review 2026-10-29: the ring keeps its one colour. The red/blue switch
+	## duplicated the hand-zone square's own feedback; the pulse alone stays.
+	pass
 
 func cast_floor_shadow(light_direction: Vector3) -> void:
 	## Same flattened overlay pass as the bystanders' (bystander_controller.gd):

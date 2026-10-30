@@ -1,0 +1,24 @@
+{
+  "user_camera_provider.gd": {
+    "original_relative_path": "scripts/tracking/user_camera_provider.gd",
+    "sha256": "cb1c79067ccc6eca8af00355c731d3fad6d21ad2339a6346bbdb60f5dee00e90",
+    "archived_sha256": "31316a2161c972bef8da661b9cae1f9b3745ff8886a84d269606e3b172d25a36",
+    "note": "Trailing whitespace normalised in archived copy; sha256 records original bytes."
+  },
+  "colored_marker_image.gd": {
+    "original_relative_path": "scripts/tracking/colored_marker_image.gd",
+    "sha256": "621d793fb5c6321510de56c247aba681bb2004f22c60e824df618e71741fee65"
+  },
+  "colored_camera.gdshader": {
+    "original_relative_path": "scripts/tracking/colored_camera.gdshader",
+    "sha256": "aa18a1031fbb9c350159ade2e5ae4aa29e82c7daf3354d7431344625df3a6f97"
+  },
+  "legacy_aruco_tracker.gd": {
+    "original_relative_path": "scripts/tracking/aruco_tracker.gd",
+    "sha256": "02e579f06c3a7487d930d445160e04fbec6f6b010a95ce2401662fe018e329a0"
+  },
+  "test_colored_marker_image.gd": {
+    "original_relative_path": "tests/test_colored_marker_image.gd",
+    "sha256": "ff1a7b7fc04e5e6f32fb11aa0c6fbdaf6e1449a89b4a09c1bf2e781fb1b7c3bb"
+  }
+}

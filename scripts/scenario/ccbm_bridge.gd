@@ -57,6 +57,11 @@ func observe_action(action: String) -> bool:
 		if _scenario.state == NaretScenario.State.IDLE:
 			decision.emit("start", {"source": "speech", "measurement_verified": false})
 		return true
+	if _scenario.state == NaretScenario.State.IDLE and action == "begin_check":
+		# Headset review 2026-10-29: the first spoken report ("the scene is safe") came
+		# before anyone said "start exercise" and was refused as out of order every time.
+		# A safety report is a clear intent to begin: start, then judge it as usual.
+		decision.emit("start", {"source": "speech", "measurement_verified": false})
 	if action not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_out_of_order")
 		return true

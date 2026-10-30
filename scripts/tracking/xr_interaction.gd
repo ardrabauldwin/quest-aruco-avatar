@@ -78,6 +78,18 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		_zone.get_node("Highlight").position = Vector3(0, 0.004, 0)
 		_zone.visible = false
 		add_child(_zone)
+		# The upstream ready() replaces the circular shader with its green quad
+		# material. Keep that familiar guide, but do not let the curved chest
+		# depth-clip half of it. Display only: collision and sternum stay unchanged.
+		var guide_material := _zone.get_node("Highlight").material_override as StandardMaterial3D
+		if guide_material != null:
+			guide_material.no_depth_test = true
+			guide_material.render_priority = 10
+		# Headset review 2026-10-29: 14 x 14 cm reads better over the real chest than the
+		# upstream 11 x 11 cm. Display only: the 8 x 7 cm contact slab is unchanged.
+		var guide_mesh := _zone.get_node("Highlight").mesh as QuadMesh
+		if guide_mesh != null:
+			guide_mesh.size = Vector2(0.14, 0.14)
 		var camera := _origin.find_child("*", true, false)
 		for child in _origin.get_children():
 			if child is XRCamera3D:
@@ -109,9 +121,16 @@ func register_ui_panel(panel: Node3D, viewport: SubViewport, size_m: Vector2) ->
 			return
 	_panels.append({"panel": panel, "viewport": viewport, "size": size_m})
 
+## The upstream gauge panel (speed dial, depth bar, count) in front of the face during
+## compressions. Switched off and back on during the 2026-10-29 headset review: the
+## trainee missed it as the "CPR window". Counting, pace and the beep do not depend on it.
+const SHOW_CPR_GAUGES := true
+## Chest dent under resting hands (NaretMannequin.set_hand_press). Off since 2026-10-29.
+const SHOW_HAND_DENT := false
+
 func set_cpr_feedback_visible(value: bool) -> void:
 	if is_instance_valid(_cpr_feedback_root):
-		_cpr_feedback_root.visible = value
+		_cpr_feedback_root.visible = value and SHOW_CPR_GAUGES
 
 func set_cpr_enabled(value: bool) -> void:
 	# Scenario stages enable/disable CPR. Reset rate history at each transition.
@@ -178,7 +197,9 @@ func _process(delta: float) -> void:
 	# so they never sink into it. This is display only: counting and depth
 	# feedback stay with the detector above. Letting go releases the chest once,
 	# so a helper's compressions (NaretBystanderDirector) still show.
-	var press: Variant = hand_press_point(_mannequin.get_sternum_transform().origin)
+	# Headset review 2026-10-29: the dent is off. Counted compressions still sink the
+	# chest through the compression morph (NaretMannequin.compress), as before the dent.
+	var press: Variant = hand_press_point(_mannequin.get_sternum_transform().origin) if SHOW_HAND_DENT else null
 	if press != null:
 		_mannequin.set_hand_press(press)
 	elif _hands_on_chest:

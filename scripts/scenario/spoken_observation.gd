@@ -20,6 +20,13 @@ static func action_for(text: String) -> String:
 	# ASR sometimes omits punctuation. Remove only known patient-directed
 	# questions at the beginning, never arbitrary words around a matched phrase.
 	var greetings := ["are you okay", "are you ok", "can you hear me", "are you all right", "hello", "sir", "can you respond", "please open your eyes"]
+	# Headset review 2026-10-29: "No, he is not responding" was refused as a negation.
+	# A leading interjection followed by punctuation is not part of the finding. Only
+	# with punctuation: a bare "no " must keep "no response" intact.
+	for interjection: String in ["no", "yes", "okay", "ok", "well", "so", "alright", "right"]:
+		for mark in [",", ".", "!", ";"]:
+			if clean.begins_with(interjection + mark):
+				clean = clean.substr(interjection.length() + 1).strip_edges()
 	for _pass in range(8):
 		var removed := false
 		for prefix: String in greetings:

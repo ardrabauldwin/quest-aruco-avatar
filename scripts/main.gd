@@ -381,7 +381,7 @@ func _calibrate_floor() -> void:
 	## Hand-menu key: the next fingertip resting on the floor sets its height.
 	if floor_touch == null:
 		return
-	floor_touch.start(origin, xr_camera)
+	floor_touch.start(origin)
 	hand_menu.set_floor_calibrating(true)
 	_toast(NaretLanguage.ui("Zeigefinger auf den Boden legen und still halten", "Połóż palec wskazujący na podłodze i trzymaj nieruchomo", _language))
 
@@ -390,7 +390,7 @@ func _on_floor_measured(floor_y: float) -> void:
 	# keep the correction; a different source later ignores it.
 	hand_menu.set_floor_calibrating(false)
 	var offset := floor_y - _floor_source_y
-	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > 0.3:
+	if _floor_source.is_empty() or not is_finite(offset) or absf(offset) > NaretSpatialAnchor.MAX_FLOOR_TOUCH_OFFSET_M:
 		# No headset floor yet (e.g. room scan still loading) or one far off.
 		print("NARET_FLOOR_TOUCH rejected source=%s source_y=%.3f touch_y=%.3f offset=%.3f" % [_floor_source if not _floor_source.is_empty() else "none", _floor_source_y, floor_y, offset])
 		_toast(NaretLanguage.ui("Boden nicht erkannt · erneut versuchen", "Nie wykryto podłogi · spróbuj ponownie", _language))

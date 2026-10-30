@@ -12,6 +12,7 @@ var manual_floor_correction_m := 0.0
 ## against ("room_scan" or "local_floor"); applies only while that source is used.
 var floor_touch_offset_m := 0.0
 var floor_touch_source := ""
+const MAX_FLOOR_TOUCH_OFFSET_M := 1.0
 ## Hand-measured height of the real compression point above the floor
 ## (NaretChestTouch); 0 = not measured. A mannequin property, so it survives
 ## other rooms and recentring. Puts the patient's `Sternum` at that height:
@@ -282,7 +283,7 @@ func load_calibration() -> Error:
 		calibrated = false # Require explicit confirmation before starting training.
 	floor_adjustment_m = clampf(float(config.get_value("calibration", "floor_adjustment_m", 0.0)), -0.3, 0.3)
 	manual_floor_correction_m = clampf(float(config.get_value("calibration", "manual_floor_correction_m", 0.0)), -1.5, 1.5)
-	floor_touch_offset_m = clampf(float(config.get_value("calibration", "floor_touch_offset_m", 0.0)), -0.3, 0.3)
+	floor_touch_offset_m = clampf(float(config.get_value("calibration", "floor_touch_offset_m", 0.0)), -MAX_FLOOR_TOUCH_OFFSET_M, MAX_FLOOR_TOUCH_OFFSET_M)
 	floor_touch_source = str(config.get_value("calibration", "floor_touch_source", ""))
 	chest_height_m = clampf(float(config.get_value("calibration", "chest_height_m", 0.0)), 0.0, 0.5)
 	# Lowering looked better on the real mannequin than flattening (deformed feet).

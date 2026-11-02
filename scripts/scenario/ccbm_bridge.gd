@@ -1,5 +1,5 @@
 extends Node
-## Real CCBM runs in an external worker. No local imitation of its posterior.
+## Real CCBM: packaged native filter on Quest; external worker on desktop.
 ## Only structural observation codes leave this node; no audio/transcripts.
 ## Speech describes reported findings; hand detection supplies compression events.
 ## CCBM tracks exercise progression, not the physical correctness of a spoken claim.
@@ -16,11 +16,18 @@ var _generation := 0
 var _history: Array[String] = []
 var _compression_observed := false
 var _mode_observed := false
+var _native: RefCounted
 
 func configure(scenario: NaretScenario) -> void:
 	_scenario = scenario
 
 func _ready() -> void:
+	if OS.has_feature("android"):
+		_native = preload("res://scripts/scenario/ccbm_native.gd").new()
+		var native_ready: bool = _native.configure_android()
+		print("NARET_CCBM_NATIVE ready=", native_ready)
+		if not native_ready:
+			status_changed.emit("ccbm_unavailable")
 	var settings := ConfigFile.new()
 	if settings.load("user://ccbm.cfg") == OK:
 		endpoint = str(settings.get_value("ccbm", "endpoint", ""))
@@ -57,6 +64,11 @@ func observe_action(action: String) -> bool:
 		if _scenario.state == NaretScenario.State.IDLE:
 			decision.emit("start", {"source": "speech", "measurement_verified": false})
 		return true
+	if _scenario.state == NaretScenario.State.IDLE and action == "begin_check":
+		# Headset review 2026-10-29: the first spoken report ("the scene is safe") came
+		# before anyone said "start exercise" and was refused as out of order every time.
+		# A safety report is a clear intent to begin: start, then judge it as usual.
+		decision.emit("start", {"source": "speech", "measurement_verified": false})
 	if action not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_out_of_order")
 		return true
@@ -106,7 +118,7 @@ func _request(action: String) -> void:
 	if _pending:
 		status_changed.emit("ccbm_busy_repeat")
 		return
-	if not (endpoint.begins_with("https://") or endpoint.begins_with("http://127.0.0.1:")):
+	if _native == null and (OS.has_feature("android") or not (endpoint.begins_with("https://") or endpoint.begins_with("http://127.0.0.1:"))):
 		status_changed.emit("ccbm_unavailable")
 		return
 	if _history.size() >= 256:
@@ -116,19 +128,17 @@ func _request(action: String) -> void:
 	var generation := _generation
 	var sequence: Array[String] = _history.duplicate()
 	sequence.append(action)
-	var body := JSON.stringify({"observations": sequence})
-	var err := _http.request(endpoint, ["Content-Type: application/json"], HTTPClient.METHOD_POST, body)
-	if err != OK:
+	var parsed: Variant
+	if _native != null:
+		parsed = await _native.infer(sequence)
+		if generation != _generation: return
 		_pending = false
-		status_changed.emit("ccbm_unavailable")
-		return
-	var response: Array = await _http.request_completed
-	_pending = false
-	if generation != _generation: return
-	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200:
-		status_changed.emit("ccbm_unavailable")
-		return
-	var parsed: Variant = JSON.parse_string(response[3].get_string_from_utf8())
+		if not parsed is Dictionary or parsed.has("error") or parsed.is_empty():
+			status_changed.emit("ccbm_unavailable")
+			return
+	else:
+		parsed = await _request_external(sequence, generation)
+		if generation != _generation or parsed == null: return
 	if not accepts(parsed, action, threshold) or action not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_uncertain_repeat")
 		return
@@ -136,6 +146,21 @@ func _request(action: String) -> void:
 		"evidence_kind": "spoken_report", "inference_engine": "ccbm",
 		"inference_probability": float(parsed.probability)})
 	status_changed.emit("ccbm_accepted")
+
+func _request_external(sequence: Array[String], generation: int) -> Variant:
+	var body := JSON.stringify({"observations": sequence})
+	var err := _http.request(endpoint, ["Content-Type: application/json"], HTTPClient.METHOD_POST, body)
+	if err != OK:
+		_pending = false
+		status_changed.emit("ccbm_unavailable")
+		return null
+	var response: Array = await _http.request_completed
+	if generation != _generation: return null
+	_pending = false
+	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200:
+		status_changed.emit("ccbm_unavailable")
+		return null
+	return JSON.parse_string(response[3].get_string_from_utf8())
 
 static func accepts(value: Variant, action: String, minimum: float) -> bool:
 	if not value is Dictionary: return false

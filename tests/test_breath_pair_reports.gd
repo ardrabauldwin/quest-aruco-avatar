@@ -32,6 +32,12 @@ func run() -> Array[String]:
 		check(gate.evaluate(text, "compressing", ["compression"], 3).is_empty(), "no breath confirmation before the compression step finishes")
 	for text in ["Two rescue breaths are given?", "I will give two rescue breaths", "I have not given two rescue breaths", "I ate two rescue breads"]:
 		check(not Speech.reports_breath_pair(text), "question, plan, denial and unrelated speech remain blocked")
+	for text in ["Ich habe beide Beatmungen gegeben.", "Ich habe zweimal beatmet!", "Zwei Atemspenden gegeben.", "Ich habe 2 Beatmungen gegeben",
+			"Wykonałam oba oddechy.", "Zrobiłem dwa oddechy ratownicze", "Dałam dwa oddechy.", "Wykonałem 2 oddechy"]:
+		check(Speech.reports_breath_pair(text), "German and Polish pair wording: " + text)
+	for text in ["Ich werde zwei Beatmungen geben", "Ich habe keine Beatmung gegeben", "Habe ich zwei Beatmungen gegeben?", "Ich habe eine Beatmung gegeben",
+			"Wykonam dwa oddechy", "Nie wykonałem dwóch oddechów", "Czy wykonałem dwa oddechy?", "Wykonałem jeden oddech ratowniczy"]:
+		check(not Speech.reports_breath_pair(text), "German and Polish plan, denial, question and single breath stay blocked: " + text)
 	var controls: Node = load("res://scripts/main.gd").new()
 	controls._language = "en"
 	controls.scenario = NaretScenario.new()

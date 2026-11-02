@@ -774,8 +774,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/calm.wav",
-                      "duration_s":  4.209,
-                      "sha256":  "65e8f8f7a9af74e784e17a3a3076b178024879e2ed4a1f33dc15dcf0ac86d7ac",
+                      "duration_s":  2.936,
+                      "sha256":  "b669d84028f7447173bbb3a9e2b3de7eeedd3823b037bdb2fb49747ee541421d",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -784,8 +784,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/help.wav",
-                      "duration_s":  3.734,
-                      "sha256":  "e6248b9811de32d2b60a22eb1de70230d677101c3a34447cffd0f18bd738ba4b",
+                      "duration_s":  3.46,
+                      "sha256":  "880dd29ff9d6d7a7d3b33cff189b8ee94e79359bd396a633183f43eb0b79b699",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -794,8 +794,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/thanks.wav",
-                      "duration_s":  3.804,
-                      "sha256":  "7ee399d10a0db2f19b8c81b112532db38b69d6fe6d619cfdcaa4167fa3716356",
+                      "duration_s":  2.317,
+                      "sha256":  "1cae36b72cd421fa46444a59aa42086d02764cd156c4867f74a70c0a8d40d45f",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -804,8 +804,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/start.wav",
-                      "duration_s":  5.563,
-                      "sha256":  "eebc0013a1d1eb5c3dedc9130c519185158a8de3d912f9b045eaaeb12911f9a1",
+                      "duration_s":  4.175,
+                      "sha256":  "924d8b149a3d443a3d9ffa39110107402ef4cb56ee860019b1cf3e6bc309ec09",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -814,8 +814,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/check_patient.wav",
-                      "duration_s":  3.929,
-                      "sha256":  "ced4b739d5614ba77e326b8dbdd045486efc3873423c6c266163aee64e0fdc43",
+                      "duration_s":  3.499,
+                      "sha256":  "b1fda2d91865ef0f36c8aff4d086e8607e0ad5ef146c8f8b2ad33f70e2a70dbd",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -824,8 +824,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/call_help.wav",
-                      "duration_s":  9.983,
-                      "sha256":  "f038641a46811439a75115f4f039e1938be8f9ba51b9f3c442ac1fda142cd140",
+                      "duration_s":  7.762,
+                      "sha256":  "41312a8c243bdad8dcffbf329ec7c51dd2282086e073853f206df69becc5fa99",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -834,8 +834,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/cpr.wav",
-                      "duration_s":  5.029,
-                      "sha256":  "68e4835aca07a2507876fa1f8f236141cbb5a58a7b2cc3c84e1f25e068d00d65",
+                      "duration_s":  4.117,
+                      "sha256":  "883e258a3bb562a8a1560c32e4d5e995fdd73478abe769dc3731ccea93dbd905",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -844,8 +844,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/recovery.wav",
-                      "duration_s":  4.389,
-                      "sha256":  "1c64df5b566a35697d4c280c425fd8566f884a363edbf42a3331d8b5dbd8b4ae",
+                      "duration_s":  3.357,
+                      "sha256":  "a7594a345d5c0eb421715951b0d665851e2c28cf251cd7ad4ab2dc67ecc81e3c",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -854,8 +854,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/anna_arrive.wav",
-                      "duration_s":  5.659,
-                      "sha256":  "108d543f2126be112bec2ef432ab0107ff44d46839079fa6f28ff8ec184dd1fe",
+                      "duration_s":  3.046,
+                      "sha256":  "d51d874ab7ff8b17f21d7f4ea66f6a75208bdf8a22778306fc7b3dddcef68665",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -864,8 +864,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/anna_urge.wav",
-                      "duration_s":  2.454,
-                      "sha256":  "ef640c9d32a71828811c3540acec69a6c2841dddb4e15f8e9c43a4f2feb769c8",
+                      "duration_s":  1.595,
+                      "sha256":  "768add10032b7516c11ca1b8ae2f00bd26d4c54116bd4a45e1bbf56308b46d50",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -874,8 +874,8 @@
                       "speaker":  "anna",
                       "language":  "en",
                       "file":  "tts_en/anna_name.wav",
-                      "duration_s":  3.804,
-                      "sha256":  "ab7b6c7a46ef163b9918538035f0e60ed24bb67fa2e8801e7670df0fe4a10925",
+                      "duration_s":  1.938,
+                      "sha256":  "a54f09444a64cfd006719ba7e0afdc0b6b6e27d0254b84c7096017118f70f2f8",
                       "generator":  "Windows System.Speech, Microsoft Zira Desktop"
                   },
                   {
@@ -884,8 +884,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/speech_repeat.wav",
-                      "duration_s":  9.307210884353742,
-                      "sha256":  "9cc650180299eb731f382909c32b3084c96eacfb8c5fc780f4fd5e49f805476f",
+                      "duration_s":  5.698,
+                      "sha256":  "5432c6c621927dcf09b6bbb3911917b5a0b43b6c2c7d7d8d46c75be821de5768",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -894,8 +894,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/confirm_begin_check.wav",
-                      "duration_s":  4.613605442176871,
-                      "sha256":  "1e425c9d31646a834e0f1115f53e48f580dca49149c4ee1c3d65e3d3c7597654",
+                      "duration_s":  2.797,
+                      "sha256":  "c417f4a8d2585d269c5744689acd08b420f73d8cc39b593b0ce8effbcee0a146",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -904,8 +904,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/confirm_check_responsiveness.wav",
-                      "duration_s":  5.363219954648526,
-                      "sha256":  "b4f14b5421e6fadc9a1e437f53a9f89b26b1ed204a55e6f231cf8c7f27c64e2f",
+                      "duration_s":  3.621,
+                      "sha256":  "369f12a39b69c1f34db3fb046877b7e1d643f342103a30272fa255b1977d9024",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   },
                   {
@@ -914,8 +914,8 @@
                       "speaker":  "instructor",
                       "language":  "en",
                       "file":  "tts_en/confirm_check_breathing.wav",
-                      "duration_s":  5.613015873015873,
-                      "sha256":  "10e5506c263f996d010c33f604ebd4be1560904d47821ebe43d65734ae736d78",
+                      "duration_s":  3.843,
+                      "sha256":  "5c74f409b3363b24106b5e64d473699d699ab9f37213cf478d423aedd5581f77",
                       "generator":  "Windows System.Speech, Microsoft Hazel Desktop"
                   }
               ]

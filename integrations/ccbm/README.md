@@ -1,5 +1,11 @@
 # CCBM integration: native runtime and desktop connection tested
 
+**Current Android implementation:** the actual filter is now compiled for ARM64
+and bundled in the Quest app. It does not use the PC HTTP worker on Android.
+See [ANDROID.md](ANDROID.md) for build instructions, packaging, native Quest
+verification and licensing. The setup/history below describes the older desktop
+worker path, which remains available for desktop development.
+
 Status (2026-10-05): Ubuntu 26.04 installed in WSL2; CCBM generator, filter and
 state analyser built. Native tests passed 17 observation prefixes (including
 repeated breaths and compression-only mode). A Godot -> HTTP -> native CCBM ->

@@ -1,0 +1,149 @@
+{
+  "generator": "Piper (local)",
+  "clips": [
+    {
+      "text": "Did you say the scene is safe? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/begin_check.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "Did you report that he is not responding? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/check_responsiveness.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "Did you report that he is not breathing normally? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/check_breathing.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "Did you complete one rescue breath? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/ventilation.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "Did you complete two rescue breaths? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/pair.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "No report confirmed. Please state the completed check and finding.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/repeat.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 89478.485
+    },
+    {
+      "text": "Haben Sie gesagt, dass die Umgebung sicher ist? Antworten Sie mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/begin_check.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 4.261
+    },
+    {
+      "text": "Haben Sie festgestellt, dass er nicht reagiert? Antworten Sie mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/check_responsiveness.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 4.168
+    },
+    {
+      "text": "Haben Sie festgestellt, dass er nicht normal atmet? Antworten Sie mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/check_breathing.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 4.4
+    },
+    {
+      "text": "Haben Sie eine Beatmung durchgeführt? Antworten Sie mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/ventilation.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 3.75
+    },
+    {
+      "text": "Haben Sie zwei Beatmungen durchgeführt? Antworten Sie mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/pair.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 3.878
+    },
+    {
+      "text": "Keine Meldung bestätigt. Bitte sagen Sie, was Sie geprüft und festgestellt haben.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/repeat.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 4.365
+    },
+    {
+      "text": "Czy miejsce jest bezpieczne? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/begin_check.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 3.309
+    },
+    {
+      "text": "Czy stwierdzono, że pacjent nie reaguje? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/check_responsiveness.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 4.203
+    },
+    {
+      "text": "Czy stwierdzono, że pacjent nie oddycha prawidłowo? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/check_breathing.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 4.598
+    },
+    {
+      "text": "Czy wykonano jeden oddech ratowniczy? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/ventilation.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 3.971
+    },
+    {
+      "text": "Czy wykonano dwa oddechy ratownicze? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/pair.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 4.063
+    },
+    {
+      "text": "Nie potwierdzono zgłoszenia. Powiedz, co sprawdzono i jaki był wynik.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/repeat.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 4.667
+    }
+  ]
+}

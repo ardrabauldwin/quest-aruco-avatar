@@ -9,12 +9,24 @@ signal layout_ready(status: String)
 ## Meta scene labels that a person cannot stand on or inside.
 const OBSTACLES := ["couch", "table", "bed", "screen", "storage", "lamp", "plant",
 	"other", "wall", "wall_face", "wall_art", "window_frame", "door_frame"]
-const WALL_CLEARANCE := 0.45
-const OBSTACLE_CLEARANCE := 0.35
-const SPOT_SEPARATION := 0.9
+## Reduced 2026-10-29 from 0.45 / 0.35 / 0.9 m: with those the strict search needed
+## roughly 3 x 3.5 m of free floor. People do stand near walls; a shoulder sits
+## about 0.25 m from the body centre.
+const WALL_CLEARANCE := 0.30
+const OBSTACLE_CLEARANCE := 0.25
+const SPOT_SEPARATION := 0.6
 ## Tried in order: a comfortable distance first, closer only if the room forces it.
 ## The trainee needs kneeling room beside the patient that a bystander must not take.
-const RADII := [1.8, 2.2, 1.5, 2.6, 1.2]
+const RADII := [1.8, 2.2, 1.5, 2.6, 1.2, 0.9]
+## Scored fallback (score_spots) for rooms where the strict search finds nothing.
+## A spot's clearance is the distance from its centre to the nearest wall or object.
+## A standing body is ~0.5 m across the shoulders and needs half of that; with less
+## the character would stand inside the wall, so it stays hidden. Body size, not tuning.
+const STAND_CLEARANCE_M := 0.25
+## Clearance beyond this earns no extra score; distance to the patient decides.
+const SCORE_CLEARANCE_CAP_M := 0.6
+const PREFERRED_DISTANCE_M := 1.5
+const MIN_SCORED_SEPARATION_M := 0.4
 ## An idle headset answers the layout query before it has localised into its room.
 const SCAN_RETRIES := 6
 const SCAN_RETRY_SECONDS := 5.0
@@ -163,13 +175,31 @@ func find_spots(center: Vector3, count: int, keep_clear: Array = [], clearance: 
 		return spots
 	var flat := pick_spots(floor_outline(), blockers, Vector2(center.x, center.z), count, clearance, allowed_outline)
 	for point in flat:
-		var position := Vector3(point.x, height, point.y)
-		var facing := Vector3(center.x - point.x, 0.0, center.z - point.y)
-		if facing.length_squared() < 0.0001:
-			facing = Vector3.BACK
-		# The characters model facing +Z, while looking_at aims -Z at its target.
-		spots.append(Transform3D(Basis.looking_at(-facing, Vector3.UP), position))
+		spots.append(_facing_transform(point, height, center))
 	return spots
+
+func find_spots_scored(center: Vector3, count: int, keep_clear: Array = [], allowed_outline: PackedVector2Array = PackedVector2Array()) -> Array[Dictionary]:
+	## find_spots with the soft rules of score_spots, for rooms where the strict
+	## search fails. Each entry: "transform", "clearance_m".
+	var result: Array[Dictionary] = []
+	if not available:
+		return result
+	var blockers := obstacle_footprints()
+	blockers.append_array(keep_clear)
+	var height := floor_height_world()
+	if not is_finite(height):
+		return result
+	for item in score_spots(floor_outline(), blockers, Vector2(center.x, center.z), count, allowed_outline):
+		result.append({"transform": _facing_transform(item.position, height, center), "clearance_m": item.clearance_m})
+	return result
+
+static func _facing_transform(point: Vector2, height: float, center: Vector3) -> Transform3D:
+	var position := Vector3(point.x, height, point.y)
+	var facing := Vector3(center.x - point.x, 0.0, center.z - point.y)
+	if facing.length_squared() < 0.0001:
+		facing = Vector3.BACK
+	# The characters model facing +Z, while looking_at aims -Z at its target.
+	return Transform3D(Basis.looking_at(-facing, Vector3.UP), position)
 
 static func pick_spots(outline: PackedVector2Array, obstacles: Array, center: Vector2, count: int, clearance: float = WALL_CLEARANCE, allowed_outline: PackedVector2Array = PackedVector2Array(), body_scale: float = 1.0) -> Array[Vector2]:
 	## Pure geometry so the placement rules stay testable without a headset.
@@ -188,20 +218,7 @@ static func pick_spots(outline: PackedVector2Array, obstacles: Array, center: Ve
 	var blocked: Array[Rect2] = []
 	for item: Rect2 in obstacles:
 		blocked.append(item.grow(maxf(clearance, OBSTACLE_CLEARANCE * body_scale)))
-	var candidates: Array[Vector2] = []
-	for radius: float in RADII:
-		for step in range(24):
-			var angle := TAU * float(step) / 24.0
-			candidates.append(center + Vector2(cos(angle), sin(angle)) * radius)
-	# Ring-only sampling missed usable corners and smaller rooms. Search the
-	# remaining floor too; all candidates still pass the identical clearance tests.
-	var bounds := Rect2(outline[0], Vector2.ZERO)
-	for point in outline:
-		bounds = bounds.expand(point)
-	for ix in mini(int(ceil(bounds.size.x / 0.25)) + 1, 128):
-		for iz in mini(int(ceil(bounds.size.y / 0.25)) + 1, 128):
-			candidates.append(bounds.position + Vector2(ix, iz) * 0.25)
-	for candidate in candidates:
+	for candidate in _candidates(outline, center):
 		if chosen.size() >= count:
 			return chosen
 		if not _inside(regions, candidate):
@@ -214,6 +231,81 @@ static func pick_spots(outline: PackedVector2Array, obstacles: Array, center: Ve
 			continue
 		chosen.append(candidate)
 	return chosen
+
+static func _candidates(outline: PackedVector2Array, center: Vector2) -> Array[Vector2]:
+	## Rings around the patient first (preferred distance first), then a 25 cm grid.
+	## Ring-only sampling missed usable corners and smaller rooms.
+	var candidates: Array[Vector2] = []
+	for radius: float in RADII:
+		for step in range(24):
+			var angle := TAU * float(step) / 24.0
+			candidates.append(center + Vector2(cos(angle), sin(angle)) * radius)
+	var bounds := Rect2(outline[0], Vector2.ZERO)
+	for point in outline:
+		bounds = bounds.expand(point)
+	for ix in mini(int(ceil(bounds.size.x / 0.25)) + 1, 128):
+		for iz in mini(int(ceil(bounds.size.y / 0.25)) + 1, 128):
+			candidates.append(bounds.position + Vector2(ix, iz) * 0.25)
+	return candidates
+
+static func score_spots(outline: PackedVector2Array, obstacles: Array, center: Vector2, count: int, allowed_outline: PackedVector2Array = PackedVector2Array()) -> Array[Dictionary]:
+	## Soft version of pick_spots: never empty while any floor is left. Hard rules
+	## stay hard (on the floor, never inside the patient, trainee or furniture
+	## rectangles); wall/object clearance and distance to the patient become a score.
+	## Entries: "position" (Vector2), "clearance_m". A spot with less than the standing
+	## clearance is unusable: nobody is placed half inside a wall. Pure geometry.
+	var chosen: Array[Dictionary] = []
+	if outline.size() < 3 or count <= 0:
+		return chosen
+	var scored: Array[Dictionary] = []
+	for candidate in _candidates(outline, center):
+		if not Geometry2D.is_point_in_polygon(candidate, outline):
+			continue
+		if allowed_outline.size() >= 3 and not Geometry2D.is_point_in_polygon(candidate, allowed_outline):
+			continue
+		if obstacles.any(func(rect: Rect2) -> bool: return rect.has_point(candidate)):
+			continue
+		var clearance := _distance_to_outline(outline, candidate)
+		if allowed_outline.size() >= 3:
+			clearance = minf(clearance, _distance_to_outline(allowed_outline, candidate))
+		for rect: Rect2 in obstacles:
+			clearance = minf(clearance, _distance_to_rect(rect, candidate))
+		if clearance < STAND_CLEARANCE_M:
+			continue
+		# More room than the cap buys nothing; being near the preferred distance does.
+		var score := minf(clearance, SCORE_CLEARANCE_CAP_M) - 0.5 * absf(candidate.distance_to(center) - PREFERRED_DISTANCE_M)
+		scored.append({"position": candidate, "clearance_m": clearance, "score": score})
+	for _slot in count:
+		var best: Dictionary = {}
+		var best_score := -INF
+		for item in scored:
+			var score: float = item.score
+			var too_close := false
+			for other in chosen:
+				var distance: float = (item.position as Vector2).distance_to(other.position)
+				too_close = too_close or distance < MIN_SCORED_SEPARATION_M
+				score -= 0.5 * maxf(0.0, SPOT_SEPARATION - distance)
+			if too_close or score <= best_score:
+				continue
+			best_score = score
+			best = item
+		if best.is_empty():
+			break
+		chosen.append({"position": best.position, "clearance_m": best.clearance_m})
+	return chosen
+
+static func _distance_to_outline(outline: PackedVector2Array, point: Vector2) -> float:
+	var best := INF
+	for i in outline.size():
+		var closest := Geometry2D.get_closest_point_to_segment(point, outline[i], outline[(i + 1) % outline.size()])
+		best = minf(best, point.distance_to(closest))
+	return best
+
+static func _distance_to_rect(rect: Rect2, point: Vector2) -> float:
+	## Distance from a point outside the rectangle to its edge; 0 inside.
+	var dx := maxf(maxf(rect.position.x - point.x, point.x - rect.end.x), 0.0)
+	var dy := maxf(maxf(rect.position.y - point.y, point.y - rect.end.y), 0.0)
+	return Vector2(dx, dy).length()
 
 static func _inside(regions: Array, point: Vector2) -> bool:
 	for region: PackedVector2Array in regions:

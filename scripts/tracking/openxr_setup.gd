@@ -7,7 +7,7 @@ var hand_meshes: Array[Node3D] = []
 ## Real-world occlusion from Meta environment depth: "off", "room" (patient
 ## excluded, hands removed from the depth map) or "all" (patient and hands too).
 const OCCLUSION_MODES := ["off", "room", "all"]
-var occlusion := "room"
+var occlusion := "off"
 var _environment_depth: Node3D
 
 func _ready() -> void:
@@ -96,7 +96,11 @@ func install_environment_depth(camera: XRCamera3D) -> void:
 		interface.connect("session_begun", _apply_occlusion)
 
 func set_occlusion(mode: String) -> void:
-	occlusion = mode if mode in OCCLUSION_MODES else "room"
+	# Do not start a native depth swapchain when the project disables it.
+	if not bool(ProjectSettings.get_setting("xr/openxr/extensions/meta/environment_depth", false)):
+		occlusion = "off"
+		return
+	occlusion = mode if mode in OCCLUSION_MODES else "off"
 	_apply_occlusion()
 
 func _apply_occlusion() -> void:

@@ -9,12 +9,13 @@ signal listening_changed(active: bool)
 signal status_changed(message: String)
 signal utterance_started(text: String, language: String, source: String, speaker: String)
 
-const MAX_RECORDING_SECONDS := 12.0
+## Zero disables the automatic stop: a recording ends only on trailing silence,
+## Microphone OFF, focus loss or reset. Set a positive value to restore a cap.
+const MAX_RECORDING_SECONDS := 0.0
 ## Voice activity detection, ported from the learning platform's SpeakGame VAD.
 ## The threshold is room- and microphone-dependent; treat it as a calibration knob.
 const VAD_THRESHOLD := 0.02
 const VAD_SILENCE_MS := 1200
-const VAD_MIN_SPEECH_MS := 500
 ## Keep audio just before activation so the first word is not clipped.
 const PRE_ROLL_SECONDS := 0.35
 var language := "pl"
@@ -77,6 +78,14 @@ func _ready() -> void:
 		for clip: Dictionary in coach_manifest.get("clips", []):
 			var coach_key := str(clip.language) + ":instructor:" + str(clip.text)
 			_coach_clips[coach_key] = load(str(clip.path))
+	# Exact one/two-breath and multilingual confirmation clips must work even
+	# when the reply TTS endpoint is unavailable.
+	var confirmation_path := "res://assets/audio/confirmation/manifest.json"
+	if FileAccess.file_exists(confirmation_path):
+		var confirmation_manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string(confirmation_path))
+		if confirmation_manifest is Dictionary:
+			for clip: Dictionary in confirmation_manifest.get("clips", []):
+				_coach_clips[str(clip.language) + ":instructor:" + str(clip.text)] = load(str(clip.path))
 	_microphone = AudioStreamPlayer.new()
 	_microphone.name = "Microphone"
 	_microphone.stream = AudioStreamMicrophone.new()
@@ -203,7 +212,7 @@ func input_level() -> float:
 
 func _process(_delta: float) -> void:
 	_reconcile_playback()
-	if recording and (Time.get_ticks_msec() - _recording_start) >= int(MAX_RECORDING_SECONDS * 1000):
+	if recording and MAX_RECORDING_SECONDS > 0.0 and (Time.get_ticks_msec() - _recording_start) >= int(MAX_RECORDING_SECONDS * 1000):
 		end_recording()
 		return
 	if not listening or not _input_focused:
@@ -240,7 +249,9 @@ func update_voice_activity(level: float, now: int) -> void:
 		_speech_seen = true
 		_silence_start = 0
 		return
-	if not _speech_seen or now - _recording_start < VAD_MIN_SPEECH_MS:
+	# Trailing silence already takes 1.2 s; a separate 0.5 s recording-age
+	# guard could not shorten/extend an automatically triggered recording.
+	if not _speech_seen:
 		return
 	if _silence_start == 0:
 		_silence_start = now

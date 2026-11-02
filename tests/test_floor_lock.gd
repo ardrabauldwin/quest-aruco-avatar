@@ -116,6 +116,29 @@ func _test_real_patient() -> void:
 	anchor.refresh()
 	check(absf(patient.get_sternum_transform().origin.y - anchor.chest_height_m) < 0.003, "shift puts the sternum on the measured chest height")
 	check(is_equal_approx(model.scale.y, 0.9) and _lowest(anchor) < -0.03, "shift keeps the thickness and lowers the body into the floor")
+	# Decoupled measurements (2026-10-29): the chest height is stored against the raw
+	# headset floor, so changing the fingertip floor correction moves the speakers' floor
+	# but never a hand-measured chest. Raw floor 0, corrected floor 0.9, chest at 1.1 world.
+	anchor.chest_fit = "shift"
+	anchor.floor_source_y = 0.0
+	anchor.floor_y = 0.9
+	anchor.chest_height_m = 1.1
+	anchor.refresh()
+	check(absf(patient.get_sternum_transform().origin.y - 1.1) < 0.003, "chest height counts from the raw headset floor")
+	anchor.floor_y = 0.6
+	anchor.refresh()
+	check(absf(patient.get_sternum_transform().origin.y - 1.1) < 0.003, "a different floor correction leaves the measured chest where it is")
+	anchor.floor_source_y = NAN
+	anchor.floor_y = 0.0
+	# Mannequin on a bed (2026-10-29): the hand-measured chest sits well above the floor.
+	# Both fits lift the whole body there; flattening a body to bed height makes no sense.
+	for fit in ["shift", "flatten"]:
+		anchor.chest_fit = fit
+		anchor.chest_height_m = 0.65
+		anchor.refresh()
+		check(absf(patient.get_sternum_transform().origin.y - 0.65) < 0.003, "%s puts the sternum on a 65 cm bed chest height" % fit)
+		check(is_equal_approx(model.scale.y, 0.9) and _lowest(anchor) > 0.3, "%s lifts the whole body onto the bed without changing its thickness" % fit)
+	anchor.chest_fit = "shift"
 	anchor.chest_height_m = 0.0
 	anchor.refresh()
 	check(absf(_lowest(anchor)) < 0.001 and is_equal_approx(model.scale.y, 0.9), "without a chest height the patient rests on the floor unchanged")

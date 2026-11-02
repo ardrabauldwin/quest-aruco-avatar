@@ -69,6 +69,8 @@ def build_config(existing: dict, *, offline: bool, key: str = "", speech_only: b
             "asr_model": MODELS["asr"],
             "asr_timeout_s": asr_timeout_s,
             "local_asr_url": "",
+            # Full cloud provisioning must also clear old PC dialogue/TTS.
+            "local_ai_url": "",
             "tts_model": MODELS["tts"],
             "tts_voice": "",
             "llm_model": MODELS["llm"],

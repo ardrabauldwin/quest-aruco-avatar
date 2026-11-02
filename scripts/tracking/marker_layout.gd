@@ -81,6 +81,18 @@ func _marker_centroid(marker_offsets: Dictionary) -> Vector3:
 	for id in marker_offsets:
 		sum += (marker_offsets[id] as Transform3D).affine_inverse().origin
 	return sum / marker_offsets.size()
+## From the side a flat marker can return its mirror solution: 2026-09-15 recordings show
+## 30-40 deg of heading and 12-14 cm of position error. Markers lying on the mannequin face up,
+## so an estimate tilted past this limit is rejected. Good markers measured 5-25 deg, mirrored
+## ones 85-95 deg. Only meaningful for a mannequin lying flat (floor_orientation).
+const MAX_TILT_DEG := 45.0
+
+func tilt_deg(id: int, world_pose: Transform3D) -> float:
+	## Angle between this marker's common-anchor estimate and world up.
+	return rad_to_deg((world_pose * offsets[id]).basis.y.normalized().angle_to(Vector3.UP))
+
+func is_flipped(id: int, world_pose: Transform3D) -> bool:
+	return floor_orientation and offsets.has(id) and tilt_deg(id, world_pose) > MAX_TILT_DEG
 
 func fuse(world_poses: Dictionary) -> Dictionary:
 	# 1. Make every visible marker estimate the SAME common anchor.

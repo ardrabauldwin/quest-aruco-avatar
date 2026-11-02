@@ -196,6 +196,10 @@ static func next_language(lang: String) -> String:
 	return SUPPORTED[(SUPPORTED.find(lang) + 1) % SUPPORTED.size()]
 
 const UI_EN := {
+  "Neu-
+start": "Fresh
+start",
+  "Neustart: Boden, Brust und Platzierung zurückgesetzt": "Fresh start: floor, chest and placement reset",
   "\u00dcben, wenn es\nwirklich z\u00e4hlt.": "Practise when it\nreally matters.",
   "BLS trainieren. Nachbarsprache sprechen.": "Practise BLS. Speak the neighbour language.",
   "Kalibrieren": "Calibrate",

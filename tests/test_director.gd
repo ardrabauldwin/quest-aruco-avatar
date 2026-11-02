@@ -21,7 +21,8 @@ func run() -> Array[String]:
 	check(said.has("anna_arrive"), "1.1 Anna calls for help when the scene starts")
 	check(not scenario.aed_available, "the AED is not on scene before anyone fetched it")
 	director.advance(9.0)
-	check(said.has("anna_urge"), "1.1 Anna pleads when nobody acts for 8 s")
+	# Headset review 2026-10-29: the plea interrupted trainees who were already acting.
+	check(not said.has("anna_urge"), "1.1 Anna no longer pleads when nobody acts for 8 s")
 
 	scenario.submit_action("begin_check")
 	scenario.submit_action("check_responsiveness")

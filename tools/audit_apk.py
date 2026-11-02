@@ -30,6 +30,13 @@ def main() -> int:
         checks["source_trees_excluded"] = not any(name.startswith(("assets/android/", "assets/third_party/", "assets/tools/", "assets/tests/")) for name in names)
         checks["env_files_excluded"] = not any(Path(name).name.startswith(".env") or Path(name).name == "config.json" for name in names)
         checks["offline_audio"] = "assets/assets/audio/manifest.json" in names
+        native_name = "lib/arm64-v8a/libnaret_ccbm.so"
+        model_name = "assets/addons/ccbm_native/model.json"
+        checks["ccbm_native"] = native_name in names
+        checks["ccbm_model"] = model_name in names
+        if checks["ccbm_native"] and checks["ccbm_model"]:
+            model = json.loads(bundle.read(model_name))
+            checks["ccbm_native_hash"] = hashlib.sha256(bundle.read(native_name)).hexdigest() == model.get("executable_sha256")
         secret = read_key().encode()
         checks["local_credential_absent"] = not secret or not any(secret in bundle.read(name) for name in names if not name.endswith("/"))
     sdk = Path(os.environ.get("ANDROID_HOME", str(Path.home() / "Library/Android/sdk")))

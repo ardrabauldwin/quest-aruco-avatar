@@ -81,12 +81,16 @@ class Handler(BaseHTTPRequestHandler):
             language = fields.get("language", b"auto").decode().strip()
             if language not in ("en", "de", "pl", "auto", ""):
                 return self.reply(400, {"error": "unsupported_language"})
+            prompt = fields.get("prompt", b"").decode("utf-8").strip()
+            if len(prompt) > 512:
+                return self.reply(400, {"error": "prompt_too_long"})
             if not lock.acquire(timeout=3):
                 return self.reply(429, {"error": "recognizer_busy"})
             try:
                 started = time.monotonic()
                 segments, _ = model.transcribe(io.BytesIO(audio), language=None if language in ("", "auto") else language,
                     beam_size=5, temperature=0.0, condition_on_previous_text=False, vad_filter=False,
+                    initial_prompt=prompt or None,
                     hotwords=VOCABULARY.get(language) if args.vocabulary_hints else None)
                 text = " ".join(segment.text.strip() for segment in segments).strip()
                 elapsed_ms = round((time.monotonic() - started) * 1000)

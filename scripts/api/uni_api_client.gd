@@ -60,6 +60,11 @@ func configure() -> void:
 	# Only loopback is allowed for this cable-connected development mode.
 	if local_asr_url != "http://127.0.0.1:8767/inference":
 		local_asr_url = ""
+	# The Quest product path must never select laptop/USB services, even if
+	# an older development install left those URLs in its private config.
+	var routes := recognition_routes(local_asr_url, local_ai_url, OS.has_feature("android"))
+	local_asr_url = routes.asr
+	local_ai_url = routes.ai
 	asr_model = str(settings.get("asr_model", "large-v3"))
 	tts_model = str(settings.get("tts_model", "omnivoice"))
 	llm_model = str(settings.get("llm_model", DEFAULT_LLM))
@@ -79,6 +84,9 @@ func configure() -> void:
 	for service: String in _requests:
 		(_requests[service] as HTTPRequest).timeout = service_timeout(service)
 
+
+static func recognition_routes(asr: String, ai: String, on_quest: bool) -> Dictionary:
+	return {"asr": "" if on_quest else asr, "ai": "" if on_quest else ai}
 
 func service_timeout(service: String) -> float:
 	return asr_timeout_s if service == "asr" else timeout_s
@@ -161,10 +169,21 @@ func synthesize(text: String, language: String = "en", speaker: String = "bystan
 		return await _request_local_ai("/audio/speech", {"input": text.left(1000), "language": language, "speaker": speaker})
 	if not is_available(tts_model):
 		return {"ok": false, "error": "tts_unavailable"}
-	var payload := {"model": tts_model, "input": text.left(1000), "response_format": "wav"}
-	if not tts_voice.is_empty():
-		payload["voice"] = tts_voice
-	return await request_json("tts", "/audio/speech", payload)
+	return await request_json("tts", "/audio/speech", cloud_speech_payload(text, language, speaker, tts_model, tts_voice))
+
+## The named cloud voices speak English only; German and Polish through them are unintelligible.
+const CLOUD_ENGLISH_MODEL := "tts-1"
+const CLOUD_ENGLISH_VOICES := {"instructor": "am_adam", "bystander": "af_sky"}
+
+static func cloud_speech_payload(text: String, language: String, speaker: String, model: String, voice: String) -> Dictionary:
+	## English keeps one voice per person, matching the saved clips. A configured voice wins.
+	var payload := {"model": model, "input": text.left(1000), "response_format": "wav"}
+	if not voice.is_empty():
+		payload["voice"] = voice
+	elif language == "en":
+		payload["model"] = CLOUD_ENGLISH_MODEL
+		payload["voice"] = CLOUD_ENGLISH_VOICES.get(speaker, CLOUD_ENGLISH_VOICES.bystander)
+	return payload
 
 func _request_local_ai(path: String, payload: Dictionary) -> Dictionary:
 	var request := HTTPRequest.new()
@@ -194,6 +213,14 @@ func _request_local_ai(path: String, payload: Dictionary) -> Dictionary:
 	return result
 
 
+## Vocabulary only, balanced between opposite findings; never suggest the next
+## scenario answer. A prompt is a decoding hint, not evidence of an action.
+const ASR_VOCABULARY := {
+	"en": "CPR, resuscitation, scene safety, surroundings, safe, unsafe, response, responding, unresponsive, consciousness, breathing, normal breathing, abnormal breathing, gasping, airway, head tilt, chin lift, emergency services, ambulance, 112, one one two, Anna, Jan, chest compressions, sternum, compression depth, compression rate, recoil, rescue breath, rescue breaths, first breath, second breath, two breaths, handover",
+	"de": "Reanimation, Wiederbelebung, Umgebung, Sicherheit, sicher, unsicher, Bewusstsein, Reaktion, reagiert, nicht, ansprechbar, bewusstlos, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, Rettungsdienst, Krankenwagen, 112, eins eins zwei, Anna, Jan, Herzdruckmassage, Brustkorb, Brustbein, Kompressionstiefe, Kompressionsfrequenz, Entlastung, Beatmung, Atemspende, erste Beatmung, zweite Beatmung, zwei Beatmungen, Übergabe",
+	"pl": "resuscytacja, bezpieczeństwo, otoczenie, bezpieczne, niebezpieczne, przytomność, reakcja, reaguje, nie, nieprzytomny, oddychanie, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, drogi oddechowe, odchylenie głowy, uniesienie bródki, pogotowie, karetka, 112, sto dwanaście, Anna, Jan, uciski klatki piersiowej, mostek, głębokość ucisków, tempo ucisków, oddech ratowniczy, pierwszy oddech, drugi oddech, dwa oddechy, przekazanie pacjenta"
+}
+
 func transcribe(wav: PackedByteArray, language: String) -> Dictionary:
 	if local_asr_url.is_empty() and not is_available(asr_model):
 		return {"ok": false, "error": "asr_unavailable"}
@@ -206,6 +233,7 @@ func transcribe(wav: PackedByteArray, language: String) -> Dictionary:
 		fields["no_context"] = "true"
 	if language in ["de", "pl", "en"]:
 		fields["language"] = language
+		fields["prompt"] = ASR_VOCABULARY[language]
 	for name: String in fields:
 		body.append_array(("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n" % [boundary, name, fields[name]]).to_utf8_buffer())
 	body.append_array(("--%s\r\nContent-Disposition: form-data; name=\"file\"; filename=\"speech.wav\"\r\nContent-Type: audio/wav\r\n\r\n" % boundary).to_utf8_buffer())

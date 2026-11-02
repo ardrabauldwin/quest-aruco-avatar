@@ -71,8 +71,15 @@ func run() -> Array[String]:
 	return failures
 
 func _test_marker_centroid() -> void:
+	# The shipped profile keeps marker 0 as common point; test the option on a copy.
+	var cfg := ConfigFile.new()
+	cfg.load("res://data/user_marker_layout.cfg")
+	cfg.set_value("layout", "common_point", "marker_centroid")
+	var path := "user://marker_centroid_test.cfg"
+	cfg.save(path)
 	var layout := NaretMarkerLayout.new()
-	check(layout.load_profile("res://data/user_marker_layout.cfg") == OK, "three-marker profile loads")
+	check(layout.load_profile(path) == OK, "three-marker profile loads")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var common := Transform3D(Basis(Vector3.UP, 0.7), Vector3(1, 0.2, -2))
 	var markers := {}
 	var middle := Vector3.ZERO

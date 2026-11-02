@@ -24,6 +24,13 @@ func has_full_marker_evidence() -> bool:
 		return _used_ids.size() == _layout.offsets.size()
 	return _used_ids.has(marker_id)
 const FRESHNESS_MS := 500.0
+## A mirrored marker keeps its own last good pose this long. The mannequin is static, and this
+## stops the average collapsing onto whichever marker happens not to flip from this viewpoint.
+const FLIP_HOLD_MS := 1000
+var rejected_flips := 0
+var held_flips := 0
+var _last_good := {}   # id -> {pose, ms}
+var _marker_log_ms := -1000
 
 var tracked := false
 var status := "initializing"
@@ -35,9 +42,21 @@ var _filter: RefCounted
 var _camera: Camera3D
 var _last_update_ms := 0
 var _discard_next_detection := false
+## Standby (camera off while the held pose is out of view) must never stick: the
+## headset review 2026-10-29 found the camera closed for good after a reference-space
+## update left a stale pose nowhere in view. Rescan briefly every few seconds.
+const STANDBY_RESCAN_EVERY_S := 6.0
+const STANDBY_RESCAN_FOR_S := 1.5
+var _standby_s := 0.0
+## Seconds since the marker was last seen; beyond this the camera never goes to standby.
+const LOST_KEEP_SCANNING_S := 10.0
+var _lost_s := 0.0
 
 func _ready() -> void:
 	_load_marker_configuration()
+	# A recentre or stage update moves the world under the held pose: forget it and scan.
+	if XRServer.has_signal("reference_frame_changed"):
+		XRServer.reference_frame_changed.connect(forget_pose)
 	if not marker_layout_file.is_empty():
 		_layout = NaretMarkerLayout.new()
 		_layout_invalid = _layout.load_profile(marker_layout_file) != OK
@@ -86,6 +105,10 @@ func bind_provider(provider: Node) -> bool:
 ## The detector node, or null on the desktop preview. Debug overlays read raw poses from it.
 func get_provider() -> Node:
 	return _provider
+
+## The ids the printed layout really uses; empty without a layout.
+func get_layout_ids() -> Array:
+	return _layout.offsets.keys() if _layout != null else []
 
 func set_view_camera(camera: Camera3D) -> void:
 	_camera = camera
@@ -144,15 +167,26 @@ func _process(_delta: float) -> void:
 		fresh = fresh or (_have_pose and age >= 0.0 and age <= FRESHNESS_MS)
 	_set_tracked(fresh)
 	if tracked:
-		_set_status("marker_tracked")
-	elif _have_pose:
-		_set_status("marker_lost_pose_held")
+		_lost_s = 0.0
+	else:
+		_lost_s += _delta
+	var in_view := true
 	if _camera != null and _have_pose:
 		# Re-evaluate FOV every frame, so turning back toward the mannequin resumes scanning.
-		var in_view := _camera.is_position_in_frustum(latest_pose.origin)
-		_provider.set("enabled", in_view)
-		if not in_view:
-			_set_status("tracking_standby")
+		in_view = _camera.is_position_in_frustum(latest_pose.origin)
+		if in_view:
+			_standby_s = 0.0
+		else:
+			_standby_s += _delta
+		# While in standby, open the camera for a short rescan every few seconds. After a
+		# long loss the held pose may be stale (mannequin moved): keep the camera on.
+		var rescan := not in_view and fmod(_standby_s, STANDBY_RESCAN_EVERY_S) < STANDBY_RESCAN_FOR_S
+		_provider.set("enabled", in_view or rescan or _lost_s > LOST_KEEP_SCANNING_S)
+	# One status per frame (the old code set two, flickering the dashboard every frame).
+	if tracked:
+		_set_status("marker_tracked")
+	elif _have_pose:
+		_set_status("marker_lost_pose_held" if in_view or _lost_s > LOST_KEEP_SCANNING_S else "tracking_standby")
 
 func _on_markers_updated(ids: Array) -> void:
 	if _layout_invalid:
@@ -166,7 +200,10 @@ func _on_markers_updated(ids: Array) -> void:
 		for id in ids:
 			var age := float(_provider.call("marker_age_ms", id))
 			if _layout.offsets.has(id) and age >= 0.0 and age <= FRESHNESS_MS:
-				poses[id] = _provider.call("get_marker_world_pose", id)
+				var raw: Transform3D = _provider.call("get_marker_world_pose", id)
+				var good := _usable_pose(id, raw)
+				if not good.is_empty():
+					poses[id] = good.pose
 		var result := _layout.fuse(poses)
 		if result.is_empty():
 			return
@@ -193,6 +230,38 @@ func _on_markers_updated(ids: Array) -> void:
 	_have_pose = true
 	_set_tracked(true)
 	pose_updated.emit(pose)
+
+func _usable_pose(id: int, raw: Transform3D) -> Dictionary:
+	## {pose} for this reading, its last good pose if it is mirrored, or {} to leave it out.
+	var now := Time.get_ticks_msec()
+	var flipped := _layout.is_flipped(id, raw)
+	if now - _marker_log_ms >= 1000:
+		_marker_log_ms = now
+	if now - _marker_log_ms < 100:
+		# One burst per second: each marker's own estimate, so a disagreeing one can be named.
+		print("NARET_MARKER_EST id=%d est=%s tilt_deg=%.0f flipped=%s rejected=%d held=%d" % [id, (raw * _layout.offsets[id]).origin, _layout.tilt_deg(id, raw), flipped, rejected_flips, held_flips])
+	if not flipped:
+		_last_good[id] = {"pose": raw, "ms": now}
+		return {"pose": raw}
+	rejected_flips += 1
+	var last: Dictionary = _last_good.get(id, {})
+	if not last.is_empty() and now - int(last.ms) <= FLIP_HOLD_MS:
+		held_flips += 1
+		return {"pose": last.pose}
+	return {}
+
+func forget_pose() -> void:
+	_last_good.clear()
+	## Drop the held pose (e.g. after a reference-frame change) and scan afresh.
+	_have_pose = false
+	_standby_s = 0.0
+	_set_tracked(false)
+	if _filter != null:
+		_filter.call("reset")
+	if _provider != null:
+		_provider.set("enabled", true)
+		_set_status("scanning_marker")
+	print("NARET_TRACKING forget_pose: reference frame changed, scanning again")
 
 func _publish_preview() -> void:
 	latest_pose = preview_pose

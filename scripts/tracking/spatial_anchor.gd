@@ -12,14 +12,24 @@ var manual_floor_correction_m := 0.0
 ## against ("room_scan" or "local_floor"); applies only while that source is used.
 var floor_touch_offset_m := 0.0
 var floor_touch_source := ""
-const MAX_FLOOR_TOUCH_OFFSET_M := 1.0
+const MAX_FLOOR_TOUCH_OFFSET_M := 1.5 # stale headset floors can be off by ~1 m (2026-10-29)
 ## Hand-measured height of the real compression point above the floor
 ## (NaretChestTouch); 0 = not measured. A mannequin property, so it survives
 ## other rooms and recentring. Puts the patient's `Sternum` at that height:
 ## "flatten" scales the body's thickness and keeps its back on the floor,
 ## "shift" keeps the thickness and lowers the whole body into the floor.
 var chest_height_m := 0.0
+## The headset's raw floor (before the fingertip correction), set by main. The chest
+## height is stored against THIS, so a later fingertip floor touch moves the speakers
+## and an uncalibrated patient, never a hand-measured chest (2026-10-29).
+var floor_source_y := NAN
 var chest_fit := "shift"
+
+func chest_height_above_floor() -> float:
+	## Measured chest height relative to the corrected floor (floor_y).
+	if not is_finite(floor_source_y):
+		return chest_height_m
+	return floor_source_y + chest_height_m - floor_y
 const CHEST_FITS := ["flatten", "shift"]
 var patient_opacity := 0.75
 var _floor_vertices := PackedVector3Array()
@@ -51,8 +61,14 @@ var _floor_offset_y := 0.0
 ## Revision 2 resets pre-pivot manual translation/rotation once. Subsequent
 ## explicit alignments saved with this revision remain usable.
 @export var patient_alignment_revision := 1
+## True puts the sternum on the fused marker point in height too, instead of resting the
+## body on the floor. The floor lock still serves the speakers; the patient may dip below it.
+@export var sternum_at_marker_height := false
 # Used only for the default sternum offset, not added again to saved calibration.
 @export var marker_thickness_m := 0.002
+## Where the default sternum sits relative to the fused marker point, in anchor axes
+## (+X side, +Y up, +Z toward the feet). The fused point itself stays where it is.
+@export var sternum_shift_m := Vector3.ZERO
 # Model-only orientation adjustment. Keep marker fusion and its gravity axes intact.
 # The scene sets this to correct the observed face-down/head-to-feet reversal.
 @export var default_model_rotation_degrees := Vector3.ZERO
@@ -65,6 +81,15 @@ var locked_pose := Transform3D.IDENTITY
 var viewer_head: Node3D
 var full_marker_evidence := true
 var viewer_gate := NaretViewerMotionGate.new()
+## Move the patient only on confirmed stable checkpoints (on in main.tscn), or launch
+## with -- --placement-checkpoints.
+@export var checkpoint_updates := false
+## A confirmed checkpoint closer than this to the current placement is marker noise, not a
+## moved mannequin, and is ignored (docs: a new resting pose > 1.5 cm / 5 deg re-places).
+const CHECKPOINT_MOVE_M := 0.015
+const CHECKPOINT_MOVE_DEG := 5.0
+var _checkpoint_target := Transform3D.IDENTITY
+var _checkpoint_transition := false
 var _viewer_filter: RefCounted
 var _viewer_rest_pose := Transform3D.IDENTITY
 var _viewer_last_ms := -1
@@ -88,8 +113,23 @@ func _process(delta: float) -> void:
 			patient.visible = locked
 		viewer_gate.head = viewer_head
 		viewer_gate.tick(delta)
+		if checkpoint_updates and _checkpoint_transition and locked:
+			if viewer_gate.moving or not full_marker_evidence or viewer_head.global_position.distance_to(locked_pose.origin) > viewer_gate.JUDGE_MOVE_MAX_RANGE_M:
+				_checkpoint_transition = false
+			else:
+				var amount := 1.0 - exp(-maxf(delta, 0.0) / 1.2)
+				locked_pose = locked_pose.interpolate_with(_checkpoint_target, amount)
+				_apply(locked_pose)
 
 func _ready() -> void:
+	checkpoint_updates = checkpoint_updates or "--placement-checkpoints" in OS.get_cmdline_user_args()
+	if checkpoint_updates:
+		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
+	if sternum_at_marker_height:
+		# The patient pivot (its sternum) sits directly on the anchor: no model step to cancel,
+		# so the default alignment holds only the marker thickness.
+		var patient := get_node_or_null("Mannequin") as Node3D
+		if patient: patient.position = Vector3.ZERO
 	# Saved alignment wins. Without it, start with the model's sternum-node offset.
 	load_calibration()
 	if not calibrated:
@@ -120,7 +160,7 @@ func sternum_offset(model_scale: Vector3 = Vector3.ONE) -> Transform3D:
 	# Preserve the previous world-space 2 mm placement when changing the anchor
 	# convention; the old anchor's +Y pointed down before the model's 180° flip.
 	var thickness_axis := Vector3.DOWN if patient_anchor_axes else Vector3.UP
-	return Transform3D(rotation, -(rotation * point + thickness_axis * marker_thickness_m))
+	return Transform3D(rotation, sternum_shift_m - (rotation * point + thickness_axis * marker_thickness_m))
 
 func update_pose(pose: Transform3D, now_ms := -1) -> void:
 	# Shared robust startup. Only the headset has a tracked viewer for motion gating.
@@ -143,7 +183,9 @@ func update_pose(pose: Transform3D, now_ms := -1) -> void:
 		_apply(locked_pose)
 		if floor_locked:
 			print("NARET_FLOOR reference_y=%.3f model_root_y=%.3f resting_bottom_y=%.3f" % [floor_y, global_position.y, global_position.y + _floor_offset_y])
-		print("Startup placement: %d readings, fallback=%s" % [initial.samples, initial.fallback])
+		var placed_sternum: Variant = get_node("Mannequin").get("sternum") if has_node("Mannequin") else null
+		print("NARET_STERNUM height_from_markers=%s sternum_y=%.3f fused_y=%.3f floor_y=%.3f" % [sternum_at_marker_height, (placed_sternum as Node3D).global_position.y if placed_sternum else NAN, locked_pose.origin.y, floor_y])
+		print("Startup placement: %d readings, fallback=%s anchor_origin=%s anchor_yaw_deg=%.1f" % [initial.samples, initial.fallback, locked_pose.origin, rad_to_deg(atan2(-locked_pose.basis.z.x, -locked_pose.basis.z.z))])
 		return
 	if viewer_head != null and locked:
 		_update_headset_pose(pose, now)
@@ -173,6 +215,20 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 	var corrected: Transform3D = result.pose
 	# Height stays at the startup anchor height; this is not snapping the mesh to floor.
 	corrected.origin.y = locked_pose.origin.y
+	if checkpoint_updates:
+		# Confirmation is the only authority for changing rest in this mode.
+		# No raw poses or old rest pull can drag the displayed patient meanwhile.
+		var step_m := corrected.origin.distance_to(locked_pose.origin)
+		var step_deg := rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(locked_pose.basis.get_rotation_quaternion()))
+		if step_m <= CHECKPOINT_MOVE_M and step_deg <= CHECKPOINT_MOVE_DEG:
+			# Marker noise around a resting mannequin: hold, so the patient does not wobble.
+			print("Checkpoint placement: held, %.1f cm / %.1f deg is below the move threshold." % [step_m * 100.0, step_deg])
+			return
+		_viewer_rest_pose = corrected
+		_checkpoint_target = corrected
+		_checkpoint_transition = true
+		print("Checkpoint placement: confirmed after ", result.samples, " readings.")
+		return
 	if _viewer_filter == null:
 		# Start smoothing from the current accepted placement, preventing a reset jump.
 		_viewer_filter = load("res://addons/naret_upstream/avatar/simple_pose_stabilizer.gd").new()
@@ -209,6 +265,9 @@ func unlock() -> void:
 	# and smoothing history. Keep the model-specific calibration offset unchanged.
 	startup = NaretStartupPlacement.new()
 	viewer_gate = NaretViewerMotionGate.new()
+	if checkpoint_updates:
+		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
+	_checkpoint_transition = false
 	_viewer_filter = null
 	_viewer_last_ms = -1
 	locked = false
@@ -247,6 +306,7 @@ func save_calibration() -> Error:
 	config.set_value("calibration", "floor_touch_offset_m", floor_touch_offset_m)
 	config.set_value("calibration", "floor_touch_source", floor_touch_source)
 	config.set_value("calibration", "chest_height_m", chest_height_m)
+	config.set_value("calibration", "chest_height_frame", "headset_floor")
 	config.set_value("calibration", "chest_fit", chest_fit)
 	config.set_value("calibration", "marker_height_lock", true)
 	config.set_value("calibration", "patient_opacity", patient_opacity)
@@ -285,7 +345,7 @@ func load_calibration() -> Error:
 	manual_floor_correction_m = clampf(float(config.get_value("calibration", "manual_floor_correction_m", 0.0)), -1.5, 1.5)
 	floor_touch_offset_m = clampf(float(config.get_value("calibration", "floor_touch_offset_m", 0.0)), -MAX_FLOOR_TOUCH_OFFSET_M, MAX_FLOOR_TOUCH_OFFSET_M)
 	floor_touch_source = str(config.get_value("calibration", "floor_touch_source", ""))
-	chest_height_m = clampf(float(config.get_value("calibration", "chest_height_m", 0.0)), 0.0, 0.5)
+	chest_height_m = clampf(float(config.get_value("calibration", "chest_height_m", 0.0)), -1.0, 2.5) # relative to the raw headset floor
 	# Lowering looked better on the real mannequin than flattening (deformed feet).
 	chest_fit = str(config.get_value("calibration", "chest_fit", "shift"))
 	if chest_fit not in CHEST_FITS:
@@ -306,7 +366,7 @@ func _apply(pose: Transform3D) -> void:
 	var old_pos := global_position
 	# Room-space anchor multiplied by model-local alignment = patient world pose.
 	global_transform = pose * marker_to_mannequin
-	if floor_locked:
+	if floor_locked and not sternum_at_marker_height:
 		if calibrated:
 			global_position.y += floor_adjustment_m
 		# Active floor lock determines vertical placement, including calibrated
@@ -319,13 +379,23 @@ func _apply(pose: Transform3D) -> void:
 		if mannequin and mannequin.get("ragdoll") and mannequin.ragdoll.is_active():
 			mannequin.ragdoll.reset_to_skeleton()
 
+func patient_bottom_y() -> float:
+	## World height of the patient's lowest point, or NAN without a model. In the
+	## marker-height mode this is the ground the people around the patient stand on.
+	return global_position.y + _floor_offset_y if _measure_floor_offset() else NAN
+
 func _snap_to_floor() -> void:
+	if not _measure_floor_offset():
+		return
+	_snap_measured()
+
+func _measure_floor_offset() -> bool:
 	# Cache the neutral mesh vertices in anchor-local coordinates. Only the patient
 	# participates: UI, hands and room geometry must never determine its height.
 	if _floor_vertices.is_empty():
 		var model := get_node_or_null("Mannequin/Model")
 		if model == null:
-			return
+			return false
 		for mesh_node in model.find_children("*", "MeshInstance3D", true, false):
 			var instance := mesh_node as MeshInstance3D
 			if instance.mesh == null:
@@ -344,19 +414,24 @@ func _snap_to_floor() -> void:
 		_floor_offset_y = INF
 		for vertex in _floor_vertices:
 			_floor_offset_y = minf(_floor_offset_y, projection.dot(vertex))
-	if not is_finite(_floor_offset_y):
-		return
+	return is_finite(_floor_offset_y)
+
+func _snap_measured() -> void:
+	var projection := _floor_projection
 	var contact_y := floor_y - _floor_offset_y
 	var mannequin := get_node_or_null("Mannequin")
 	var sternum: Node3D = mannequin.get("sternum") if mannequin else null
-	var measured := chest_height_m > 0.0 and sternum != null
+	var measured := chest_height_m != 0.0 and sternum != null
+	var chest_above := chest_height_above_floor()
 	# Height of the patient's sternum above its own lowest point, as placed now.
 	var sternum_y := projection.dot(mannequin.transform * sternum.position) if sternum else 0.0
 	var rise := sternum_y - _floor_offset_y
-	var flatten := measured and chest_fit == "flatten" and rise > 0.01
+	# A chest more than 35 cm above the floor is a raised mannequin (bed, table), not a
+	# thick one: always shift the whole body up to the measured height, never flatten.
+	var flatten := measured and chest_fit == "flatten" and rise > 0.01 and chest_above > 0.01 and chest_above <= 0.35
 	# Lowest point and sternum scale together, so the ratio gives the thickness.
 	# A changed body drops the vertex cache; the second pass measures it anew.
-	var thickness := clampf(float(mannequin.get("thickness")) * chest_height_m / rise, 0.4, 1.2) if flatten else 1.0
+	var thickness := clampf(float(mannequin.get("thickness")) * chest_above / rise, 0.4, 1.2) if flatten else 1.0
 	if _set_thickness(thickness):
 		_snap_to_floor()
 		return
@@ -365,7 +440,7 @@ func _snap_to_floor() -> void:
 	elif flatten:
 		global_position.y = contact_y + manual_floor_correction_m
 	else:
-		global_position.y = floor_y + chest_height_m - sternum_y + manual_floor_correction_m
+		global_position.y = floor_y + chest_above - sternum_y + manual_floor_correction_m
 
 func _set_thickness(value: float) -> bool:
 	## True when the body changed, so the cached floor vertices were dropped.

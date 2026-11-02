@@ -7,6 +7,18 @@ from api_common import BASE_URL
 
 
 class SpeechOnlyConfigTests(unittest.TestCase):
+    def test_full_cloud_setup_clears_all_pc_voice_routes(self):
+        original = {"api": {"local_asr_url": "http://127.0.0.1:8767/inference",
+                            "local_ai_url": "http://127.0.0.1:8768"},
+                    "placement": {"offset": [0, 0.1, 0]}}
+        snapshot = copy.deepcopy(original)
+        configured = build_config(original, offline=False, key="test-placeholder")
+        self.assertEqual(original, snapshot)
+        self.assertEqual(configured["placement"], original["placement"])
+        self.assertEqual(configured["api"]["local_asr_url"], "")
+        self.assertEqual(configured["api"]["local_ai_url"], "")
+        self.assertEqual(configured["api"]["base_url"], BASE_URL)
+
     def test_switch_preserves_dialogue_and_device_settings(self):
         original = {"api": {"local_asr_url": "http://127.0.0.1:8767/inference",
                             "local_ai_url": "http://127.0.0.1:8768",

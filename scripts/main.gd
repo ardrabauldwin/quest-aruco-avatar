@@ -28,6 +28,9 @@ var director: NaretBystanderDirector
 var room: NaretRoomLayout
 var floor_touch: NaretFloorTouch
 var chest_touch: NaretChestTouch
+## The chest's flat-hand measurement, held longer, on the mouth/chin instead.
+var chin_touch: NaretChestTouch
+var scan_fit_touch: NaretScanFitTouch
 ## Automatic floor height and its source, before the fingertip offset.
 var _floor_source := ""
 var _floor_source_y := NAN
@@ -261,6 +264,21 @@ func _ready() -> void:
 		chest_touch.failed.connect(func():
 			hand_menu.set_chest_calibrating(false)
 			_toast(NaretLanguage.ui("Brust nicht erkannt · Hand flach auflegen", "Nie wykryto klatki · połóż płasko dłoń", _language)))
+		scan_fit_touch = NaretScanFitTouch.new()
+		add_child(scan_fit_touch)
+		scan_fit_touch.measured.connect(_on_scan_fit_measured)
+		scan_fit_touch.failed.connect(func(fit: String):
+			hand_menu.set_scan_fitting(fit, false)
+			_toast(NaretLanguage.ui("Hände nicht erkannt · beide Hände still halten", "Nie wykryto dłoni · trzymaj obie dłonie nieruchomo", _language)))
+		chin_touch = NaretChestTouch.new()
+		chin_touch.hold_s = 3.5
+		chin_touch.spread_m = 0.04 # nose and chin: a face is less flat than a chest
+		chin_touch.log_tag = "NARET_CHIN_TOUCH"
+		add_child(chin_touch)
+		chin_touch.measured.connect(_on_chin_measured)
+		chin_touch.failed.connect(func():
+			hand_menu.set_chin_calibrating(false)
+			_toast(NaretLanguage.ui("Kinn nicht erkannt · Hand flach auflegen", "Nie wykryto brody · połóż płasko dłoń", _language)))
 		# The physical room/floor remains visible through passthrough.
 		$Room.visible = false
 		# The speakers' shadows fall on that real floor instead. They follow the key
@@ -332,6 +350,8 @@ func _build_xr_ui() -> void:
 		hand_menu.set_gizmos_on(true)
 		_set_marker_gizmos.call_deferred(true)
 	hand_menu.chest_calibration_requested.connect(_calibrate_chest)
+	hand_menu.chin_calibration_requested.connect(_calibrate_chin)
+	hand_menu.scan_fit_requested.connect(_fit_scan)
 	hand_menu.chest_fit_requested.connect(_set_chest_fit)
 	hand_menu.set_chest_fit(anchor.chest_fit)
 	hand_menu.sternum_landmark_apply_requested.connect(_apply_sternum_landmark)
@@ -456,6 +476,69 @@ func _on_chest_measured(surface_y: float) -> void:
 	var saved := anchor.save_calibration() == OK
 	print("NARET_CHEST height_raw=%.3f above_floor=%.3f fit=%s thickness=%.3f" % [height, above_floor, anchor.chest_fit, mannequin.thickness])
 	_toast(NaretLanguage.ui("Brust: ", "Klatka: ", _language) + "%.1f" % (above_floor * 100.0) + NaretLanguage.ui(" cm über Boden", " cm nad podłogą", _language) + ("" if saved else " (Save failed)"))
+
+func _calibrate_chin() -> void:
+	## Hand-menu key (experiment): a flat hand resting on the real mouth/chin raises or
+	## lowers the full-body head along the chest normal until its face meets the hand.
+	## The rest of the body stays where it is; the neck stretches to follow.
+	if chin_touch == null or chin_touch.active:
+		return
+	if not anchor.locked:
+		_toast("Wait for marker placement")
+		return
+	var mouth := mannequin.get_node_or_null("MouthZone") as Node3D
+	chin_touch.start(origin, func() -> Vector3: return mouth.global_position if mouth else mannequin.global_position)
+	hand_menu.set_chin_calibrating(true)
+	_toast(NaretLanguage.ui("Hand flach auf Mund und Kinn legen und 4 s still halten", "Połóż płasko dłoń na ustach i brodzie i trzymaj 4 s", _language))
+
+func _on_chin_measured(surface_y: float) -> void:
+	hand_menu.set_chin_calibrating(false)
+	var palm := chin_touch.measured_palm
+	var lift: float = mannequin.head_lift_for(Vector3(palm.x, surface_y, palm.z))
+	print("NARET_CHIN lift=%.3f palm=%s surface_y=%.3f" % [lift, palm, surface_y])
+	if not is_finite(lift) or absf(lift) > NaretSpatialAnchor.MAX_HEAD_LIFT_M:
+		_toast(NaretLanguage.ui("Kopf nicht angepasst · Hand prüfen", "Głowa nie dopasowana · sprawdź dłoń", _language) + " (%.1f cm)" % (lift * 100.0))
+		return
+	anchor.set_head_lift(lift)
+	var saved := anchor.save_calibration() == OK
+	_toast(NaretLanguage.ui("Kopf verschoben: ", "Głowa przesunięta: ", _language) + "%+.1f cm" % (lift * 100.0) + ("" if saved else " (Save failed)"))
+
+func _fit_scan(fit: String) -> void:
+	## Hand-menu keys: both hands against the real torso's cut-off ("edge") or its
+	## sides ("sides") move the patient so the 1:1 scan meets the fingers.
+	if scan_fit_touch == null or scan_fit_touch.active:
+		return
+	if not anchor.locked:
+		_toast("Wait for marker placement")
+		return
+	scan_fit_touch.start(origin, fit)
+	hand_menu.set_scan_fitting(fit, true)
+	if fit == "edge":
+		_toast(NaretLanguage.ui("4 s: beide Hände unter die Schnittkante, kleine Finger an die Puppe", "4 s: obie dłonie pod krawędzią cięcia, małe palce przy manekinie", _language))
+	else:
+		_toast(NaretLanguage.ui("4 s: Hände links und rechts an die Puppe, Zeigefinger anlegen", "4 s: dłonie z lewej i prawej strony manekina, palce wskazujące przy nim", _language))
+
+func _on_scan_fit_measured(fit: String, hands: Array) -> void:
+	# Fingers and scan meet in mannequin space; the shift goes into the saved
+	# marker-to-patient offset like a controller nudge, so it follows the marker.
+	hand_menu.set_scan_fitting(fit, false)
+	var to_local := mannequin.global_transform.affine_inverse()
+	var model_scale := mannequin.global_basis.get_scale()
+	var local := []
+	for joints: Array in hands:
+		var mapped := []
+		for joint: Dictionary in joints:
+			mapped.append({"position": to_local * (joint.position as Vector3), "radius": float(joint.radius) / model_scale.z})
+		local.append(mapped)
+	var shift := NaretScanFitTouch.shift(fit, local, mannequin.scan_points())
+	print("NARET_SCAN_FIT fit=%s shift=%s" % [fit, shift])
+	if shift.is_zero_approx() or shift.length() > 0.15:
+		_toast(NaretLanguage.ui("Scan nicht angepasst · Hände prüfen", "Skan nie dopasowany · sprawdź dłonie", _language) + " (%.1f cm)" % (shift.length() * 100.0))
+		return
+	anchor.nudge_world(mannequin.global_basis * shift, 0.0)
+	anchor.calibrated = true
+	var saved := anchor.save_calibration() == OK
+	_toast(NaretLanguage.ui("Scan verschoben: ", "Skan przesunięty: ", _language) + "%+.1f cm" % ((shift.z if fit == "edge" else shift.x) * 100.0) + ("" if saved else " (Save failed)"))
 
 func _set_chest_fit(fit: String) -> void:
 	## Switches live between a flattened body and one lowered into the floor.
@@ -772,6 +855,7 @@ func _fresh_start() -> void:
 	anchor.floor_touch_source = ""
 	anchor.chest_height_m = 0.0
 	anchor.manual_floor_correction_m = 0.0
+	anchor.set_head_lift(0.0)
 	anchor.save_calibration()
 	if xr.active:
 		_refresh_floor_reference()

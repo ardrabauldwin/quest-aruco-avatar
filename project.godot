@@ -57,5 +57,6 @@ openxr/extensions/meta/passthrough=true
 openxr/extensions/meta/hand_tracking_mesh=true
 openxr/extensions/meta/anchor_api=true
 openxr/extensions/meta/scene_api=true
-; Disabled after Quest runtime aborted importing the environment-depth swapchain.
-openxr/extensions/meta/environment_depth=false
+; Re-enabled for the Debug row's depth key; occlusion still starts off. Was disabled after
+; the Quest runtime aborted importing the environment-depth swapchain: watch for that.
+openxr/extensions/meta/environment_depth=true

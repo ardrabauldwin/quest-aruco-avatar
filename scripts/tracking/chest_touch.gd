@@ -24,6 +24,13 @@ const JOINTS := [XRHandTracker.HAND_JOINT_PALM,
 	XRHandTracker.HAND_JOINT_RING_FINGER_PHALANX_INTERMEDIATE, XRHandTracker.HAND_JOINT_RING_FINGER_PHALANX_DISTAL, XRHandTracker.HAND_JOINT_RING_FINGER_TIP]
 
 var active := false
+## Per instance, so the same measurement serves the chin (longer hold, and a
+## face is less flat than a chest): see main.gd's chin_touch.
+var hold_s := HOLD_S
+var spread_m := SPREAD_M
+var log_tag := "NARET_CHEST_TOUCH"
+## Where the measuring palm was, for a caller that needs the spot, not only the height.
+var measured_palm := Vector3.ZERO
 var _origin: XROrigin3D
 var _sternum: Callable
 var _elapsed := 0.0
@@ -41,7 +48,7 @@ func start(origin: XROrigin3D, sternum_position: Callable) -> void:
 	_samples = [[], []]
 	_log_s = 0.0
 	active = true
-	print("NARET_CHEST_TOUCH start sternum=%s" % str(sternum_position.call()))
+	print("%s start target=%s" % [log_tag, str(sternum_position.call())])
 
 func _process(delta: float) -> void:
 	if not active or _origin == null:
@@ -49,7 +56,7 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 	if _elapsed > TIMEOUT_S:
 		active = false
-		print("NARET_CHEST_TOUCH timeout")
+		print("%s timeout" % log_tag)
 		failed.emit()
 		return
 	var sternum: Vector3 = _sternum.call()
@@ -84,13 +91,14 @@ func _process(delta: float) -> void:
 			low = minf(low, value)
 			high = maxf(high, value)
 		reasons.append("h%d:joints=%d spread_cm=%.1f held_s=%.1f y=%.2f" % [index, estimates.size(), (high - low) * 100.0 if estimates.size() > 0 else 0.0, (_elapsed - float(_samples[index][0].t)) if not _samples[index].is_empty() else 0.0, palm_world.origin.y])
-		var surface_y := feed(_samples[index], estimates, palm_world.origin, _elapsed)
+		var surface_y := feed(_samples[index], estimates, palm_world.origin, _elapsed, hold_s, spread_m)
 		if report:
-			print("NARET_CHEST_TOUCH t=%.0f %s" % [_elapsed, " | ".join(reasons)])
+			print("%s t=%.0f %s" % [log_tag, _elapsed, " | ".join(reasons)])
 			report = false
 		if is_finite(surface_y):
 			active = false
-			print("NARET_CHEST_TOUCH hand=%d joints=%d surface_y=%.3f" % [index, estimates.size(), surface_y])
+			measured_palm = palm_world.origin
+			print("%s hand=%d joints=%d surface_y=%.3f" % [log_tag, index, estimates.size(), surface_y])
 			measured.emit(surface_y)
 			return
 
@@ -100,9 +108,9 @@ static func median(values: PackedFloat32Array) -> float:
 	var middle := sorted.size() / 2
 	return sorted[middle] if sorted.size() % 2 == 1 else (sorted[middle - 1] + sorted[middle]) * 0.5
 
-static func feed(samples: Array, estimates: PackedFloat32Array, palm: Vector3, now_s: float) -> float:
+static func feed(samples: Array, estimates: PackedFloat32Array, palm_at: Vector3, now_s: float, hold := HOLD_S, spread := SPREAD_M) -> float:
 	## Pure so the acceptance rule is testable without a headset: NAN until a flat
-	## hand has rested HOLD_S, then the median surface height under it.
+	## hand has rested `hold` seconds, then the median surface height under it.
 	if estimates.size() < MIN_JOINTS:
 		samples.clear()
 		return NAN
@@ -111,17 +119,17 @@ static func feed(samples: Array, estimates: PackedFloat32Array, palm: Vector3, n
 	for value in estimates:
 		low = minf(low, value)
 		high = maxf(high, value)
-	if high - low > SPREAD_M:
+	if high - low > spread:
 		samples.clear()
 		return NAN
-	samples.append({"t": now_s, "p": palm, "y": median(estimates)})
+	samples.append({"t": now_s, "p": palm_at, "y": median(estimates)})
 	# The hold restarts after the newest sample that lies outside the still ball.
 	for i in range(samples.size() - 1, -1, -1):
-		if (samples[i].p as Vector3).distance_to(palm) > STILL_M:
+		if (samples[i].p as Vector3).distance_to(palm_at) > STILL_M:
 			for _drop in i + 1:
 				samples.pop_front()
 			break
-	if now_s - float(samples[0].t) < HOLD_S:
+	if now_s - float(samples[0].t) < hold:
 		return NAN
 	var heights := PackedFloat32Array()
 	for sample: Dictionary in samples:

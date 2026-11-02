@@ -41,6 +41,8 @@ radius = 0.055
 [node name="Mannequin" type="Node3D" unique_id=45203466]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.207, -0.08)
 script = ExtResource("1")
+sternum_landmark_offset = Vector3(0, 0, -0.02)
+neck_shorten_m = 0.03
 
 [node name="BodyFrame" type="Marker3D" parent="." unique_id=1031655427]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.207, 0.08)

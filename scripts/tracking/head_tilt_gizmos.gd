@@ -1,8 +1,9 @@
 extends Node3D
 ## Debug overlay: the two spheres NaretHeadTiltGesture measures against, at their real radii.
-## Forehead (palm) blue, chin (index fingertip) orange. Each lights up while its own hand
-## condition holds; both turn green while the gesture is active. They always show the entry
-## radius. Switched on from the hand menu's Debug row.
+## Forehead (palm) blue, chin (thumb tip) orange. Each lights up while its own hand
+## condition holds; with both lit the head follows the forehead palm's rotation. Both turn
+## green while the gesture is active. They always show the entry radius. Switched on from
+## the hand menu's Debug row.
 
 const FOREHEAD_COLOUR := Color(0.2, 0.55, 1.0)
 const CHIN_COLOUR := Color(1.0, 0.55, 0.1)

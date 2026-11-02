@@ -53,6 +53,20 @@ var _overlay_materials: Array[ShaderMaterial] = []
 var _overlay_sources: Array[StandardMaterial3D] = []
 var _floor_shadow: ShaderMaterial
 var _occludable := true
+var _scan_points := PackedVector3Array()
+## The full-body face around the mouth in Model space, unlifted, for the chin
+## calibration; `head_lift_m` is how far the head is raised along the chest normal.
+var _face_points := PackedVector3Array()
+var head_lift_m := 0.0
+## Shortens the full-body neck: the head moves this far toward the feet (mannequin
+## metres, +Z), split between neck and head. Tunable live in the Remote inspector.
+@export var neck_shorten_m := 0.0:
+	set(value):
+		neck_shorten_m = value
+		_apply_head_offset()
+var _applied_head_offset := Vector3.ZERO
+const FACE_RADIUS_M := 0.08
+const HAND_FOOTPRINT_M := 0.05
 ## Hand press: the tracked hands push the chest down to their own height, so
 ## real hands do not sink into a static chest. Bounded and smoothed against
 ## tracking jumps; shown by a shader dent, not the fixed compression morph.
@@ -137,12 +151,23 @@ class HeadTilt extends SkeletonModifier3D:
 	var target := 0.0
 	var arm := 0.0
 	var arm_target := 0.0
+	## Chin lift and shortened neck: the head moved by this vector in `frame`'s space
+	## (the mannequin), half by the neck and half by the head, so the neck changes evenly.
+	var lift := Vector3.ZERO
+	var frame: Node3D
 	func _process_modification() -> void:
 		amount = move_toward(amount, target, get_process_delta_time() * 2.5)
 		arm = move_toward(arm, arm_target, get_process_delta_time() * 1.5)
 		var skeleton := get_skeleton()
 		if skeleton == null:
 			return
+		if not lift.is_zero_approx() and frame:
+			var half := skeleton.global_basis.inverse() * (frame.global_basis * lift) * 0.5
+			for bone_name: String in ["neck_01", "head"]:
+				var bone := skeleton.find_bone(bone_name)
+				var parent := skeleton.get_bone_parent(bone) if bone >= 0 else -1
+				if parent >= 0:
+					skeleton.set_bone_pose_position(bone, skeleton.get_bone_pose_position(bone) + skeleton.get_bone_global_pose(parent).basis.inverse() * half)
 		var upper := skeleton.find_bone("upperarm_l")
 		if upper >= 0 and arm > 0.0:
 			skeleton.set_bone_pose_rotation(upper, skeleton.get_bone_pose_rotation(upper) * Quaternion(Vector3.BACK, deg_to_rad(ARM_OUT * arm)))
@@ -196,7 +221,10 @@ func _ready() -> void:
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
 	if not skeletons.is_empty():
 		_tilt_modifier = HeadTilt.new()
+		_tilt_modifier.frame = self
 		skeletons[0].add_child(_tilt_modifier)
+	_cache_face_points(model)
+	_apply_head_offset()
 
 func _sync_landmarks() -> void:
 	# Interaction targets must follow the resized anatomy, not the old scan.
@@ -204,7 +232,17 @@ func _sync_landmarks() -> void:
 	for pair in [["Mouth", $MouthZone], ["Forehead", $ForeheadZone]]:
 		var marker := model.find_child(pair[0], true, false) as Node3D
 		if marker:
-			(pair[1] as Node3D).position = to_local(marker.global_position)
+			(pair[1] as Node3D).position = to_local(_unmodified_position(marker)) + _applied_head_offset
+
+func _unmodified_position(marker: Node3D) -> Vector3:
+	# A marker on a bone attachment shows the head offset (a modifier) only after the
+	# next skeleton update; the bone's own pose never does. Read that, then add the
+	# offset explicitly, so the zones do not depend on when they are synced.
+	var attachment := marker.get_parent() as BoneAttachment3D
+	var skeleton := attachment.get_parent() as Skeleton3D if attachment else null
+	if skeleton == null or attachment.bone_idx < 0:
+		return marker.global_position
+	return (skeleton.global_transform * skeleton.get_bone_global_pose(attachment.bone_idx) * marker.transform).origin
 
 func apply_sternum_landmark_offset() -> bool:
 	## Hand-menu key for tuning: applies sternum_landmark_offset as last edited,
@@ -465,6 +503,81 @@ func set_occludable(enabled: bool) -> void:
 func set_shadow_floor(floor_y: float) -> void:
 	if _floor_shadow:
 		_floor_shadow.set_shader_parameter("floor_y", floor_y)
+
+func scan_points() -> PackedVector3Array:
+	## The 1:1 scan's vertices in mannequin space, for fitting it to the hands
+	## (NaretScanFitTouch). Cached in scan space: a thickness rebase moves the scan
+	## node inside the mannequin, never its meshes inside the scan.
+	var reference := get_node_or_null("ScanReference") as Node3D
+	if reference == null:
+		return PackedVector3Array()
+	if _scan_points.is_empty():
+		for mesh: MeshInstance3D in reference.find_children("*", "MeshInstance3D", true, false):
+			if mesh.mesh == null:
+				continue
+			var local := reference.global_transform.affine_inverse() * mesh.global_transform
+			for surface in mesh.mesh.get_surface_count():
+				for vertex in NaretSpatialAnchor.posed_vertices(mesh, surface):
+					_scan_points.append(local * vertex)
+	return reference.transform * _scan_points
+
+func _cache_face_points(model: Node3D) -> void:
+	# Taken once in _ready, before any lift or tilt, so a later measurement never
+	# sees its own correction.
+	var mouth := model.find_child("Mouth", true, false) as Node3D
+	if mouth == null:
+		return
+	var to_model := model.global_transform.affine_inverse()
+	var centre := to_model * mouth.global_position
+	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mesh.mesh == null or not String(mesh.name).ends_with("Body"):
+			continue
+		var to_local_model := to_model * mesh.global_transform
+		for surface in mesh.mesh.get_surface_count():
+			for vertex in NaretSpatialAnchor.posed_vertices(mesh, surface):
+				var point: Vector3 = to_local_model * vertex
+				if point.distance_to(centre) <= FACE_RADIUS_M:
+					_face_points.append(point)
+
+func head_lift_for(surface_world: Vector3) -> float:
+	## Chin calibration: the lift that puts the face's top under a flat hand (the
+	## palm's spot at the measured surface height) onto that surface, in mannequin
+	## metres along +Y. NAN without face points.
+	if _face_points.is_empty():
+		return NAN
+	var surface := to_local(surface_world)
+	var points := ($Model as Node3D).transform * _face_points
+	var top := -INF
+	for point in points:
+		# The shortened neck has moved the face toward the feet; the lift has not counted.
+		if Vector2(point.x - surface.x, point.z + neck_shorten_m - surface.z).length() <= HAND_FOOTPRINT_M:
+			top = maxf(top, point.y)
+	if not is_finite(top):
+		# The palm missed the model's face: use the face's highest point instead.
+		for point in points:
+			top = maxf(top, point.y)
+	return surface.y - top
+
+func set_head_lift(value: float) -> void:
+	head_lift_m = value
+	_apply_head_offset()
+
+func _apply_head_offset() -> void:
+	## Chin lift (+Y) and shortened neck (+Z, toward the feet) move the full-body
+	## head together. The face's touch zones follow it: mouth/forehead (mannequin
+	## space) and the head-tilt gesture markers (Model space, so undo its scale).
+	# The scene's own value arrives before the zones exist; _ready applies it.
+	if not is_inside_tree():
+		return
+	var offset := Vector3(0, head_lift_m, neck_shorten_m)
+	var change := offset - _applied_head_offset
+	_applied_head_offset = offset
+	if _tilt_modifier:
+		_tilt_modifier.lift = offset
+	for zone_node: Node3D in [$MouthZone, $ForeheadZone]:
+		zone_node.position += change
+	for marker: Node3D in [$Model/HeadTiltForehead, $Model/HeadTiltChin]:
+		marker.position += ($Model as Node3D).transform.basis.inverse() * change
 
 func set_reference_visible(enabled: bool) -> void:
 	var reference := get_node_or_null("ScanReference") as Node3D

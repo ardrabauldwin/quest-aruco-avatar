@@ -101,22 +101,22 @@ func _test_ragdoll() -> void:
 	ragdoll._head_tilt = 0.0
 	ragdoll._apply_to_skeleton()
 	check(skeleton.get_bone_global_pose(head).is_equal_approx(head_rest), "the head returns to rest")
-	# A hand on the forehead, turned around the ear line in skeleton space.
-	var on_forehead := func(degrees: float) -> Vector3:
-		var lever := Vector3(0, 0.05, 0.11).rotated(Vector3.RIGHT, deg_to_rad(degrees))
-		return skeleton.global_transform * (NaretRagdoll.EAR_LINE_POINT + lever)
-	check(ragdoll.grab("head_hand", on_forehead.call(0.0)), "a hand on the forehead takes hold of the head")
-	check(ragdoll._head_target_tilt == 0.0, "taking hold does not move the head")
-	ragdoll.move("head_hand", on_forehead.call(-20.0))
-	check(absf(ragdoll._head_target_tilt + 20.0) < 0.5, "the hand tilts the head back as far as it turns")
-	ragdoll.move("head_hand", on_forehead.call(15.0))
-	check(absf(ragdoll._head_target_tilt - 15.0) < 0.5, "the same hold bends the head forward")
-	ragdoll.move("head_hand", on_forehead.call(-90.0))
+	# The head is never grabbed: a fist on the forehead holds nothing.
+	var forehead := skeleton.global_transform * (NaretRagdoll.EAR_LINE_POINT + Vector3(0, 0.05, 0.11))
+	check(not ragdoll.grab("head_hand", forehead), "a fist on the forehead does not take hold of the head")
+	# A palm on the forehead steers it: turned about the head's own tilt axis (+X).
+	var axis := (skeleton.global_basis * skeleton.get_bone_global_rest(head).basis * Vector3.RIGHT).normalized()
+	var palm := Basis(Vector3.UP, 0.6) * Basis(Vector3.RIGHT, 0.3)
+	ragdoll.steer_head(true, palm)
+	check(ragdoll._head_target_tilt == 0.0, "starting to steer does not move the head")
+	ragdoll.steer_head(true, Basis(axis, deg_to_rad(-20.0)) * palm)
+	check(absf(ragdoll._head_target_tilt + 20.0) < 0.5, "the palm tilts the head back as far as it turns, got %s" % ragdoll._head_target_tilt)
+	ragdoll.steer_head(true, Basis(axis, deg_to_rad(15.0)) * Basis(axis.cross(Vector3.UP).normalized(), 0.4) * palm)
+	check(absf(ragdoll._head_target_tilt - 15.0) < 3.0, "turning the palm about other axes barely counts, got %s" % ragdoll._head_target_tilt)
+	ragdoll.steer_head(true, Basis(axis, deg_to_rad(-90.0)) * palm)
 	check(ragdoll._head_target_tilt == -NaretRagdoll.MAX_HEAD_EXTENSION_DEG, "tilting back stops at its limit")
-	ragdoll.move("head_hand", skeleton.global_transform * NaretRagdoll.EAR_LINE_POINT)
-	check(ragdoll._head_target_tilt == -NaretRagdoll.MAX_HEAD_EXTENSION_DEG, "a hand on the ear line leaves the tilt alone")
-	ragdoll.release("head_hand")
-	check(ragdoll._head_target_tilt == 0.0, "letting go returns the head")
+	ragdoll.steer_head(false)
+	check(ragdoll._head_target_tilt == 0.0, "leaving the zones returns the head")
 	model.queue_free()
 	stage.queue_free()
 	await _tree().process_frame

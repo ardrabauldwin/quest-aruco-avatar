@@ -242,12 +242,20 @@ func _update_head_tilt(delta: float) -> void:
 	for index in range(2):
 		var hand := hand_tracker(index)
 		var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM) if hand else null
-		var finger: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP) if hand else null
-		hands.append({"palm": (_origin.global_transform * palm).origin, "finger": (_origin.global_transform * finger).origin} if palm != null and finger != null else {})
+		var thumb: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_THUMB_TIP) if hand else null
+		if palm == null or thumb == null:
+			hands.append({})
+			continue
+		var palm_world := _origin.global_transform * (palm as Transform3D)
+		hands.append({"palm": palm_world.origin, "basis": palm_world.basis, "thumb": (_origin.global_transform * (thumb as Transform3D)).origin})
 	var was_active := head_tilt_gesture.active
 	var on := head_tilt_gesture.observe(hands, _mannequin.gesture_forehead(), _mannequin.gesture_chin(),
 		_mannequin.global_basis.y.normalized(), -_mannequin.global_basis.z.normalized(), delta)
-	_mannequin.set_head_tilt(on)
+	# Both zones lit: the head follows the forehead palm's rotation. The detected
+	# gesture below no longer plays the fixed tilt animation on top of it.
+	var steer: int = head_tilt_gesture.steer_hand
+	if _ragdoll:
+		_ragdoll.steer_head(steer >= 0, hands[steer].basis if steer >= 0 else Basis.IDENTITY)
 	if on and not was_active:
 		print("NARET_HEAD_TILT gesture_detected technique_unverified")
 		head_tilt_gesture_detected.emit()

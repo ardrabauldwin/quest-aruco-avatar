@@ -24,6 +24,16 @@ var chest_height_m := 0.0
 ## and an uncalibrated patient, never a hand-measured chest (2026-10-29).
 var floor_source_y := NAN
 var chest_fit := "shift"
+## Hand-measured chin calibration (main.gd's chin_touch): how far the full-body
+## head is raised along the chest normal, in mannequin metres; 0 = not measured.
+var head_lift_m := 0.0
+const MAX_HEAD_LIFT_M := 0.08
+
+func set_head_lift(value: float) -> void:
+	head_lift_m = value
+	var mannequin := get_node_or_null("Mannequin")
+	if mannequin and mannequin.has_method("set_head_lift"):
+		mannequin.set_head_lift(value)
 
 func chest_height_above_floor() -> float:
 	## Measured chest height relative to the corrected floor (floor_y).
@@ -308,6 +318,7 @@ func save_calibration() -> Error:
 	config.set_value("calibration", "chest_height_m", chest_height_m)
 	config.set_value("calibration", "chest_height_frame", "headset_floor")
 	config.set_value("calibration", "chest_fit", chest_fit)
+	config.set_value("calibration", "head_lift_m", head_lift_m)
 	config.set_value("calibration", "marker_height_lock", true)
 	config.set_value("calibration", "patient_opacity", patient_opacity)
 	var result := config.save(calibration_file)
@@ -349,7 +360,9 @@ func load_calibration() -> Error:
 	# Lowering looked better on the real mannequin than flattening (deformed feet).
 	chest_fit = str(config.get_value("calibration", "chest_fit", "shift"))
 	if chest_fit not in CHEST_FITS:
-		chest_fit = "shift"	# Preserve the explicitly saved vertical adjustment in older profiles too.
+		chest_fit = "shift"
+	set_head_lift(clampf(float(config.get_value("calibration", "head_lift_m", 0.0)), -MAX_HEAD_LIFT_M, MAX_HEAD_LIFT_M))
+	# Preserve the explicitly saved vertical adjustment in older profiles too.
 	# Dropping it silently raises a patient that the user previously nudged down.
 	patient_opacity = clampf(float(config.get_value("calibration", "patient_opacity", 0.75)), 0.0, 1.0)
 	return OK

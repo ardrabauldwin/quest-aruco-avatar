@@ -22,6 +22,10 @@ signal floor_calibration_requested
 signal reference_scan_toggled(visible: bool)
 signal hand_meshes_toggled(visible: bool)
 signal chest_calibration_requested
+## A flat hand on the real mouth/chin moves the full-body head to it (main.gd's chin_touch).
+signal chin_calibration_requested
+## "edge" or "sides": fit the scan to the hands (NaretScanFitTouch).
+signal scan_fit_requested(fit: String)
 signal chest_fit_requested(fit: String)
 signal sternum_landmark_apply_requested
 signal occlusion_requested(mode: String)
@@ -37,6 +41,11 @@ var _scan_on := false
 var _hands_key: Key3D
 var _hands_on := false
 var _chest_key: Key3D
+var _chin_key: Key3D
+var _edge_key: Key3D
+var _sides_key: Key3D
+var _calibration_menu: Key3D
+var _calibration_choices: Node3D
 var _fit_key: Key3D
 var chest_fit := "shift"
 var _ring_key: Key3D
@@ -494,19 +503,18 @@ func _build_cuff() -> void:
 		recording_requested.emit(_mic_on), _cuff)
 	_build_mic_icon(_mic_key.icon)
 	_place_on_cuff(_mic_key, 0.0, -0.021)
-	# Measures the real floor under a resting fingertip (NaretFloorTouch).
-	_floor_key = _key(NaretLanguage.ui("Boden", "Podłoga", language), Vector2(0.024, 0.026), "tile", func(): floor_calibration_requested.emit(), _cuff)
-	_build_target_icon(_floor_key.icon)
-	_place_on_cuff(_floor_key, -76.0, CUFF_ROW_Y[0])
+	# One Calibration key on the cuff; the hand measurements pop out like Debug's.
+	_calibration_menu = _key("", Vector2(0.024, 0.026), "tile", func():
+		_calibration_choices.visible = not _calibration_choices.visible
+		_debug_choices.visible = false
+		_language_choices.visible = false, _cuff)
+	_build_target_icon(_calibration_menu.icon)
+	_place_on_cuff(_calibration_menu, -76.0, CUFF_ROW_Y[0])
+	_build_calibration_controls()
 	_export_key = _key("Export", Vector2(0.024, 0.026), "tile", func(): export_requested.emit(), _cuff)
 	_build_export_icon(_export_key.icon)
 	_place_on_cuff(_export_key, 76.0, -0.021)
-	# A flat hand on the compression point measures the real chest height.
-	# Calibration tiles share the target icon: floor above, chest below it.
-	_chest_key = _key("", Vector2(0.024, 0.026), "tile", func(): chest_calibration_requested.emit(), _cuff)
-	_build_target_icon(_chest_key.icon)
-	_place_on_cuff(_chest_key, -76.0, CUFF_ROW_Y[1])
-	# How the body meets that height: flattened, or lowered into the floor.
+	# How the body meets the measured chest height: flattened, or lowered into the floor.
 	_fit_key = _key("", Vector2(0.024, 0.026), "key", func():
 		chest_fit_requested.emit("shift" if chest_fit == "flatten" else "flatten"), _cuff)
 	_fit_key.label.font_size = 19
@@ -519,6 +527,7 @@ func _build_cuff() -> void:
 	# One Debug key on the cuff; its testing toggles pop out to the cuff's right.
 	_debug_menu = _key("Debug", Vector2(0.024, 0.026), "key", func():
 		_debug_choices.visible = not _debug_choices.visible
+		_calibration_choices.visible = false
 		_language_choices.visible = false, _cuff)
 	_debug_menu.label.font_size = 19
 	_place_on_cuff(_debug_menu, 38.0, CUFF_ROW_Y[0])
@@ -532,6 +541,29 @@ nowa", language), Vector2(0.024, 0.026), "key", func(): fresh_start_requested.em
 	_place_on_cuff(_fresh_key, 0.0, CUFF_ROW_Y[1])
 
 
+func _build_calibration_controls() -> void:
+	# Hand measurements of the real mannequin, in a 3×2 grid at the Debug grid's
+	# place past the cuff's right edge; the two pop-ups fold each other away.
+	# Top row: heights under a resting hand. Bottom row: scan fits.
+	_calibration_choices = Node3D.new()
+	_cuff.add_child(_calibration_choices)
+	_calibration_choices.visible = false
+	# Measures the real floor under a resting fingertip (NaretFloorTouch).
+	_floor_key = _key("", DEBUG_KEY_SIZE, "key", func(): floor_calibration_requested.emit(), _calibration_choices)
+	# A flat hand on the compression point measures the real chest height.
+	_chest_key = _key("", DEBUG_KEY_SIZE, "key", func(): chest_calibration_requested.emit(), _calibration_choices)
+	# A flat hand on the real mouth/chin: raises or lowers the full-body head to it.
+	_chin_key = _key("", DEBUG_KEY_SIZE, "key", func(): chin_calibration_requested.emit(), _calibration_choices)
+	# Both pinkies against the torso's cut-off: moves the scan toward head or feet.
+	_edge_key = _key("", DEBUG_KEY_SIZE, "key", func(): scan_fit_requested.emit("edge"), _calibration_choices)
+	# Both index fingers against the torso's sides: centres the scan between them.
+	_sides_key = _key("", DEBUG_KEY_SIZE, "key", func(): scan_fit_requested.emit("sides"), _calibration_choices)
+	var keys: Array[Key3D] = [_floor_key, _chest_key, _chin_key, _edge_key, _sides_key]
+	for i in keys.size():
+		keys[i].position = Vector3(0.078 + (i % 3) * 0.042, CUFF_ROW_Y[i / 3], CUFF_R_M * 0.3)
+		keys[i].label.font_size = 18
+
+
 func _build_exercise_controls() -> void:
 	# Compact controls follow the wrist, beside the original palm display.
 	# Other-hand poke/pinch uses the same registered hit targets as existing keys.
@@ -540,7 +572,8 @@ func _build_exercise_controls() -> void:
 	# The languages pop out to the right of this key only while chosen, then fold away again.
 	_language_menu = _key("Languages", Vector2(0.090, 0.035), "key", func():
 		_language_choices.visible = not _language_choices.visible
-		_debug_choices.visible = false, _controls)
+		_debug_choices.visible = false
+		_calibration_choices.visible = false, _controls)
 	_language_menu.position = Vector3(0, 0.022, 0)
 	_language_choices = Node3D.new()
 	_controls.add_child(_language_choices)
@@ -875,7 +908,6 @@ func set_language(value: String) -> void:
 	_lang_key.set_accent(Color("32d16d"), Color("16843c"))
 	_export_key.set_text(NaretLanguage.ui("Export", "Eksport", language))
 	_large_align.set_text(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language))
-	_floor_key.set_text(NaretLanguage.ui("Boden", "Podłoga", language))
 	_refresh_start()
 	if _fresh_key:
 		_fresh_key.set_text(NaretLanguage.ui("Neu-
@@ -917,7 +949,12 @@ func _refresh_scan() -> void:
 		_occlusion_key.set_text(NaretLanguage.ui("Tiefe", "Głębia", language) + "\n" + state)
 		_occlusion_key.set_accent(GLOW if occlusion == "off" else Color("32d16d"), Color.TRANSPARENT if occlusion == "off" else Color("16843c"))
 	if _chest_key:
+		_calibration_menu.set_text(NaretLanguage.ui("Kalibrieren", "Kalibracja", language))
+		_floor_key.set_text(NaretLanguage.ui("Boden", "Podłoga", language))
 		_chest_key.set_text(NaretLanguage.ui("Brust", "Klatka", language))
+		_chin_key.set_text(NaretLanguage.ui("Mund/\nKinn", "Usta/\nbroda", language))
+		_edge_key.set_text(NaretLanguage.ui("Scan\nUnterkante", "Skan\ndolna kraw.", language))
+		_sides_key.set_text(NaretLanguage.ui("Scan\nSeiten", "Skan\nboki", language))
 	if _fit_key:
 		# Shows the active fit; pressing switches to the other one.
 		_fit_key.set_text(NaretLanguage.ui("Brust\nflach", "Klatka\npłaska", language) if chest_fit == "flatten" else NaretLanguage.ui("Brust\ntiefer", "Klatka\nniżej", language))
@@ -941,6 +978,12 @@ func set_floor_calibrating(active: bool) -> void:
 
 func set_chest_calibrating(active: bool) -> void:
 	_set_lit(_chest_key, active)
+
+func set_chin_calibrating(active: bool) -> void:
+	_set_lit(_chin_key, active)
+
+func set_scan_fitting(fit: String, active: bool) -> void:
+	_set_lit(_edge_key if fit == "edge" else _sides_key, active)
 
 func _set_lit(key: Key3D, on: bool) -> void:
 	key.set_accent(Color("32d16d") if on else GLOW, Color("16843c") if on else Color.TRANSPARENT)

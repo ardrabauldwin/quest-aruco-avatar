@@ -1,6 +1,6 @@
 extends "res://tests/suite.gd"
 ## The yellow FUSED ball stays on the fused marker point (marker 0); only the patient's
-## sternum is shifted, to the midpoint of markers 0 and 1.
+## sternum is shifted, to 3 cm headward (-Z) of the midpoint of markers 0 and 1.
 
 func run() -> Array[String]:
 	failures.clear()
@@ -12,7 +12,7 @@ func run() -> Array[String]:
 	check(layout.load_profile("res://data/user_marker_layout.cfg") == OK, "marker layout loads")
 	check(layout.common_to_sternum.is_equal_approx(Transform3D.IDENTITY), "the fused point stays on marker 0")
 	var midpoint := (layout.offsets[1] as Transform3D).affine_inverse().origin / 2.0
-	check(shift.distance_to(midpoint) < 0.001, "the scene's sternum shift is the midpoint of markers 0 and 1: " + str(shift))
+	check(shift.distance_to(midpoint + Vector3(0, 0, -0.03)) < 0.001, "the scene's sternum shift is 3 cm headward of the midpoint of markers 0 and 1: " + str(shift))
 
 	var path := "user://sternum_shift_test.cfg"
 	DirAccess.remove_absolute(path)

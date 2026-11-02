@@ -30,6 +30,12 @@ func run() -> Array[String]:
 		check(patient.get_body_transform().is_equal_approx(expected_body), fit + ": authored body reference preserves previous world coordinates")
 		for path in ["Model", "ScanReference", "Heart", "Sternum", "MouthZone", "ForeheadZone"]:
 			var expected: Transform3D = captured.get_value(section, path)
+			if path in ["Model", "MouthZone", "ForeheadZone"]:
+				# The scene's landmark offset slides only the body (and its face zones) since.
+				expected.origin -= patient.global_basis * patient.sternum_landmark_offset
+			if path in ["MouthZone", "ForeheadZone"]:
+				# The shortened neck moves the face zones toward the feet (+Z).
+				expected.origin += patient.global_basis * Vector3(0, 0, patient.neck_shorten_m)
 			check((patient.get_node(path) as Node3D).global_transform.is_equal_approx(expected), fit + ": " + path + " stays in its previous world pose")
 		var aed := NaretAED.new()
 		aed._mannequin = patient

@@ -15,6 +15,10 @@ var state := "waiting"
 # Whether each zone's own hand condition holds this frame; only debug overlays read these.
 var forehead_met := false
 var chin_met := false
+## The hand whose palm is on the forehead while the OTHER hand's thumb is in the chin
+## zone (both zones lit), or -1. While set, the head follows that palm's rotation
+## (NaretRagdoll.steer_head); no grab is needed.
+var steer_hand := -1
 var _forehead_hand := -1
 var _hold := 0.0
 var _move_time := 0.0
@@ -33,8 +37,9 @@ func reset() -> void:
 	_lost = 0.0
 
 func observe(hands: Array, forehead: Vector3, chin: Vector3, up: Vector3, toward_head: Vector3, delta: float) -> bool:
-	# Caller supplies fresh tracked palm/index positions, or {} for an invalid hand.
+	# Caller supplies fresh tracked palm/thumb-tip positions, or {} for an invalid hand.
 	var dt := clampf(delta, 0.0, 0.05)
+	_update_steer(hands, forehead, chin)
 	var role := _forehead_hand
 	if role < 0:
 		for index in 2:
@@ -52,7 +57,7 @@ func observe(hands: Array, forehead: Vector3, chin: Vector3, up: Vector3, toward
 	_lost = 0.0
 	_forehead_hand = role
 	var fore: Vector3 = hands[role].palm - forehead
-	var lift: Vector3 = hands[1 - role].finger - chin
+	var lift: Vector3 = hands[1 - role].thumb - chin
 	if active:
 		return true
 	if state == "waiting":
@@ -91,19 +96,30 @@ func observe(hands: Array, forehead: Vector3, chin: Vector3, up: Vector3, toward
 
 func _update_gates(hands: Array, forehead: Vector3, chin: Vector3, factor: float) -> void:
 	var palms: Array[int] = []
-	var fingers: Array[int] = []
+	var thumbs: Array[int] = []
 	for index in hands.size():
 		if hands[index].is_empty():
 			continue
 		if hands[index].palm.distance_to(forehead) <= FOREHEAD_RADIUS_M * factor:
 			palms.append(index)
-		if hands[index].finger.distance_to(chin) <= CHIN_RADIUS_M * factor:
-			fingers.append(index)
+		if hands[index].thumb.distance_to(chin) <= CHIN_RADIUS_M * factor:
+			thumbs.append(index)
 	forehead_met = not palms.is_empty()
-	# One hand cannot hold both roles, so its fingertip does not count for the chin.
-	chin_met = not fingers.is_empty() and not (fingers.size() == 1 and palms == fingers)
+	# One hand cannot hold both roles, so its thumb does not count for the chin.
+	chin_met = not thumbs.is_empty() and not (thumbs.size() == 1 and palms == thumbs)
+
+func _update_steer(hands: Array, forehead: Vector3, chin: Vector3) -> void:
+	# A steering hand keeps its role within the wider active radius, so the zones'
+	# edges do not flicker the head back to rest.
+	if steer_hand >= 0 and _matches(hands, steer_hand, forehead, chin, ACTIVE_RADIUS_FACTOR):
+		return
+	steer_hand = -1
+	for index in 2:
+		if _matches(hands, index, forehead, chin, 1.0):
+			steer_hand = index
+			return
 
 func _matches(hands: Array, role: int, forehead: Vector3, chin: Vector3, factor: float) -> bool:
 	return hands.size() == 2 and not hands[role].is_empty() and not hands[1 - role].is_empty() \
 		and hands[role].palm.distance_to(forehead) <= FOREHEAD_RADIUS_M * factor \
-		and hands[1 - role].finger.distance_to(chin) <= CHIN_RADIUS_M * factor
+		and hands[1 - role].thumb.distance_to(chin) <= CHIN_RADIUS_M * factor

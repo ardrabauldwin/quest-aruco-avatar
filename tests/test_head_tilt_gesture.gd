@@ -1,7 +1,7 @@
 extends "res://tests/suite.gd"
 
 func _hands(fore: Vector3, chin: Vector3) -> Array:
-	return [{"palm": fore, "finger": fore}, {"palm": chin, "finger": chin}]
+	return [{"palm": fore, "thumb": fore}, {"palm": chin, "thumb": chin}]
 
 func _feed(detector: NaretHeadTiltGesture, hands: Array, frames: int) -> void:
 	for i in frames:
@@ -35,4 +35,17 @@ func run() -> Array[String]:
 	check(not detector.active, "single motion spike cannot activate")
 	_feed(detector, [{}, {}], 1)
 	check(detector.state == "waiting", "tracking loss cannot preserve an unconfirmed gesture")
+	# Steering: palm on the forehead and the OTHER hand's thumb in the chin zone, no hold.
+	detector.reset()
+	_feed(detector, rest, 1)
+	check(detector.steer_hand == 0, "both zones lit steer with the forehead hand at once")
+	_feed(detector, [{"palm": Vector3.ZERO, "thumb": Vector3(0, 0, 0.12)}, {"palm": Vector3(0, 0.3, 0), "thumb": Vector3(0, 0.3, 0)}], 1)
+	check(detector.steer_hand == -1, "one hand on both zones does not steer")
+	_feed(detector, [{"palm": Vector3.ZERO, "thumb": Vector3.ZERO}, {"palm": Vector3(0, 0.3, 0), "thumb": Vector3(0, 0.07, 0.12)}], 1)
+	check(detector.steer_hand == -1, "a thumb outside the chin zone does not steer")
+	_feed(detector, rest, 1)
+	_feed(detector, _hands(Vector3(0, 0, 0.07), Vector3(0, 0, 0.12)), 1)
+	check(detector.steer_hand == 0, "steering keeps its hand within the wider active radius")
+	_feed(detector, [rest[0], {}], 1)
+	check(detector.steer_hand == -1, "losing the chin hand stops steering")
 	return failures

@@ -1,6 +1,8 @@
 class_name NaretRagdoll
 extends Node
 ## Anatomical posing of the CPR mannequin: hinge-limited arm IK and head tilt.
+## Arms are grabbed with a fist; the head is steered by a palm on the forehead
+## (steer_head, driven by NaretHeadTiltGesture), never grabbed.
 
 const GRAB_RANGE_M := 0.22
 const REACH_M := 0.52
@@ -8,8 +10,6 @@ const MAX_ELBOW_FLEX_DEG := 140.0
 # Head tilt is signed: positive bends the head forward, negative tilts it back.
 const MAX_HEAD_FLEXION_DEG := 35.0
 const MAX_HEAD_EXTENSION_DEG := 35.0
-# Closer to the ear line than this, the hand's angle around it is only noise.
-const HEAD_MIN_LEVER_M := 0.03
 # Midpoint of the ears on the rest mesh, in skeleton space (ears at x = ±0.085).
 const EAR_LINE_POINT := Vector3(0.0, 1.615, 0.040)
 
@@ -22,10 +22,9 @@ const BONES := [
 const GRAB_PARTS := {
 	"arm_l": ["hand_l", "lowerarm_l"],
 	"arm_r": ["hand_r", "lowerarm_r"],
-	"head": ["head", "neck_01"],
 }
 # A hand nearer one of these than any limb holds nothing, so reaching for the
-# chest or shoulder does not catch the head or an elbow within GRAB_RANGE_M.
+# chest or shoulder does not catch an elbow within GRAB_RANGE_M.
 const UNGRABBABLE_BONES := ["spine_03", "clavicle_l", "clavicle_r", "upperarm_l", "upperarm_r"]
 const SPINE_BONES := ["spine_01", "spine_02", "spine_03"]
 
@@ -39,10 +38,11 @@ var _targets: Dictionary = {}
 # Articulation states
 var _head_tilt := 0.0
 var _head_target_tilt := 0.0
-var _head_held := false
+var _head_steered := false
+var _steer_start := Quaternion.IDENTITY
+var _steer_start_tilt := 0.0
 var _head_posed := false
 var _head_pivot := Vector3.ZERO
-var _neck_pivot := Vector3.ZERO
 var _head_rest_position := Vector3.ZERO
 # Per-arm state keyed by grab part; the side suffix ("l"/"r") is part.right(1).
 var _arms := {
@@ -84,8 +84,6 @@ func configure(model: Node3D) -> void:
 	if _home.has("head"):
 		_head_pivot = _skeleton.get_bone_global_rest(_home["head"]).affine_inverse() * EAR_LINE_POINT
 		_head_rest_position = _skeleton.get_bone_rest(_home["head"]).origin
-	if _home.has("neck_01"):
-		_neck_pivot = _skeleton.get_bone_global_rest(_home["neck_01"]).affine_inverse() * EAR_LINE_POINT
 
 	reset_to_skeleton()
 	process_priority = 200
@@ -114,7 +112,7 @@ func reset_to_skeleton() -> void:
 	_targets.clear()
 	_head_tilt = 0.0
 	_head_target_tilt = 0.0
-	_head_held = false
+	_head_steered = false
 	_head_posed = false
 	for arm: Dictionary in _arms.values():
 		arm.flexion = 0.0
@@ -148,15 +146,8 @@ func grab(id: String, world_point: Vector3) -> bool:
 
 	_held[id] = {"part": chosen_part, "anchor": anchor_name}
 	_targets[id] = world_point
-
-	if chosen_part == "head":
-		_head_held = true
-		_head_target_tilt = _head_tilt
-		_held[id]["angle"] = _head_hand_angle(world_point)
-	else:
-		_arms[chosen_part].held = true
-		_arms[chosen_part].target = world_point
-
+	_arms[chosen_part].held = true
+	_arms[chosen_part].target = world_point
 	return true
 
 func move(id: String, world_point: Vector3) -> void:
@@ -181,23 +172,27 @@ func move(id: String, world_point: Vector3) -> void:
 			target = bounded_target + dir * (_l2 * 0.5)
 		_arms[part].target = target
 
-	elif part == "head":
-		# The head follows the hand around the ear line from wherever it was grabbed.
-		var angle := _head_hand_angle(world_point)
-		if is_finite(angle):
-			var previous: float = info.angle
-			if is_finite(previous):
-				var turned := rad_to_deg(wrapf(angle - previous, -PI, PI))
-				_head_target_tilt = clampf(_head_target_tilt + turned, -MAX_HEAD_EXTENSION_DEG, MAX_HEAD_FLEXION_DEG)
-			info.angle = angle
-
-func _head_hand_angle(world_point: Vector3) -> float:
-	## The hand's angle around the ear line, in the plane of the tilt; NAN too close to it.
-	var neck := _skeleton.global_transform * _skeleton.get_bone_global_pose(_home["neck_01"])
-	var lever := neck.affine_inverse() * world_point - _neck_pivot
-	if Vector2(lever.y, lever.z).length() < HEAD_MIN_LEVER_M:
-		return NAN
-	return atan2(lever.z, lever.y)
+func steer_head(on: bool, palm_basis: Basis = Basis.IDENTITY) -> void:
+	## While `on`, the head turns about the ear line as far as the forehead palm
+	## (`palm_basis`, world) has turned about that line since steering began; off,
+	## it eases back to rest. Only the palm's twist about the ear line counts.
+	if not on or not _home.has("head"):
+		if _head_steered:
+			_head_steered = false
+			_head_target_tilt = 0.0
+		return
+	var palm := palm_basis.get_rotation_quaternion()
+	if not _head_steered:
+		_head_steered = true
+		_steer_start = palm
+		_steer_start_tilt = _head_tilt
+		_head_target_tilt = _head_tilt
+		return
+	var turned := palm * _steer_start.inverse()
+	# Twist about the head's own +X (the tilt axis of _apply_to_skeleton), from rest.
+	var axis := (_skeleton.global_basis * _skeleton.get_bone_global_rest(_home["head"]).basis * Vector3.RIGHT).normalized()
+	var angle := wrapf(2.0 * atan2(Vector3(turned.x, turned.y, turned.z).dot(axis), turned.w), -PI, PI)
+	_head_target_tilt = clampf(_steer_start_tilt + rad_to_deg(angle), -MAX_HEAD_EXTENSION_DEG, MAX_HEAD_FLEXION_DEG)
 
 func release(id: String) -> void:
 	if not _held.has(id):
@@ -214,12 +209,8 @@ func release(id: String) -> void:
 			still_holding = true
 			break
 
-	if not still_holding:
-		if _arms.has(part):
-			_arms[part].held = false
-		elif part == "head":
-			_head_held = false
-			_head_target_tilt = 0.0
+	if not still_holding and _arms.has(part):
+		_arms[part].held = false
 
 func _process(delta: float) -> void:
 	if not is_active():
@@ -234,7 +225,7 @@ func _physics_process(delta: float) -> void:
 	_process(delta)
 
 func _update_head_dynamics(delta: float) -> void:
-	if _head_held:
+	if _head_steered:
 		_head_tilt = move_toward(_head_tilt, _head_target_tilt, 90.0 * delta)
 	else:
 		_head_tilt = move_toward(_head_tilt, 0.0, 45.0 * delta)

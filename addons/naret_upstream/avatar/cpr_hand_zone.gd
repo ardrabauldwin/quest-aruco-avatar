@@ -37,6 +37,17 @@ signal placement_restarted
 ## Contact arms counting. Small spheres represent tracked hand joints and heel;
 ## overlap with the chest BoxShape3D is virtual contact, not a force sensor.
 @export var require_collision_contact := false
+## Count from where the hands rest (scripts/tracking/placed_press_counter.gd) instead of the
+## palm-motion detector below: place the hands in the green area, hold still, then press.
+@export var placed_counting := false
+var _placed_counter: RefCounted
+var _trace_points := {}   # tracker -> _measuring_points(), recorded for choosing the depth point
+var _placed_trace := {"state": "", "left_h": NAN, "right_h": NAN, "left_in": false, "right_in": false, "drop": 0.0}
+## The chest area a hand must lie in: the visible 14 x 14 cm green square, from 3 cm above the
+## chest surface to 8 cm into it (the avatar may be a little bigger than the real chest).
+const PLACED_HALF_M := 0.07
+const PLACED_ABOVE_M := 0.03
+const PLACED_BELOW_M := 0.08
 var _contact_armed := false
 const CONTACT_RADIUS_M := 0.015
 @export_range(100.0, 120.0, 5.0) var target_bpm := 110.0
@@ -67,6 +78,7 @@ var _trace: FileAccess
 var _trace_grace_s := 0.0
 var _trace_unflushed := 0
 var _motion_tracker: StringName = &""
+var _trace_heights := {}   # tracker -> this frame's palm height (NAN when untracked), for the trace
 var _last_chest_pose := Transform3D.IDENTITY
 var _have_chest_pose := false
 var hand_tracking_status := "Show your hands"
@@ -141,6 +153,9 @@ func _process(delta: float) -> void:
 func _update_hand_motion(delta: float, available: bool, left: Dictionary, right: Dictionary) -> void:
 	motion_session.target_bpm = target_bpm
 	motion_session.breathing_duration_s = breathing_duration_s
+	if placed_counting:
+		_update_placed_counting(delta, available)
+		return
 	var sample := {}
 	var chosen: StringName = &""
 	var left_usable := available and _motion_hand_usable(left)
@@ -286,6 +301,120 @@ Press the Meta button, then close the menu."
 		_metronome.stop()
 
 
+func _update_placed_counting(delta: float, available: bool) -> void:
+	if _placed_counter == null:
+		# Both palms counted, the steadier (upper) one reported: no press lost on a palm change.
+		_placed_counter = load("res://scripts/tracking/two_hand_press_counter.gd").new()
+		_placed_counter.placed.connect(func(hand: String, rest_m: float):
+			print("CPR hands placed: %s palm is on top, rest %.1f cm above the chest" % [hand, rest_m * 100.0]))
+		_placed_counter.lifted.connect(func(): print("CPR hands lifted: place them again to continue"))
+		_placed_counter.pressed.connect(_on_placed_press)
+	# Rate staleness, breathing phase and the metronome keep running; strokes come from the counter.
+	# update() with no sample clears the previous-press flag the rate needs, so keep it.
+	var had_previous: bool = motion_session._have_previous_stroke
+	motion_session.update(delta, false, 0.0, not available)
+	motion_session._have_previous_stroke = had_previous
+	if not available:
+		_metronome.stop()
+		return
+	var hands := {}
+	for tracker in [left_tracker, right_tracker]:
+		var read := _read_hand(tracker)
+		var in_zone := false
+		for point in _hand_contact_points(tracker):
+			in_zone = in_zone or _in_placed_zone(point)
+		hands[tracker] = {"in_zone": in_zone, "height": _palm_height({"point": read.heel}) if read.has("heel") else NAN}
+	var left: Dictionary = hands[left_tracker]
+	var right: Dictionary = hands[right_tracker]
+	_placed_counter.update(delta, left, right)
+	motion_session.tracking_available = _placed_counter.state == "placed"
+	motion_session.travel_m = maxf(0.0, _placed_counter.drop_m) if _placed_counter.pressing else 0.0
+	hand_over_chest = left.in_zone or right.in_zone
+	if _placed_counter.state == "placed":
+		hand_tracking_status = "Hands placed - press"
+	elif hand_over_chest:
+		hand_tracking_status = "Hold your hands still"
+	else:
+		hand_tracking_status = "Place your hands on the green area"
+	if hand_tracking_status != _last_tracking_status:
+		_last_tracking_status = hand_tracking_status
+		print("CPR hands: ", hand_tracking_status)
+	_trace_points = {left_tracker: _measuring_points(left_tracker), right_tracker: _measuring_points(right_tracker)}
+	_placed_trace = {"state": _placed_counter.state, "left_h": left.height, "right_h": right.height,
+		"left_in": left.in_zone, "right_in": right.in_zone, "drop": _placed_counter.drop_m}
+	var chosen: StringName = left_tracker if _placed_counter.hand == "left" else (right_tracker if _placed_counter.hand == "right" else &"")
+	var height: float = float(hands[chosen].height) if chosen != &"" else 0.0
+	_write_cpr_trace(delta, true, _placed_counter.state == "placed", not hand_over_chest, chosen, height if is_finite(height) else 0.0)
+
+
+func _on_placed_press(depth_m: float) -> void:
+	motion_session._count_stroke(depth_m)
+	print("CPR press #%d  travel=%.1f cm  %s  interval=%.2f s  hand=%s  mode=placed" % [
+		motion_session.total_count, depth_m * 100.0, motion_session.last_stroke_quality,
+		motion_session.last_interval_s, _placed_counter.hand])
+	if motion_session.active and not is_cpr_started:
+		is_cpr_started = true
+		cpr_started.emit()
+
+
+## Candidate depth points of one hand, heights above the chest surface in metres (NAN when not
+## seen): palm centre, wrist, knuckles (mean of the four proximal finger joints) and the full hand
+## (mean of every tracked joint), plus how many joints the headset actually tracks. Trace only:
+## a recording against the QCPR manikin decides which point measures depth best.
+func _measuring_points(tracker_name: StringName) -> Dictionary:
+	var result := {"palm": NAN, "wrist": NAN, "knuckles": NAN, "full": NAN, "seen": 0}
+	var hand := XRServer.get_tracker(tracker_name) as XRHandTracker
+	if xr_origin == null or hand == null or not hand.has_tracking_data:
+		return result
+	if hand.hand_tracking_source in [XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER, XRHandTracker.HAND_TRACKING_SOURCE_NOT_TRACKED]:
+		return result
+	var required := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+	var knuckles := [XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL,
+		XRHandTracker.HAND_JOINT_RING_FINGER_PHALANX_PROXIMAL, XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL]
+	var full_sum := 0.0
+	var knuckle_sum := 0.0
+	var knuckle_n := 0
+	for joint in range(XRHandTracker.HAND_JOINT_MAX):
+		if (hand.get_hand_joint_flags(joint) & required) != required:
+			continue
+		var position := hand.get_hand_joint_transform(joint).origin
+		if not position.is_finite():
+			continue
+		var pose := XRPose.new()
+		pose.transform = Transform3D(Basis.IDENTITY, position)
+		var height := _palm_height({"point": xr_origin.global_transform * pose.get_adjusted_transform().origin})
+		result.seen += 1
+		full_sum += height
+		if joint == XRHandTracker.HAND_JOINT_PALM:
+			result.palm = height
+		elif joint == XRHandTracker.HAND_JOINT_WRIST:
+			result.wrist = height
+		elif joint in knuckles:
+			knuckle_sum += height
+			knuckle_n += 1
+	if result.seen > 0:
+		result.full = full_sum / result.seen
+	if knuckle_n > 0:
+		result.knuckles = knuckle_sum / knuckle_n
+	return result
+
+
+func _points_row(tracker_name: StringName) -> Array:
+	var p: Dictionary = _trace_points.get(tracker_name, {})
+	return [float(p.get("palm", NAN)), float(p.get("wrist", NAN)), float(p.get("knuckles", NAN)),
+		float(p.get("full", NAN)), int(p.get("seen", 0))]
+
+
+## Inside the green square and between PLACED_ABOVE_M above and PLACED_BELOW_M below the chest.
+func _in_placed_zone(point: Vector3) -> bool:
+	if not point.is_finite() or _shape.disabled:
+		return false
+	var chest := _shape.global_transform
+	var offset := (point - chest.origin) / _units_per_metre()
+	var height := offset.dot(chest.basis.y.normalized())
+	return absf(offset.dot(chest.basis.x.normalized())) <= PLACED_HALF_M 		and absf(offset.dot(chest.basis.z.normalized())) <= PLACED_HALF_M 		and height <= PLACED_ABOVE_M and height >= -PLACED_BELOW_M
+
+
 ## One CSV row per frame while a palm is usable over the chest, and for 1 s after it is lost,
 ## so dropouts are visible. Columns are the counter's inputs and its internal state, enough to
 ## replay cpr_motion_session.gd on a PC with other thresholds against the real hand signal.
@@ -303,19 +432,25 @@ func _write_cpr_trace(delta: float, available: bool, valid: bool, no_sample: boo
 		_trace = FileAccess.open(path, FileAccess.WRITE)
 		if _trace == null:
 			return
-		_trace.store_line("t_ms,valid,hand,height_m,top_m,bottom_m,recoil_peak_m,descending,travel_m,count,since_stroke_s,left_move_m,right_move_m")
+		# unix_ms lines the trace up with other recordings (QCPR manikin); both palm heights let
+		# hand-selection rules be replayed on the PC (tools/replay_cpr_trace.gd).
+		_trace.store_line("t_ms,valid,hand,height_m,top_m,bottom_m,recoil_peak_m,descending,travel_m,count,since_stroke_s,left_move_m,right_move_m,unix_ms,left_height_m,right_height_m,contact_armed,placed_state,left_heel_m,right_heel_m,left_in_zone,right_in_zone,drop_m,left_palm_m,left_wrist_m,left_knuckles_m,left_full_m,left_seen_joints,right_palm_m,right_wrist_m,right_knuckles_m,right_full_m,right_seen_joints")
 		print("CPR trace: ", path)
 	var hand := "none"
 	if chosen == left_tracker:
 		hand = "left"
 	elif chosen == right_tracker:
 		hand = "right"
-	_trace.store_line("%d,%d,%s,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%d,%.2f,%.4f,%.4f" % [
+	_trace.store_line("%d,%d,%s,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%d,%.2f,%.4f,%.4f,%d,%.4f,%.4f,%d,%s,%.4f,%.4f,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%.4f,%.4f,%.4f,%d" % ([
 		Time.get_ticks_msec(), int(valid), hand, height,
 		motion_session._top, motion_session._bottom, motion_session._recoil_peak,
 		int(motion_session._descending), motion_session.travel_m,
 		motion_session.total_count, motion_session._since_stroke,
-		_hand_movement(left_tracker), _hand_movement(right_tracker)])
+		_hand_movement(left_tracker), _hand_movement(right_tracker),
+		int(Time.get_unix_time_from_system() * 1000.0),
+		float(_trace_heights.get(left_tracker, NAN)), float(_trace_heights.get(right_tracker, NAN)),
+		int(_contact_armed), _placed_trace.state, float(_placed_trace.left_h), float(_placed_trace.right_h),
+		int(_placed_trace.left_in), int(_placed_trace.right_in), float(_placed_trace.drop)] + _points_row(left_tracker) + _points_row(right_tracker)))
 	_trace_unflushed += 1
 	if _trace_unflushed >= 36:
 		_trace.flush()
@@ -333,6 +468,7 @@ func _palm_height(hand: Dictionary) -> float:
 func _record_hand_height(tracker_name: StringName, hand: Dictionary) -> void:
 	var history: Array = _hand_history.get(tracker_name, [])
 	var height := _palm_height(hand)
+	_trace_heights[tracker_name] = height
 	if is_finite(height):
 		history.append([_motion_time_s, height])
 	while not history.is_empty() and float(history[0][0]) < _motion_time_s - MOVEMENT_WINDOW_S:

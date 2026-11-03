@@ -69,6 +69,9 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		_zone.set("guide_only", false)
 		_zone.set("enable_motion_practice", true)
 		_zone.set("require_collision_contact", true)
+		# 2026-11-03, checked against a QCPR manikin: count from where the hands rest in the green
+		# square instead of from palm motion (false presses at rest, wrong-hand switches).
+		_zone.set("placed_counting", true)
 		var motion: RefCounted = _zone.get("motion_session")
 		# The scenario owns breathing pauses; disable the standalone demo scheduler.
 		motion.set("automatic_breathing_pause", false)

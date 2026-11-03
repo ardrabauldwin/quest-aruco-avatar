@@ -34,8 +34,11 @@ func _ready() -> void:
 	for service in ["models", "asr", "tts", "llm"]:
 		var request := HTTPRequest.new()
 		request.name = "HTTP_" + service
-		# Keep unlimited speech requests cancellable without joining a socket worker.
-		request.use_threads = service != "asr"
+		# No socket worker for any service: a threaded HTTPRequest reads in blocking mode, and
+		# its timeout or cancel joins that worker, freezing the render loop until the socket
+		# gives up. Headset 2026-11-03: a 2 s LLM timeout froze the app for 53 s after every
+		# slow reply ("NARET_MAIN_STALLED ... step=safety", then "NARET_INTERPRET ok=false").
+		request.use_threads = false
 		request.timeout = service_timeout(service)
 		request.body_size_limit = 8 * 1024 * 1024
 		request.max_redirects = 0 # Never forward authorization to a redirected host.

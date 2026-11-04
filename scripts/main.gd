@@ -1047,6 +1047,21 @@ func _on_transcript(text: String) -> void:
 	_record_speech_status("heard")
 	_toast("Heard: " + text.left(160))
 	print("NARET_TRANSCRIPT ", text.left(160))
+	# Scene safety is understood by meaning before the phrase grammar and the cloud: trainees
+	# got stuck at this first step, and "not safe" had no answer at all (2026-11-03).
+	if "begin_check" in scenario.get_available_actions():
+		var safety := preload("res://scripts/scenario/safety_report.gd").classify(text, _language)
+		if safety == "safe":
+			print("NARET_SAFETY safe")
+			_speech_confirmation.clear()
+			ccbm.observe_action("begin_check")
+			return
+		if safety == "unsafe":
+			print("NARET_SAFETY unsafe")
+			var reply := preload("res://scripts/scenario/safety_report.gd").unsafe_reply(_language)
+			_toast(reply)
+			audio_manager.speak(reply, _language, "", "instructor")
+			return
 	if _language in ["en", "de", "pl"]:
 		var context := str(scenario.state) + ":" + str(scenario.get_available_actions()) + ":" + str(scenario.cycle_compressions) + ":" + str(scenario.cycle_ventilations)
 		var interpreted: Dictionary = _speech_confirmation.evaluate(text, context, scenario.get_available_actions(), Time.get_ticks_msec(), _language)

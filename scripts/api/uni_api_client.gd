@@ -14,6 +14,10 @@ var tts_model := "omnivoice"
 var llm_model := DEFAULT_LLM
 var tts_voice := "" # ApphubAI omnivoice rejects the OpenAI example voice 'alloy'.
 var timeout_s := 2.0
+## Understanding a spoken report gets longer than the voice deadline: on the headset
+## (2026-11-03) the cloud answered in 0.4-1.9 s, and 2 of 12 reports were dropped as "not
+## understood" at exactly 2 s. Waiting no longer freezes the app (no socket threads).
+var llm_timeout_s := 6.0
 var asr_timeout_s := 0.0 # Zero disables the cloud speech deadline; Restart still cancels.
 var offline := false
 # Optional PC recogniser reached through adb reverse. Never send cloud credentials.
@@ -74,6 +78,7 @@ func configure() -> void:
 	tts_voice = str(settings.get("tts_voice", ""))
 	# Dialogue/voice fallback stays short; speech has its own deadline.
 	timeout_s = clampf(float(settings.get("timeout_s", 2.0)), 0.1, 2.0)
+	llm_timeout_s = clampf(float(settings.get("llm_timeout_s", 6.0)), 1.0, 10.0)
 	asr_timeout_s = maxf(float(settings.get("asr_timeout_s", 0.0)), 0.0)
 	if not is_finite(asr_timeout_s): asr_timeout_s = 0.0
 	api_key = OS.get_environment("UNI_API_KEY")
@@ -92,7 +97,9 @@ static func recognition_routes(asr: String, ai: String, on_quest: bool) -> Dicti
 	return {"asr": "" if on_quest else asr, "ai": "" if on_quest else ai}
 
 func service_timeout(service: String) -> float:
-	return asr_timeout_s if service == "asr" else timeout_s
+	if service == "asr":
+		return asr_timeout_s
+	return llm_timeout_s if service == "llm" else timeout_s
 
 
 func is_available(model: String = "") -> bool:

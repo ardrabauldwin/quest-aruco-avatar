@@ -9,7 +9,7 @@ func run() -> Array[String]:
 	var deadlines := NaretUniAPIClient.new()
 	check(deadlines.service_timeout("asr") == 0.0, "cloud ASR can wait without an automatic deadline")
 	check(deadlines.service_timeout("tts") == 2.0, "voice deadline does not delay the recorded voice fallback")
-	check(deadlines.service_timeout("llm") == 6.0, "understanding a report waits for a slower cloud answer")
+	check(deadlines.service_timeout("llm") == 15.0, "understanding a report waits for a slower cloud answer")
 	deadlines.free()
 	check(NaretLLMOrchestrator.parse_response('{"text":"Ich helfe.","action":"calm","language":"de"}', "de").get("action") == "calm", "valid JSON accepted")
 	check(NaretLLMOrchestrator.parse_response('{"text":"X","action":"admin","language":"de"}', "de").is_empty(), "unknown actions rejected")

@@ -56,8 +56,27 @@ def words(text: str) -> str:
     return re.sub(r"[^a-z0-9 ]", "", text.lower()).strip()
 
 
+def finalise_wav(data: bytes) -> bytes:
+    """The cloud streams WAV with 0xFFFFFFFF RIFF/data sizes, which Godot's importer and the
+    Android export cannot read (2026-11-02 and 11-04). Write the real sizes."""
+    data = bytearray(data)
+    at = 12
+    while at + 8 <= len(data):
+        chunk, size = bytes(data[at:at + 4]), int.from_bytes(data[at + 4:at + 8], "little")
+        if chunk == b"data":
+            length = len(data) - at - 8
+            if length % 2:
+                length -= 1
+                del data[at + 8 + length:]
+            data[at + 4:at + 8] = length.to_bytes(4, "little")
+            break
+        at += 8 + size + (size % 2)
+    data[4:8] = (len(data) - 8).to_bytes(4, "little")
+    return bytes(data)
+
+
 def make(key: str, path: Path, text: str, speaker: str) -> float:
-    data = speak(key, text, VOICES[speaker])
+    data = finalise_wav(speak(key, text, VOICES[speaker]))
     path.write_bytes(data)
     match = difflib.SequenceMatcher(None, words(text), words(heard(key, data))).ratio()
     with wave.open(str(path), "rb") as clip:

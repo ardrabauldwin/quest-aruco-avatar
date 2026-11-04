@@ -2,9 +2,9 @@ class_name NaretTwoHandPressCounter
 extends RefCounted
 ## Runs one NaretPlacedPressCounter per palm, each with its own resting height, and reports the
 ## presses of the steadier palm, judged once while both rest. The headset sees the upper hand;
-## the hidden lower one jitters about twice as much (four recordings, 2026-11-03). Because both palms are counted all along,
-## changing to the other palm takes over its count instead of losing the press in progress:
-## a single counter that changed palms during the first presses missed three in a row (16:03).
+## the hidden lower one jitters about twice as much (four recordings, 2026-11-03). A palm change
+## carries on from the count reported so far: taking over the other palm's own count added
+## presses nobody made when that palm was partly tracked (2026-11-04: three extra, one "10.6 cm").
 ## Replayed against the QCPR manikin: 60/60 and 31/31 presses, none false.
 ## Same signals and fields as NaretPlacedPressCounter, so cpr_hand_zone.gd can use either.
 
@@ -84,7 +84,7 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 			change = best
 	if change != "":
 		hand = change
-		_catch_up()
+		_base[hand] = _counts[hand] - _reported
 	var current: NaretPlacedPressCounter = _counters[hand]
 	rest_m = current.rest_m
 	drop_m = current.drop_m

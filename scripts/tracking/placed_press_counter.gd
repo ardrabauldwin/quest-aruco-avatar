@@ -26,6 +26,9 @@ const LIFT_S := 0.5
 const LOST_SWITCH_S := 0.3     # upper hand unseen this long: carry on with the other one
 const JITTER_WINDOW_S := 1.5   # half a second while placing was too short to tell the hands apart
 const CONFIRM_PRESSES := 3     # "smooth" keeps checking the hand choice until this many presses
+## A partly tracked hand (fewer joints than this) is guessed, not seen: on 2026-11-04 a palm
+## seen with 2-21 joints came back 3-4 cm lower and counted a press nobody made.
+const FULL_JOINTS := 26
 
 ## Which palm to follow once placed: "smooth" (default: the steadier palm while still; the
 ## headset sees the upper hand, the hidden lower one jitters about twice as much: four headset
@@ -48,12 +51,13 @@ var _presses_since_placed := 0
 var _time_s := 0.0
 var _away_s := 0.0
 var _lost_s := 0.0
+var _untrusted := false        # the followed palm was partly tracked: carry the depth on when it is back
 
 
 ## left/right: {"in_zone": bool, "height": float (NAN when untracked), optional "seen": int}.
 func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 	_time_s += delta
-	var hands := {"left": left, "right": right}
+	var hands := {"left": _trusted(left), "right": _trusted(right)}
 	for side: String in hands:
 		_seen[side] = int(hands[side].get("seen", 0))
 		var h: Dictionary = hands[side]
@@ -83,6 +87,7 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 	var other: Dictionary = hands[other_side]
 	if not is_finite(float(current.get("height", NAN))):
 		_lost_s += delta
+		_untrusted = true
 		if _lost_s > LOST_SWITCH_S and other.get("in_zone", false) and is_finite(float(other.get("height", NAN))):
 			# Continue on the other palm from the same depth: stacked palms sit cm apart.
 			rest_m = float(other.height) + drop_m
@@ -98,6 +103,10 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 		hand = other_side
 		current = other
 	var height := float(current.height)
+	if _untrusted:
+		# Back in full view: whatever jump the partial tracking made is not a press.
+		rest_m = height + drop_m
+		_untrusted = false
 	drop_m = rest_m - height
 	if not pressing:
 		if drop_m >= PRESS_START_M:
@@ -162,6 +171,18 @@ func _reset_to_waiting() -> void:
 	pressing = false
 	drop_m = 0.0
 	_lost_s = 0.0
+	_untrusted = false
+
+
+## A hand reported with fewer than FULL_JOINTS tracked joints has no trusted height. Callers
+## that do not report "seen" (0) are trusted as before.
+static func _trusted(h: Dictionary) -> Dictionary:
+	var seen := int(h.get("seen", 0))
+	if seen <= 0 or seen >= FULL_JOINTS:
+		return h
+	var copy := h.duplicate()
+	copy.height = NAN
+	return copy
 
 
 func _is_still(side: String) -> bool:

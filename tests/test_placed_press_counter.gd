@@ -111,4 +111,44 @@ func run() -> Array[String]:
 			both_tick.call(0.03 - 0.04 * sin(PI * i / 40.0), true, true)
 	check(two.hand == "left", "the two-hand counter ends on the steady palm: " + two.hand)
 	check(two_counted[0] == 8, "every press is reported once: " + str(two_counted[0]))
+
+	# A palm that is only partly tracked comes back 3.5 cm lower (headset, 2026-11-04): no press.
+	var partial := NaretPlacedPressCounter.new()
+	partial.hand_rule = "left"
+	var partial_counted := [0]
+	partial.pressed.connect(func(_d: float): partial_counted[0] += 1)
+	var seen_step := func(height: float, seen: int):
+		partial.update(DT, {"in_zone": true, "height": height, "seen": seen}, {"in_zone": false, "height": NAN})
+	for i in 60:
+		seen_step.call(0.06, 26)
+	for i in 12:
+		seen_step.call(0.06 - i * 0.003, 2 if i < 9 else 21)
+	for i in 60:
+		seen_step.call(0.025, 26)
+	check(partial.state == "placed" and partial_counted[0] == 0, "a jump while partly tracked is no press: " + str(partial_counted[0]))
+	for p in 3:
+		for i in 40:
+			seen_step.call(0.025 - 0.045 * sin(PI * i / 40.0), 26)
+	check(partial_counted[0] == 3, "presses after the jump count from the new height: " + str(partial_counted[0]))
+
+	# Changing palms mid-series does not add the other palm's own presses.
+	var change := NaretTwoHandPressCounter.new()
+	var change_counted := [0]
+	change.pressed.connect(func(_d: float): change_counted[0] += 1)
+	var g := [0]
+	var change_tick := func(left_h: float, right_h: float):
+		g[0] += 1
+		var j := 0.004 if g[0] % 2 == 0 else -0.004
+		change.update(DT, {"in_zone": is_finite(left_h), "height": left_h}, {"in_zone": true, "height": right_h + j})
+	for i in 100:
+		change_tick.call(0.03, 0.04)
+	for p in 4:
+		for i in 40:
+			# The jittery right palm makes two presses out of each real one.
+			var down := 0.04 * sin(PI * i / 40.0)
+			change_tick.call(0.03 - down, 0.04 - 0.04 * absf(sin(TAU * i / 40.0)))
+	for i in 60:
+		change_tick.call(NAN, 0.04)  # left palm lost: carry on with the right one
+	check(change.hand == "right", "a lost palm hands over to the other one: " + change.hand)
+	check(change_counted[0] == 4, "the change adds no presses: " + str(change_counted[0]))
 	return failures

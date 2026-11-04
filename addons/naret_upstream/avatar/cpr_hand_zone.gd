@@ -323,7 +323,8 @@ func _update_placed_counting(delta: float, available: bool) -> void:
 		var in_zone := false
 		for point in _hand_contact_points(tracker):
 			in_zone = in_zone or _in_placed_zone(point)
-		hands[tracker] = {"in_zone": in_zone, "height": _palm_height({"point": read.heel}) if read.has("heel") else NAN}
+		hands[tracker] = {"in_zone": in_zone, "height": _palm_height({"point": read.heel}) if read.has("heel") else NAN,
+			"seen": int(_measuring_points(tracker).seen)}
 	var left: Dictionary = hands[left_tracker]
 	var right: Dictionary = hands[right_tracker]
 	_placed_counter.update(delta, left, right)

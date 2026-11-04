@@ -6,7 +6,7 @@
       "path": "res://assets/audio/coaching/en/setup.wav"
     },
     {
-      "text": "First check that it is safe to approach. Tell me what you find.",
+      "text": "Before you go to the patient, look around for dangers to you and to him, such as traffic, fire, electricity, gas or water. Then tell me: \"The scene is safe\" or \"The scene is not safe\".",
       "language": "en",
       "path": "res://assets/audio/coaching/en/safety.wav"
     },
@@ -16,17 +16,17 @@
       "path": "res://assets/audio/coaching/en/response.wav"
     },
     {
-      "text": "Ask Anna to call 112 and put the phone on speaker.",
+      "text": "He does not respond, so he needs emergency help now. Speak to Anna directly by name and ask her to call 112, for example: \"Anna, please call 112.\"",
       "language": "en",
       "path": "res://assets/audio/coaching/en/call.wav"
     },
     {
-      "text": "Open his airway with head tilt and chin lift. Check for normal breathing for no more than ten seconds, then tell me what you find. Gasping is not normal breathing.",
+      "text": "Open his airway with head tilt and chin lift. Check for normal breathing for no more than ten seconds. Remember: gasping is not normal breathing. Then tell me what you find: is he breathing normally or not?",
       "language": "en",
       "path": "res://assets/audio/coaching/en/breathing.wav"
     },
     {
-      "text": "Give 30 compressions in the centre of the chest, on the lower half of the breastbone. Aim for 100 to 120 a minute and 5 to 6 centimetres depth. Allow full recoil and minimise pauses.",
+      "text": "Give 30 compressions in the centre of the chest, over the green box. Aim for 100 to 120 a minute and 5 to 6 centimetres depth.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/compressions.wav"
     },
@@ -66,7 +66,7 @@
       "path": "res://assets/audio/coaching/de/setup.wav"
     },
     {
-      "text": "Prüfen Sie zuerst, ob Sie sich gefahrlos nähern können. Sagen Sie, was Sie feststellen.",
+      "text": "Bevor Sie zum Patienten gehen, prüfen Sie die Umgebung auf Gefahren für sich und für ihn, zum Beispiel Verkehr, Feuer, Strom, Gas oder Wasser. Sagen Sie mir dann: „Die Umgebung ist sicher“ oder „Die Umgebung ist nicht sicher“.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/safety.wav"
     },
@@ -76,17 +76,17 @@
       "path": "res://assets/audio/coaching/de/response.wav"
     },
     {
-      "text": "Bitten Sie Anna, 112 anzurufen und den Lautsprecher einzuschalten.",
+      "text": "Er reagiert nicht und braucht jetzt sofort professionelle Hilfe. Sprechen Sie Anna direkt mit Namen an und bitten Sie sie, die 112 anzurufen, zum Beispiel: „Anna, ruf bitte die 112 an.“",
       "language": "de",
       "path": "res://assets/audio/coaching/de/call.wav"
     },
     {
-      "text": "Öffnen Sie die Atemwege durch Überstrecken des Kopfes und Anheben des Kinns. Prüfen Sie die normale Atmung höchstens zehn Sekunden und berichten Sie das Ergebnis. Schnappatmung ist nicht normal.",
+      "text": "Machen Sie die Atemwege frei, indem Sie den Kopf überstrecken und das Kinn anheben. Prüfen Sie höchstens zehn Sekunden lang, ob er normal atmet. Denken Sie daran: Schnappatmung ist keine normale Atmung. Sagen Sie mir dann, was Sie feststellen: Atmet er normal oder nicht?",
       "language": "de",
       "path": "res://assets/audio/coaching/de/breathing.wav"
     },
     {
-      "text": "Geben Sie 30 Kompressionen in der Brustmitte auf der unteren Hälfte des Brustbeins: 100 bis 120 pro Minute und 5 bis 6 Zentimeter tief. Vollständig entlasten und Pausen minimieren.",
+      "text": "Drücken Sie 30-mal in der Mitte des Brustkorbs, genau über dem grünen Feld. Ziel sind 100 bis 120 pro Minute und 5 bis 6 Zentimeter Tiefe.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/compressions.wav"
     },
@@ -126,7 +126,7 @@
       "path": "res://assets/audio/coaching/pl/setup.wav"
     },
     {
-      "text": "Najpierw sprawdź, czy możesz bezpiecznie podejść. Powiedz, co stwierdzasz.",
+      "text": "Zanim podejdziesz do poszkodowanego, rozejrzyj się, czy nie ma zagrożeń dla ciebie i dla niego, na przykład ruchu ulicznego, ognia, prądu, gazu lub wody. Potem powiedz mi: „Miejsce jest bezpieczne” albo „Miejsce nie jest bezpieczne”.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/safety.wav"
     },
@@ -136,17 +136,17 @@
       "path": "res://assets/audio/coaching/pl/response.wav"
     },
     {
-      "text": "Poproś Annę, żeby zadzwoniła pod 112 i włączyła głośnik.",
+      "text": "On nie reaguje i potrzebuje teraz natychmiastowej pomocy. Zwróć się bezpośrednio do Anny po imieniu i poproś ją, żeby zadzwoniła pod 112, na przykład: „Anno, zadzwoń proszę pod 112”.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/call.wav"
     },
     {
-      "text": "Udrożnij drogi oddechowe, odchylając głowę i unosząc brodę. Sprawdzaj prawidłowy oddech przez najwyżej dziesięć sekund, potem zgłoś wynik. Pojedyncze westchnienia nie są prawidłowym oddechem.",
+      "text": "Udrożnij drogi oddechowe, odchylając głowę do tyłu i unosząc żuchwę. Przez nie dłużej niż dziesięć sekund sprawdź, czy oddycha prawidłowo. Pamiętaj: oddech agonalny nie jest prawidłowym oddechem. Potem powiedz mi, czy oddycha prawidłowo, czy nie.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/breathing.wav"
     },
     {
-      "text": "Wykonaj 30 uciśnięć pośrodku klatki piersiowej, na dolnej połowie mostka. Tempo 100 do 120 na minutę, głębokość 5 do 6 centymetrów. Pozwól klatce całkowicie się rozprężyć i ogranicz przerwy.",
+      "text": "Wykonaj 30 uciśnięć na środku klatki piersiowej, nad zielonym polem. Celuj w tempo 100 do 120 na minutę i głębokość 5 do 6 centymetrów.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/compressions.wav"
     },

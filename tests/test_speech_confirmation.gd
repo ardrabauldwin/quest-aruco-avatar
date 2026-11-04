@@ -37,4 +37,14 @@ func run() -> Array[String]:
 	check(not gate.evaluate("no", "a", allowed, 32100).has("action"), "no cancels")
 	check(gate.evaluate("The vaccine is safe", "a", allowed, 32200).is_empty(), "unrelated safety statement not guessed")
 	check(gate.evaluate("Tassini's safe", "a", ["call_emergency"], 32300).is_empty(), "out of order proposal blocked")
+	# A doubtful interpretation asks yes/no about the current step (headset, 2026-11-04).
+	gate.propose("check_responsiveness", "c", 40000, "en")
+	check(gate.evaluate("Yes.", "c", ["check_responsiveness"], 41000).get("action") == "check_responsiveness", "yes confirms the asked step")
+	gate.propose("call_emergency", "d", 42000, "de")
+	check(not gate.evaluate("Nein", "d", ["call_emergency"], 43000).has("action"), "nein does not confirm")
+	check(not gate.evaluate("ja", "d", ["call_emergency"], 43100).has("action"), "a refused question is gone")
+	gate.propose("call_emergency", "e", 44000, "pl")
+	check(not gate.evaluate("tak", "f", ["call_emergency"], 44500).has("action"), "a new step drops the question")
+	for language in ["en", "de", "pl"]:
+		check(Confirm.question("call_emergency", 1, language) != Confirm.repeat_message(language), language + " asks yes/no about calling 112")
 	return failures

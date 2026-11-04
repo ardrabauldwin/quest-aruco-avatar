@@ -79,14 +79,23 @@ func evaluate(text: String, context: String, allowed: Array, now: int, language 
 	_deadline = now + LIFETIME_MS
 	return {"proposal": candidate}
 
+## Holds a yes/no question about `action` that main asked because the interpreter was in
+## doubt. Only an explicit "yes" to it within LIFETIME_MS confirms the step.
+func propose(action: String, context: String, now: int, language := "en") -> void:
+	_action = action
+	_context = context
+	_deadline = now + LIFETIME_MS
+	_breaths = 1
+	_language = language
+
 static func repeat_message(language: String) -> String:
 	return {"en": "No report confirmed. Please state the completed check and finding.", "de": "Keine Meldung bestätigt. Bitte sagen Sie, was Sie geprüft und festgestellt haben.", "pl": "Nie potwierdzono zgłoszenia. Powiedz, co sprawdzono i jaki był wynik."}.get(language, "Please repeat your report.")
 
 static func question(action: String, breaths: int, language: String) -> String:
 	var lines := {
-		"en": {"begin_check": "Did you say the scene is safe? Say yes or no.", "check_responsiveness": "Did you report that he is not responding? Say yes or no.", "check_breathing": "Did you report that he is not breathing normally? Say yes or no.", "ventilation": "Did you complete one rescue breath? Say yes or no.", "pair": "Did you complete two rescue breaths? Say yes or no."},
-		"de": {"begin_check": "Haben Sie gesagt, dass die Umgebung sicher ist? Antworten Sie mit ja oder nein.", "check_responsiveness": "Haben Sie festgestellt, dass er nicht reagiert? Antworten Sie mit ja oder nein.", "check_breathing": "Haben Sie festgestellt, dass er nicht normal atmet? Antworten Sie mit ja oder nein.", "ventilation": "Haben Sie eine Beatmung durchgeführt? Antworten Sie mit ja oder nein.", "pair": "Haben Sie zwei Beatmungen durchgeführt? Antworten Sie mit ja oder nein."},
-		"pl": {"begin_check": "Czy miejsce jest bezpieczne? Odpowiedz tak lub nie.", "check_responsiveness": "Czy stwierdzono, że pacjent nie reaguje? Odpowiedz tak lub nie.", "check_breathing": "Czy stwierdzono, że pacjent nie oddycha prawidłowo? Odpowiedz tak lub nie.", "ventilation": "Czy wykonano jeden oddech ratowniczy? Odpowiedz tak lub nie.", "pair": "Czy wykonano dwa oddechy ratownicze? Odpowiedz tak lub nie."}
+		"en": {"begin_check": "Did you say the scene is safe? Say yes or no.", "check_responsiveness": "Did you report that he is not responding? Say yes or no.", "call_emergency": "Did you ask Anna to call 112? Say yes or no.", "check_breathing": "Did you report that he is not breathing normally? Say yes or no.", "ventilation": "Did you complete one rescue breath? Say yes or no.", "pair": "Did you complete two rescue breaths? Say yes or no."},
+		"de": {"begin_check": "Haben Sie gesagt, dass die Umgebung sicher ist? Antworten Sie mit ja oder nein.", "check_responsiveness": "Haben Sie festgestellt, dass er nicht reagiert? Antworten Sie mit ja oder nein.", "call_emergency": "Haben Sie Anna gebeten, die 112 anzurufen? Antworten Sie mit ja oder nein.", "check_breathing": "Haben Sie festgestellt, dass er nicht normal atmet? Antworten Sie mit ja oder nein.", "ventilation": "Haben Sie eine Beatmung durchgeführt? Antworten Sie mit ja oder nein.", "pair": "Haben Sie zwei Beatmungen durchgeführt? Antworten Sie mit ja oder nein."},
+		"pl": {"begin_check": "Czy miejsce jest bezpieczne? Odpowiedz tak lub nie.", "check_responsiveness": "Czy stwierdzono, że pacjent nie reaguje? Odpowiedz tak lub nie.", "call_emergency": "Czy poproszono Annę o wezwanie pogotowia pod numer 112? Odpowiedz tak lub nie.", "check_breathing": "Czy stwierdzono, że pacjent nie oddycha prawidłowo? Odpowiedz tak lub nie.", "ventilation": "Czy wykonano jeden oddech ratowniczy? Odpowiedz tak lub nie.", "pair": "Czy wykonano dwa oddechy ratownicze? Odpowiedz tak lub nie."}
 	}
 	var key := "pair" if action == "ventilation" and breaths == 2 else action
 	return str(lines.get(language, lines.en).get(key, repeat_message(language)))

@@ -6,7 +6,9 @@ signal status_changed(message: String)
 signal request_finished(service: String, success: bool, latency_ms: int)
 
 const DEFAULT_URL := "https://apphubai.wolke.uni-greifswald.de/v1"
-const DEFAULT_LLM := "unsloth/Qwen3.8-27B-GGUF:Q4_K_M"
+## Gemma: 24/24 and about 0.5 s on the interpreter prompt; Qwen 23/24, about 2 s, and 2 in 10
+## clear reports refused at random (2026-11-04). Its JSON comes in a code block: see unfence().
+const DEFAULT_LLM := "unsloth/gemma-4-31B-it-qat-GGUF:UD-Q4_K_XL"
 var base_url := DEFAULT_URL
 var api_key := ""
 var asr_model := "large-v3"

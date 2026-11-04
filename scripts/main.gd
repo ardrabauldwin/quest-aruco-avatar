@@ -195,6 +195,12 @@ func _ready() -> void:
 	# Explicit witness questions are already routed to Anna in _on_transcript.
 	# An unclear exercise report needs the instructor, not unrelated witness chat.
 	observation_interpreter.conversation.connect(func(_text: String):
+		# A question to the exercise ("can't I call 112 myself?") gets an answer from the
+		# instructor, who explains the approved step; repeating the step text did not answer
+		# it (headset, 2026-11-04). Other unclassified audio only repeats the step.
+		if observation_interpreter.last_kind == "question" and not _smoke_mode:
+			_queue_coach_question(_text)
+			return
 		# Help and witness questions were routed explicitly before classification.
 		# Unclassified audio must not provoke generated clinical instructions.
 		var step := NaretTrainingCoach.step(scenario)
@@ -206,6 +212,8 @@ func _ready() -> void:
 			_unclassified_spoken_step = step
 			audio_manager.speak(guidance, _language, "", "instructor"))
 	observation_interpreter.clarification.connect(func(text: String):
+		if observation_interpreter.last_doubtful and _ask_step_confirmation():
+			return
 		if not api.local_ai_url.is_empty():
 			text = NaretTrainingCoach.feedback(scenario, _last_heard_report, "unclear", _language)
 		_toast(text)
@@ -1063,7 +1071,7 @@ func _on_transcript(text: String) -> void:
 			audio_manager.speak(reply, _language, "", "instructor")
 			return
 	if _language in ["en", "de", "pl"]:
-		var context := str(scenario.state) + ":" + str(scenario.get_available_actions()) + ":" + str(scenario.cycle_compressions) + ":" + str(scenario.cycle_ventilations)
+		var context := _confirmation_context()
 		var interpreted: Dictionary = _speech_confirmation.evaluate(text, context, scenario.get_available_actions(), Time.get_ticks_msec(), _language)
 		if interpreted.has("action"):
 			if interpreted.get("breaths", 1) == 2:
@@ -1086,6 +1094,27 @@ func _on_transcript(text: String) -> void:
 	# Progression observations go to CCBM, never to Anna's generated action field.
 	if ccbm and ccbm.observe_speech(text): return
 	observation_interpreter.interpret(text, bystander_language())
+
+func _confirmation_context() -> String:
+	return str(scenario.state) + ":" + str(scenario.get_available_actions()) + ":" + str(scenario.cycle_compressions) + ":" + str(scenario.cycle_ventilations)
+
+
+## The interpreter could not tell what the trainee meant: ask yes/no about the step the
+## trainee is on instead of a generic "no step has been confirmed" (headset, 2026-11-04:
+## trainees asked back "which step should I confirm?"). Only an explicit "yes" confirms.
+const CONFIRMABLE_STEPS := ["begin_check", "check_responsiveness", "call_emergency", "check_breathing"]
+func _ask_step_confirmation() -> bool:
+	var steps: Array = scenario.get_available_actions().filter(func(a): return a in CONFIRMABLE_STEPS)
+	if steps.size() != 1:
+		return false
+	_speech_confirmation.propose(str(steps[0]), _confirmation_context(), Time.get_ticks_msec(), _language)
+	var question := preload("res://scripts/scenario/speech_confirmation.gd").question(str(steps[0]), 1, _language)
+	print("NARET_CONFIRM_ASK ", steps[0])
+	_toast(question)
+	if not _smoke_mode:
+		audio_manager.speak(question, _language, "", "instructor")
+	return true
+
 
 func _on_conversation(text: String) -> void:
 	if NaretTrainingCoach.asks_for_help(text):

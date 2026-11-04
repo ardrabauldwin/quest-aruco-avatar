@@ -19,6 +19,10 @@ func run() -> Array[String]:
 	check(Interpreter.parse('{"action":"shock","kind":"request","result":"none","evidence":"shock"}', "shock").is_empty(), "Unknown action rejected")
 	check(Interpreter.parse('not json', "hello").is_empty(), "Malformed model reply rejected")
 	check(Interpreter.parse('{"action":7}', "hello").is_empty(), "Wrong types rejected")
+	# Gemma's answers come in one ```json code block (headset, 2026-11-04).
+	var fenced := "```json\n{\"action\": \"check_responsiveness\", \"kind\": \"report\", \"result\": \"unresponsive\", \"evidence\": \"He's not responding.\"}\n```"
+	check(Interpreter.accepted_action(Interpreter.parse(fenced, "He's not responding."), "He's not responding.") == "check_responsiveness", "A code-fenced answer is read")
+	check(Interpreter.parse("Sure! ```json\n{}\n```", "x").is_empty(), "Text around a code block is still refused")
 	for lang in ["en", "de", "pl"]:
 		check(not Interpreter.clarification_text(lang).is_empty(), "Local clarification available " + lang)
 	return failures

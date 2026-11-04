@@ -44,6 +44,13 @@ static func current_instruction(scenario: NaretScenario, language: String) -> St
 		key = "resume_compressions"
 	return instruction(key, language)
 
+## ERC 2025 adult BLS facts the instructor answers CPR questions from (data/erc_bls_facts.json).
+static func erc_facts() -> Array:
+	var file := FileAccess.open("res://data/erc_bls_facts.json", FileAccess.READ)
+	if file == null: return []
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	return parsed.get("facts", []) if parsed is Dictionary else []
+
 static func context(scenario: NaretScenario, language: String) -> Dictionary:
 	var key := step(scenario)
 	var guide := {}
@@ -52,6 +59,7 @@ static func context(scenario: NaretScenario, language: String) -> Dictionary:
 	return {"language": language, "scenario_state": scenario.get_state_name(),
 		"next_step": key, "approved_instruction": current_instruction(scenario, language),
 		"approved_guide": guide,
+		"erc_facts": erc_facts(),
 		"compression_count": scenario.cycle_compressions, "breath_reports": scenario.cycle_ventilations,
 		"emergency_call_reported": scenario.emergency_called,
 		"scope": "one witness Anna; no AED interaction in this exercise; breaths and findings are reported, not sensor verified",

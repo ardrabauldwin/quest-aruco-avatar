@@ -214,6 +214,11 @@ func _ready() -> void:
 	observation_interpreter.clarification.connect(func(text: String):
 		if observation_interpreter.last_doubtful and _ask_step_confirmation():
 			return
+		# A clear report with another finding ("he is breathing normally") is not a doubt: the
+		# instructor answers it from the deviation guide instead of "no step confirmed".
+		if not observation_interpreter.last_doubtful and not _last_heard_report.is_empty() and not _smoke_mode:
+			_queue_coach_question(_last_heard_report)
+			return
 		if not api.local_ai_url.is_empty():
 			text = NaretTrainingCoach.feedback(scenario, _last_heard_report, "unclear", _language)
 		_toast(text)
@@ -1065,10 +1070,10 @@ func _on_transcript(text: String) -> void:
 			ccbm.observe_action("begin_check")
 			return
 		if safety == "unsafe":
+			# The instructor answers from the deviation guide: remove the danger, move him, or keep
+			# away and call 112 when there is no safe place. Without the cloud it repeats the step.
 			print("NARET_SAFETY unsafe")
-			var reply := preload("res://scripts/scenario/safety_report.gd").unsafe_reply(_language)
-			_toast(reply)
-			audio_manager.speak(reply, _language, "", "instructor")
+			_queue_coach_question(text)
 			return
 	if _language in ["en", "de", "pl"]:
 		var context := _confirmation_context()

@@ -88,11 +88,3 @@ static func _by_length(phrases: Array) -> Array:
 	sorted.sort_custom(func(a: String, b: String): return a.length() > b.length())
 	return sorted
 
-
-## What the instructor says to an "unsafe" report: the exercise scene is safe by design.
-static func unsafe_reply(language: String) -> String:
-	return {
-		"en": "Good that you checked. In this exercise the scene is safe. Look again and tell me: the scene is safe.",
-		"de": "Gut, dass Sie geprüft haben. In dieser Übung ist die Umgebung sicher. Schauen Sie noch einmal und sagen Sie mir: Die Umgebung ist sicher.",
-		"pl": "Dobrze, że to sprawdzasz. W tym ćwiczeniu miejsce jest bezpieczne. Rozejrzyj się jeszcze raz i powiedz mi: miejsce jest bezpieczne.",
-	}.get(language, "In this exercise the scene is safe. Tell me: the scene is safe.")

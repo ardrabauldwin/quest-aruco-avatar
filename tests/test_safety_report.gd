@@ -60,6 +60,4 @@ func run() -> Array[String]:
 	for case: Array in CASES:
 		var got: String = Safety.classify(case[1], case[0])
 		check(got == case[2], "%s \"%s\" -> \"%s\" (expected \"%s\")" % [case[0], case[1], got, case[2]])
-	for language in ["en", "de", "pl"]:
-		check(not Safety.unsafe_reply(language).is_empty(), language + " has an unsafe-report reply")
 	return failures

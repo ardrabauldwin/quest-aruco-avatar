@@ -51,6 +51,15 @@ static func erc_facts() -> Array:
 	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	return parsed.get("facts", []) if parsed is Dictionary else []
 
+## How to answer a trainee who reports or asks about something other than the exercise expects,
+## for one step (data/deviation_guide.json). Compression-only uses the compression entries.
+static func deviation_guide(step_key: String) -> Array:
+	var file := FileAccess.open("res://data/deviation_guide.json", FileAccess.READ)
+	if file == null: return []
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary: return []
+	return parsed.get("compressions" if step_key == "compression_only" else step_key, [])
+
 static func context(scenario: NaretScenario, language: String) -> Dictionary:
 	var key := step(scenario)
 	var guide := {}
@@ -60,6 +69,7 @@ static func context(scenario: NaretScenario, language: String) -> Dictionary:
 		"next_step": key, "approved_instruction": current_instruction(scenario, language),
 		"approved_guide": guide,
 		"erc_facts": erc_facts(),
+		"deviation_guide": deviation_guide(key),
 		"compression_count": scenario.cycle_compressions, "breath_reports": scenario.cycle_ventilations,
 		"emergency_call_reported": scenario.emergency_called,
 		"scope": "one witness Anna; no AED interaction in this exercise; breaths and findings are reported, not sensor verified",

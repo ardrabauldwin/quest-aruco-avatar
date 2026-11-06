@@ -30,9 +30,31 @@ func run() -> Array[String]:
 	gate.head = head
 	raw.origin.x = 0.4
 	check(gate.evaluate(raw, placed, 200, false).is_empty(), "partial markers cannot trigger large-move override")
-	check(gate.evaluate(raw, placed, 201).is_empty(), "big move needs three detections")
-	check(gate.evaluate(raw, placed, 202).is_empty(), "two detections still hold")
-	check(not gate.evaluate(raw, placed, 203).is_empty(), "three full detections retain old large-move override")
+	# Since 2026-11-06 a big move is confirmed like the startup placement: 30, 33, ... readings
+	# whose robust estimate holds four times in a row (earliest at 42), so a few mirrored or
+	# stray readings cannot move the patient.
+	var held := true
+	for i in range(41):
+		held = held and gate.evaluate(raw, placed, 201 + i).is_empty()
+	check(held and gate.gate_state == "big_collecting", "41 agreeing big readings still hold")
+	var big := gate.evaluate(raw, placed, 242)
+	check(not big.is_empty() and big.get("confirmed", false) and big.pose.origin.is_equal_approx(Vector3(0.4, 0, 0)), "42 agreeing big readings confirm the move")
+	check(not gate.evaluate(raw, placed, 243).is_empty(), "readings near the confirmed pose keep passing while the patient glides")
+	gate = NaretViewerMotionGate.new()
+	gate.head = head
+	for i in range(20):
+		gate.evaluate(raw, placed, 250 + i)
+	var spike := Transform3D(Basis.IDENTITY, Vector3(0.0, 0, 0.35))
+	for i in range(3):
+		gate.evaluate(spike, placed, 270 + i)
+	var went_to_spike := false
+	var confirmed_pose := Transform3D.IDENTITY
+	for i in range(30):
+		var r := gate.evaluate(raw, placed, 280 + i)
+		if not r.is_empty():
+			went_to_spike = went_to_spike or r.pose.origin.distance_to(spike.origin) < 0.05
+			confirmed_pose = r.pose
+	check(not went_to_spike and confirmed_pose.origin.is_equal_approx(Vector3(0.4, 0, 0)), "three stray readings neither move the patient to them nor block the real move")
 	gate = NaretViewerMotionGate.new()
 	gate.head = head
 	for i in range(60): gate.tick(0.01)

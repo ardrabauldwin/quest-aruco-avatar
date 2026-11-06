@@ -100,6 +100,16 @@ const CHECKPOINT_MOVE_M := 0.015
 const CHECKPOINT_MOVE_DEG := 5.0
 var _checkpoint_target := Transform3D.IDENTITY
 var _checkpoint_transition := false
+## A moved checkpoint must be confirmed from a second viewpoint before the patient moves
+## (2026-11-06). A viewing error is steady from one place but changes with the angle; a moved
+## mannequin gives the same new pose from anywhere. The second viewpoint is this far from the
+## first, and both checkpoints agree within the AGREE limits (viewing errors were 2-3.5 cm).
+const VIEWPOINT_MOVE_M := 0.25
+const VIEWPOINT_TURN_DEG := 15.0
+const CHECKPOINT_AGREE_M := 0.025
+const CHECKPOINT_AGREE_DEG := 4.0
+const CHECKPOINT_PENDING_S := 30.0
+var _pending_checkpoint := {}   # {"pose", "head", "head_yaw", "ms"} of an unconfirmed move
 var _viewer_filter: RefCounted
 var _viewer_rest_pose := Transform3D.IDENTITY
 var _viewer_last_ms := -1
@@ -231,13 +241,38 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 		var step_m := corrected.origin.distance_to(locked_pose.origin)
 		var step_deg := rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(locked_pose.basis.get_rotation_quaternion()))
 		if step_m <= CHECKPOINT_MOVE_M and step_deg <= CHECKPOINT_MOVE_DEG:
-			# Marker noise around a resting mannequin: hold, so the patient does not wobble.
+			# Marker noise around a resting mannequin: hold, so the patient does not wobble. A
+			# pending move that this viewpoint does not see was a viewing error: drop it.
 			print("Checkpoint placement: held, %.1f cm / %.1f deg is below the move threshold." % [step_m * 100.0, step_deg])
+			_pending_checkpoint = {}
 			return
-		_viewer_rest_pose = corrected
-		_checkpoint_target = corrected
+		var head_pos := viewer_head.global_position
+		var head_yaw := atan2(-viewer_head.global_basis.z.x, -viewer_head.global_basis.z.z)
+		if not _pending_checkpoint.is_empty() and now - int(_pending_checkpoint.ms) > CHECKPOINT_PENDING_S * 1000.0:
+			_pending_checkpoint = {}
+		if _pending_checkpoint.is_empty():
+			_pending_checkpoint = {"pose": corrected, "head": head_pos, "head_yaw": head_yaw, "ms": now}
+			print("Checkpoint placement: %.1f cm / %.1f deg away, waiting for a second viewpoint." % [step_m * 100.0, step_deg])
+			return
+		var first: Transform3D = _pending_checkpoint.pose
+		var moved_m := head_pos.distance_to(_pending_checkpoint.head)
+		var turned_deg := rad_to_deg(absf(wrapf(head_yaw - float(_pending_checkpoint.head_yaw), -PI, PI)))
+		if moved_m < VIEWPOINT_MOVE_M and turned_deg < VIEWPOINT_TURN_DEG:
+			_pending_checkpoint.pose = corrected  # same viewpoint again: not a second opinion
+			return
+		var agree_m := corrected.origin.distance_to(first.origin)
+		var agree_deg := rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(first.basis.get_rotation_quaternion()))
+		if agree_m > CHECKPOINT_AGREE_M or agree_deg > CHECKPOINT_AGREE_DEG:
+			# The two viewpoints disagree: a viewing error. This one becomes the new candidate.
+			print("Checkpoint placement: viewpoints disagree by %.1f cm / %.1f deg - holding." % [agree_m * 100.0, agree_deg])
+			_pending_checkpoint = {"pose": corrected, "head": head_pos, "head_yaw": head_yaw, "ms": now}
+			return
+		var target := first.interpolate_with(corrected, 0.5)
+		_pending_checkpoint = {}
+		_viewer_rest_pose = target
+		_checkpoint_target = target
 		_checkpoint_transition = true
-		print("Checkpoint placement: confirmed after ", result.samples, " readings.")
+		print("Checkpoint placement: moved %.1f cm / %.1f deg, confirmed from two viewpoints %.0f cm / %.0f deg apart." % [step_m * 100.0, step_deg, moved_m * 100.0, turned_deg])
 		return
 	if _viewer_filter == null:
 		# Start smoothing from the current accepted placement, preventing a reset jump.
@@ -246,6 +281,10 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 		_viewer_filter.call("configure", 5, 0.020, 0.3, 1.2, 2.0, 0.0015, 1.0, 3, 0.080, 8.0)
 		_viewer_rest_pose = locked_pose
 		_viewer_filter.call("anchor_at", locked_pose)
+	if result.get("confirmed", false):
+		# A big move confirmed like the startup placement is the new rest at once: the rest pull
+		# and landing then carry the patient onto it instead of dragging it back (2026-11-06).
+		_viewer_rest_pose = corrected
 	corrected = _viewer_filter.call("update", corrected, elapsed, now, _viewer_rest_pose, true)
 	# Adopt stable endpoints independently, matching navel_provider.gd.
 	var target: Transform3D = _viewer_filter.call("measurement_target")
@@ -278,6 +317,7 @@ func unlock() -> void:
 	if checkpoint_updates:
 		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
 	_checkpoint_transition = false
+	_pending_checkpoint = {}
 	_viewer_filter = null
 	_viewer_last_ms = -1
 	locked = false

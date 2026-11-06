@@ -76,7 +76,7 @@ patient_alignment_revision = 6
 marker_thickness_m = 0.0
 sternum_shift_m = Vector3(0.0685, -0.0037, -0.031)
 sternum_at_marker_height = true
-checkpoint_updates = true
+checkpoint_updates = false
 
 [node name="Mannequin" parent="SpatialAnchor" unique_id=775750655 instance=ExtResource("2")]
 

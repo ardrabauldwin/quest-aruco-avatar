@@ -54,7 +54,11 @@ func run() -> Array[String]:
 	pose.origin.x = 0.12
 	for i in range(42): anchor.update_pose(pose, 1000 + i)
 	check(anchor.locked_pose.origin.is_zero_approx(), "confirmation does not teleport patient")
-	check(anchor._viewer_rest_pose.origin.is_equal_approx(pose.origin), "confirmed target becomes new rest immediately")
+	check(anchor._viewer_rest_pose.origin.is_zero_approx() and not anchor._pending_checkpoint.is_empty(), "one viewpoint waits for a second (2026-11-06)")
+	head.position = Vector3(0.4, 0, 0)
+	for i in range(100): anchor._process(0.01)
+	for i in range(42): anchor.update_pose(pose, 2000 + i)
+	check(anchor._viewer_rest_pose.origin.is_equal_approx(pose.origin), "a second viewpoint confirms the new rest")
 	for i in range(120): anchor._process(0.01)
 	check(anchor.locked_pose.origin.x > 0.05 and anchor.locked_pose.origin.x < 0.12, "frame-time smoothing moves toward confirmed rest")
 	anchor.full_marker_evidence = false

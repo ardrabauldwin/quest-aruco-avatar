@@ -109,7 +109,8 @@ func run() -> Array[String]:
 	for p in 8:
 		for i in 40:
 			both_tick.call(0.03 - 0.04 * sin(PI * i / 40.0), true, true)
-	check(two.hand == "left", "the two-hand counter ends on the steady palm: " + two.hand)
+	# Since 2026-11-05 the palm that presses leads; either palm may be shown here.
+	check(two.hand in ["left", "right"], "the two-hand counter follows a placed palm: " + two.hand)
 	check(two_counted[0] == 8, "every press is reported once: " + str(two_counted[0]))
 
 	# A palm that is only partly tracked comes back 3.5 cm lower (headset, 2026-11-04): no press.
@@ -151,4 +152,16 @@ func run() -> Array[String]:
 		change_tick.call(NAN, 0.04)  # left palm lost: carry on with the right one
 	check(change.hand == "right", "a lost palm hands over to the other one: " + change.hand)
 	check(change_counted[0] == 4, "the change adds no presses: " + str(change_counted[0]))
+
+	# The hidden lower palm freezes (perfectly steady) while the upper palm presses
+	# (headset, 2026-11-05: 8 of 23 counted when the steady palm was followed).
+	var frozen := NaretTwoHandPressCounter.new()
+	var frozen_counted := [0]
+	frozen.pressed.connect(func(_d: float): frozen_counted[0] += 1)
+	for i in 80:
+		frozen.update(DT, {"in_zone": true, "height": 0.07 + (0.003 if i % 2 == 0 else -0.003)}, {"in_zone": true, "height": 0.04})
+	for p in 10:
+		for i in 40:
+			frozen.update(DT, {"in_zone": true, "height": 0.07 - 0.045 * sin(PI * i / 40.0)}, {"in_zone": true, "height": 0.04})
+	check(frozen_counted[0] == 10, "the pressing palm is counted, not the frozen hidden one: " + str(frozen_counted[0]))
 	return failures

@@ -24,8 +24,9 @@ func run() -> void:
 	for i in range(header.size()):
 		col[header[i]] = i
 	var counter
-	if rule == "two":
-		counter = NaretTwoHandPressCounter.new()  # both palms counted, the steadier one reported
+	if rule in ["two", "twosteady"]:
+		counter = NaretTwoHandPressCounter.new()  # both palms counted; "twosteady": the old choice
+		if rule == "twosteady": counter.follow = "steady"
 	else:
 		counter = NaretPlacedPressCounter.new()
 		counter.hand_rule = rule

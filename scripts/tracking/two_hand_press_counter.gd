@@ -15,6 +15,17 @@ signal pressed(depth_m: float)
 const JITTER_WINDOW_S := 1.5
 const SWITCH_RATIO := 0.8      # the other palm must be clearly steadier to take over
 
+## "count" (default): report a press whenever either palm's count since placement passes the
+## count reported so far, and show the leading palm. Headset run 2026-11-05: the hidden lower
+## palm froze, looked steadiest at rest and was followed: 8 of 23 presses counted while the
+## upper palm pressed cleanly. "steady": the palm judged steadier at rest (until 2026-11-05).
+var follow := "count"
+## In "count", a palm's presses closer than this are one press shaken into several by tracking
+## jitter (200 a minute; CPR is 100-120), so a jittery palm cannot out-count the pressing one.
+const MIN_PRESS_INTERVAL_S := 0.3
+var _valid := {"left": 0, "right": 0}         # presses per palm in this placement, "count" only
+var _last_press_s := {"left": -INF, "right": -INF}
+
 var state := "waiting"
 var hand := ""
 var rest_m := 0.0
@@ -61,6 +72,7 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 			return
 		state = "placed"
 		_base = _counts.duplicate()
+		_valid = {"left": 0, "right": 0}
 		_reported = 0
 		_decided = false
 		hand = _steadier(placed_sides)
@@ -75,7 +87,9 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 	# Steadiness tells the palms apart only at rest: while pressing, the upper hand moves most.
 	# So judge once, when both palms have just been placed, and keep that palm until it is lost.
 	var change := ""
-	if hand not in placed_sides:
+	if follow == "count":
+		pass  # the palm that presses leads; see _on_press
+	elif hand not in placed_sides:
 		change = placed_sides[0]
 	elif not _decided and placed_sides.size() == 2 and not _counters.left.pressing and not _counters.right.pressing:
 		_decided = true
@@ -85,6 +99,8 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 	if change != "":
 		hand = change
 		_base[hand] = _counts[hand] - _reported
+	if hand not in placed_sides:
+		hand = placed_sides[0]
 	var current: NaretPlacedPressCounter = _counters[hand]
 	rest_m = current.rest_m
 	drop_m = current.drop_m
@@ -94,7 +110,18 @@ func update(delta: float, left: Dictionary, right: Dictionary) -> void:
 func _on_press(depth_m: float, side: String) -> void:
 	_counts[side] += 1
 	_depths[side].append(depth_m)
-	if state == "placed" and side == hand:
+	if state != "placed":
+		return
+	if follow == "count":
+		if _time_s - float(_last_press_s[side]) < MIN_PRESS_INTERVAL_S:
+			return
+		_last_press_s[side] = _time_s
+		_valid[side] += 1
+		if _valid[side] > _reported:
+			hand = side
+			_reported += 1
+			pressed.emit(depth_m)
+	elif side == hand:
 		_catch_up()
 
 

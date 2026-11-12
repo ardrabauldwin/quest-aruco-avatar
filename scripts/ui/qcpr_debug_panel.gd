@@ -48,6 +48,9 @@ func _bind_manager() -> void:
 	qcpr_manager.quality_feedback.connect(_on_feedback)
 	qcpr_manager.status_changed.connect(func(msg: String):
 		if _status_label: _status_label.text = msg)
+	if _auto_button and qcpr_manager.sim_backend:
+		var is_auto: bool = qcpr_manager.sim_backend.control_mode == SimBackend.ControlMode.AUTO_CPR
+		_auto_button.text = "Modus: %s" % ("AUTO-CPR (Aktiv)" if is_auto else "MANUELL (Hand-Tracking)")
 
 func _build_ui() -> void:
 	var root_vbox := VBoxContainer.new()

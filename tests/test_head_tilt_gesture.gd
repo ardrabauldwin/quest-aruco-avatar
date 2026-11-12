@@ -1,7 +1,7 @@
 extends "res://tests/suite.gd"
 
 func _hands(fore: Vector3, chin: Vector3) -> Array:
-	return [{"palm": fore, "thumb": fore}, {"palm": chin, "thumb": chin}]
+	return [{"palm": fore, "index": fore}, {"palm": chin, "index": chin}]
 
 func _feed(detector: NaretHeadTiltGesture, hands: Array, frames: int) -> void:
 	for i in frames:
@@ -22,7 +22,7 @@ func run() -> Array[String]:
 	check(not detector.active, "sideways reaching does not activate")
 	detector.reset()
 	_feed(detector, rest, 18)
-	var motion := _hands(Vector3(0, -0.009, -0.01), Vector3(0, 0.016, 0.12))
+	var motion := _hands(Vector3(0, -0.009, -0.01), Vector3(0, 0.01, 0.12))
 	_feed(detector, motion, 7)
 	check(detector.active, "hold followed by coordinated motion activates")
 	_feed(detector, [{}, {}], 5)
@@ -35,17 +35,36 @@ func run() -> Array[String]:
 	check(not detector.active, "single motion spike cannot activate")
 	_feed(detector, [{}, {}], 1)
 	check(detector.state == "waiting", "tracking loss cannot preserve an unconfirmed gesture")
-	# Steering: palm on the forehead and the OTHER hand's thumb in the chin zone, no hold.
+	# Steering: an index or middle fingertip held still on the chin, no forehead hand.
+	var chin := Vector3(0, 0, 0.12)
 	detector.reset()
-	_feed(detector, rest, 1)
-	check(detector.steer_hand == 0, "both zones lit steer with the forehead hand at once")
-	_feed(detector, [{"palm": Vector3.ZERO, "thumb": Vector3(0, 0, 0.12)}, {"palm": Vector3(0, 0.3, 0), "thumb": Vector3(0, 0.3, 0)}], 1)
-	check(detector.steer_hand == -1, "one hand on both zones does not steer")
-	_feed(detector, [{"palm": Vector3.ZERO, "thumb": Vector3.ZERO}, {"palm": Vector3(0, 0.3, 0), "thumb": Vector3(0, 0.07, 0.12)}], 1)
-	check(detector.steer_hand == -1, "a thumb outside the chin zone does not steer")
-	_feed(detector, rest, 1)
-	_feed(detector, _hands(Vector3(0, 0, 0.07), Vector3(0, 0, 0.12)), 1)
-	check(detector.steer_hand == 0, "steering keeps its hand within the wider active radius")
-	_feed(detector, [rest[0], {}], 1)
-	check(detector.steer_hand == -1, "losing the chin hand stops steering")
+	detector.release_steer()
+	# _feed steps 0.02 s; one frame either side of HOLD_S avoids float rounding at the edge.
+	var hold_frames := ceili(NaretHeadTiltGesture.HOLD_S / 0.02)
+	_feed(detector, [{}, {"index": chin}], hold_frames - 1)
+	check(detector.steer_hand == -1, "a fingertip on the chin does not steer before the hold")
+	_feed(detector, [{}, {"index": chin}], 2)
+	check(detector.steer_hand == 1 and detector.steer_finger == "index", "an index fingertip held still on the chin takes the head")
+	var away := chin + Vector3(0, 0.06, -0.02)
+	_feed(detector, [{}, {"index": away}], 1)
+	check(detector.steer_hand == 1 and detector.steer_point.is_equal_approx(away), "the finger leads the head out of the chin zone within the tilt plane")
+	_feed(detector, [{"index": chin}, {"index": away}], 1)
+	check(detector.steer_hand == 1, "another hand on the chin does not take over")
+	_feed(detector, [{}, {}], 5)
+	check(detector.steer_hand == 1, "a brief dropout keeps the head")
+	_feed(detector, [{}, {}], 9)
+	check(detector.steer_hand == -1, "a sustained dropout lets go")
+	_feed(detector, [{}, {"middle": chin}], 18)
+	check(detector.steer_hand == 1 and detector.steer_finger == "middle", "a middle fingertip takes the head too")
+	_feed(detector, [{}, {"middle": chin + Vector3(0.025, 0.04, 0)}], 1)
+	check(detector.steer_hand == 1, "a little out of the tilt plane keeps steering")
+	_feed(detector, [{}, {"middle": chin + Vector3(0.04, 0.04, 0)}], 1)
+	check(detector.steer_hand == -1, "leaving the tilt plane lets go")
+	for i in 18:
+		_feed(detector, [{}, {"index": chin + Vector3(0, 0.015 * (i % 2), 0)}], 1)
+	check(detector.steer_hand == -1, "a fingertip moving on the chin does not take the head")
+	_feed(detector, [{"palm": chin, "thumb": chin}, {}], 20)
+	check(detector.steer_hand == -1, "a palm or thumb on the chin does not take the head")
+	_feed(detector, [{}, {"index": chin + Vector3(0, NaretHeadTiltGesture.CHIN_RADIUS_M + 0.005, 0)}], 20)
+	check(detector.steer_hand == -1, "a fingertip outside the chin zone does not take the head")
 	return failures

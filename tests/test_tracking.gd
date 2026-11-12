@@ -311,7 +311,18 @@ func _test_hand_menu(tree: SceneTree) -> void:
 	menu.update_session(scenario)
 	var actions: Array[String] = []
 	menu.action_requested.connect(func(action: String): actions.append(action))
+	# CPR grip: the other palm 5 cm away. A palm-up reading of the covered hand must not open it.
+	var other := synth_hand(Transform3D(_palm_basis(Vector3.DOWN), palm_position + Vector3(0, 0.05, 0)))
+	other.name = &"/user/hand_tracker/right"
+	XRServer.add_tracker(other)
+	await tree.create_timer(NaretHandMenu.OPEN_HOLD_S + 0.1).timeout
 	await tree.process_frame
+	check(not menu.palm_panel.is_visible_in_tree(), "stacked CPR hands keep the hand menu closed")
+	XRServer.remove_tracker(other)
+	# The lost other hand keeps the stacked verdict for STACK_MEMORY_S, then the hold starts.
+	await tree.process_frame
+	check(not menu.palm_panel.is_visible_in_tree(), "the menu waits for the palm to face the wearer for a moment")
+	await tree.create_timer(NaretHandMenu.STACK_MEMORY_S + NaretHandMenu.OPEN_HOLD_S + 0.1).timeout
 	await tree.process_frame
 	check(menu.palm_panel.is_visible_in_tree(), "palm turned to the face opens the hand menu")
 	check(shown == [true], "opening reports exactly one visibility change")

@@ -86,6 +86,18 @@ const PULSE := Color("ff6a5c")
 ## palm faced the wearer at roughly 60 degrees.
 const OPEN_DOT := 0.4
 const CLOSE_DOT := 0.3
+## Opening gates against false palm flips (headset, 2026-11-06): during CPR the lower hand
+## is covered by the upper one and Quest sometimes reports it palm-up, which opened the menu.
+## Stacked hands: the two palm joints (centre of the palm, world space) closer than this
+## mean the CPR grip, so the menu does not open. Generous, since the covered hand's
+## position is off by a few centimetres too.
+const STACKED_PALMS_M := 0.10
+## A lost other hand keeps its last "stacked" verdict this long; it is lost mostly while
+## covered, which is exactly the CPR grip.
+const STACK_MEMORY_S := 0.5
+## The palm must face the wearer this long before the menu opens; a flip lasts a few frames.
+## Closing stays immediate.
+const OPEN_HOLD_S := 0.4
 ## ponytail: fixed anatomical offsets, tune on a worn headset if panels crowd the hand.
 const PALM_SIZE := Vector2(0.076, 0.088)
 const PALM_BEND_M := 0.09
@@ -119,6 +131,9 @@ var _rig: Node3D
 var _palm: Node3D
 var _cuff: Node3D
 var _shown := false
+var _facing_s := 0.0     # How long the palm has faced the wearer while closed.
+var _stack_memory_s := 0.0
+var _blocked_logged := false
 var _pop := 1.0
 var _state_label: Label3D
 var _vitals_label: Label3D
@@ -741,6 +756,7 @@ func _process(delta: float) -> void:
 	# The wrist is the first joint Quest stops tracking (edge of view, under the other
 	# hand). It only supplies the forearm direction, so a tracked palm is enough (2026-10-29).
 	if camera == null or pose == null:
+		_facing_s = 0.0
 		_show_control_fallback(camera)
 		return
 	var palm: Transform3D = pose
@@ -749,7 +765,22 @@ func _process(delta: float) -> void:
 	var normal := palm.basis.z.normalized()
 	var to_head := (camera.global_position - palm.origin).normalized()
 	var pressing: bool = _interaction != null and _interaction.has_method("has_active_menu_press") and bool(_interaction.call("has_active_menu_press"))
-	_set_shown(pressing or normal.dot(to_head) > (CLOSE_DOT if _shown else OPEN_DOT))
+	var facing := normal.dot(to_head) > (CLOSE_DOT if _shown else OPEN_DOT)
+	var other := NaretXRInteraction.hand_tracker(1 - hand_index)
+	var other_palm: Variant = _joint(other, XRHandTracker.HAND_JOINT_PALM) if other != null else null
+	var distance := palm.origin.distance_to((other_palm as Transform3D).origin) if other_palm != null else INF
+	var stacked := palms_stacked(distance, _stack_memory_s > 0.0)
+	if other_palm != null:
+		_stack_memory_s = STACK_MEMORY_S if stacked else 0.0
+	else:
+		_stack_memory_s = maxf(0.0, _stack_memory_s - delta)
+	# Only opening is gated: an open menu closes as before, and stays open while the
+	# other hand's finger works it (pressing).
+	_facing_s = open_hold(_facing_s, facing and not stacked, delta)
+	if facing and stacked and not _shown and not _blocked_logged:
+		print("NARET_HAND_MENU open_blocked stacked palm_distance_m=", distance if other_palm != null else -1.0)
+	_blocked_logged = facing and stacked and not _shown
+	_set_shown(pressing or (facing if _shown else _facing_s >= OPEN_HOLD_S))
 	if not _shown:
 		return
 	_palm.visible = true
@@ -845,6 +876,19 @@ func _draw_trace() -> void:
 		var t := ekg.time - (1.0 - fraction) * TRACE_SECONDS
 		mesh.surface_add_vertex(bend(Vector3(-width * 0.5 + fraction * width, 0.002 + ekg.sample(t) * 0.014, 0.0025), PALM_BEND_M))
 	mesh.surface_end()
+
+
+static func palms_stacked(palm_distance_m: float, remembered: bool) -> bool:
+	## The CPR grip: both palm joints within STACKED_PALMS_M. Without the other hand
+	## (INF) the last verdict holds while `remembered` (STACK_MEMORY_S).
+	if is_finite(palm_distance_m):
+		return palm_distance_m < STACKED_PALMS_M
+	return remembered
+
+
+static func open_hold(held_s: float, wanted: bool, delta: float) -> float:
+	## Time the opening condition has held without a break; any break restarts it.
+	return held_s + maxf(delta, 0.0) if wanted else 0.0
 
 
 func _set_shown(value: bool) -> void:

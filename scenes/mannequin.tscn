@@ -55,8 +55,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21051179, -0.526369)
 gizmo_extents = 0.067
 
 [node name="HeadTiltChin" type="Marker3D" parent="Model" unique_id=701074440]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.23780705, -0.35789946)
-gizmo_extents = 0.05
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22584562, -0.3775)
+gizmo_extents = 0.015
 
 [node name="ScanReference" parent="." unique_id=523028087 instance=ExtResource("7")]
 transform = Transform3D(0.69, 0, 0, 0, 0.69, 0, 0, 0, 0.69, 0, -0.1440142, 0.0552)

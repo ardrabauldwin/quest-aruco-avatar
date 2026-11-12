@@ -120,6 +120,7 @@ func _ready() -> void:
 	add_child(scenario)
 	ccbm = preload("res://scripts/scenario/ccbm_bridge.gd").new()
 	ccbm.configure(scenario)
+	ccbm.desktop_bypass = not OS.has_feature("android")
 	add_child(ccbm)
 	ccbm.decision.connect(_on_action)
 	ccbm.status_changed.connect(_on_ccbm_status)
@@ -335,6 +336,24 @@ func _build_ui() -> void:
 		dashboard.transcript_submitted.connect(_on_transcript)
 		dashboard.recording_requested.connect(_on_recording)
 		dashboard.export_requested.connect(_export_session)
+		_build_desktop_manikin()
+
+## Desktop has no hand tracking. The simulated manikin turns C into one measured
+## stroke and V into one breath (F2 shows its panel). Manual mode is set before
+## connecting, so auto-CPR never presses by itself.
+func _build_desktop_manikin() -> void:
+	qcpr = NaretQcprManager.new()
+	qcpr.scenario = scenario
+	add_child(qcpr)
+	qcpr.set_simulator_auto_mode(false)
+	qcpr.sim_backend.connect_device()
+	qcpr.compression_measured.connect(_on_qcpr_compression)
+	qcpr.quality_feedback.connect(_on_qcpr_quality_feedback)
+	qcpr_debug_panel = NaretQcprDebugPanel.new()
+	qcpr_debug_panel.configure(qcpr)
+	qcpr_debug_panel.visible = false
+	qcpr_debug_panel.position = Vector2(16, 120)
+	_ui_layer.add_child(qcpr_debug_panel)
 
 func _build_xr_ui() -> void:
 	## Controls ride the hand. The patient-side surface is used only for results.
@@ -516,6 +535,11 @@ func _on_chin_measured(surface_y: float) -> void:
 	var saved := anchor.save_calibration() == OK
 	_toast(NaretLanguage.ui("Kopf verschoben: ", "Głowa przesunięta: ", _language) + "%+.1f cm" % (lift * 100.0) + ("" if saved else " (Save failed)"))
 
+## Added to the "Scan lower edge" fit, toward the feet (+Z in mannequin space). Headset
+## check 2026-11-06: with the pinkies on the real cut-off the virtual head sat ~6 cm too
+## far toward the head end. Applied after the measurement's sanity checks.
+const SCAN_EDGE_EXTRA_FEET_M := 0.06
+
 func _fit_scan(fit: String) -> void:
 	## Hand-menu keys: both hands against the real torso's cut-off ("edge") or its
 	## sides ("sides") move the patient so the 1:1 scan meets the fingers.
@@ -548,6 +572,9 @@ func _on_scan_fit_measured(fit: String, hands: Array) -> void:
 	if shift.is_zero_approx() or shift.length() > 0.15:
 		_toast(NaretLanguage.ui("Scan nicht angepasst · Hände prüfen", "Skan nie dopasowany · sprawdź dłonie", _language) + " (%.1f cm)" % (shift.length() * 100.0))
 		return
+	if fit == "edge":
+		shift.z += SCAN_EDGE_EXTRA_FEET_M
+		print("NARET_SCAN_FIT edge_extra=%.3f total_shift=%s" % [SCAN_EDGE_EXTRA_FEET_M, shift])
 	anchor.nudge_world(mannequin.global_basis * shift, 0.0)
 	anchor.calibrated = true
 	var saved := anchor.save_calibration() == OK
@@ -971,22 +998,12 @@ func _on_state_changed(state: int) -> void:
 		$Bystanders/Anna.set_emotion("grateful")
 		_export_session.call_deferred()
 	if audio_manager and not _smoke_mode and state > NaretScenario.State.IDLE:
-		if not api.local_ai_url.is_empty():
-			_announce_coach_step()
-			return
-		# A new step queues behind a bystander's line instead of cutting it off (the
-		# start action clears the queue itself). The AED instruction comes with the
-		# device (see _process), not with each analysis.
-		if state in [NaretScenario.State.IDLE, NaretScenario.State.INTRO]: _aed_announced = false
-		var clip := ["", "start", "check_patient", "call_help", "cpr", "", "recovery"][state] as String
-		# Back to CPR after an analysis: the AED says so itself.
-		if state == NaretScenario.State.CPR and (scenario.shock_count > 0 or scenario.reassessments > 0 or scenario.aed_attached): clip = ""
-		if state == NaretScenario.State.RECOVERY and scenario.outcome == "rosc":
-			# The closing words wait for the handover to the ambulance crew (1.18).
-			get_tree().create_timer(NaretBystanderDirector.EMS_AFTER_S + 4.0).timeout.connect(func():
-				if scenario.state == NaretScenario.State.RECOVERY: audio_manager.speak("", _language, "recovery", "instructor"))
-		elif not clip.is_empty():
-			audio_manager.speak("", _language, clip, "instructor")
+		if state == NaretScenario.State.INTRO: _aed_announced = false
+		# 2026-11-06: with and without the laptop's dialogue server (the Quest never has it)
+		# each step speaks its approved line from data/coach_steps.json, baked in
+		# assets/audio/coaching/. The per-state clips (tts_*/start, check_patient, call_help,
+		# cpr, recovery) predate the safety step and told the trainee to skip it.
+		_announce_coach_step()
 
 func bystander_language() -> String:
 	## Own-language mode keeps everyone in the trainee's language; the neighbour
@@ -1138,7 +1155,7 @@ func _queue_coach_question(text: String) -> void:
 var _last_coach_step := ""
 var _unclassified_spoken_step := ""
 func _announce_coach_step() -> void:
-	if _smoke_mode or not audio_manager or api.local_ai_url.is_empty(): return
+	if _smoke_mode or not audio_manager: return
 	var key := NaretTrainingCoach.step(scenario)
 	if key == "setup":
 		_last_coach_step = ""
@@ -1178,13 +1195,16 @@ func _on_ccbm_status(status: String) -> void:
 		"ccbm_uncertain_repeat": ["Nicht eindeutig. Bitte wiederholen.", "Niepewne. Powtórz.", "Uncertain observation: please repeat."],
 		"ccbm_out_of_order": ["Dieser Schritt ist jetzt nicht verfügbar.", "Ten krok nie jest teraz dostępny.", "That step is not available yet."],
 		"ccbm_session_limit": ["Sitzungslimit erreicht.", "Osiągnięto limit sesji.", "Session observation limit reached."],
-		"ccbm_accepted": ["Gesprochene Meldung angenommen.", "Przyjęto zgłoszenie głosowe.", "Spoken report accepted."]
+		"ccbm_accepted": ["Gesprochene Meldung angenommen.", "Przyjęto zgłoszenie głosowe.", "Spoken report accepted."],
+		"ccbm_bypassed": ["Meldung angenommen (CCBM aus, Desktop).", "Przyjęto zgłoszenie (CCBM wyłączony, desktop).", "Spoken report accepted (CCBM off, desktop)."]
 	}
 	var index := 2 if _language == "en" else (1 if _language == "pl" else 0)
 	var message := str(messages.get(status, [status, status, status])[index])
 	if status in ["ccbm_out_of_order", "ccbm_uncertain_repeat"]:
 		message = NaretTrainingCoach.feedback(scenario, _last_heard_report, status, _language)
-		if not _smoke_mode: audio_manager.speak(message, _language, "", "instructor")
+		# Without TTS (the Quest offline) the composed sentence has no recording: speak the
+		# current step's baked instruction instead; the toast still shows the full message.
+		if not _smoke_mode: audio_manager.speak(message, _language, "", "instructor", NaretTrainingCoach.current_instruction(scenario, _language))
 	if _language == "en":
 		message = "Heard: " + _last_heard_report + "\n" + message + "\nNext: " + _next_spoken_step()
 	_toast(message)
@@ -1225,7 +1245,10 @@ func _on_qcpr_compression(depth_mm: float, rate_bpm: float, recoil_ok: bool, qua
 	if xr_info:
 		xr_info.show_qcpr_compression(depth_mm, rate_bpm, recoil_ok, quality)
 
-func _on_qcpr_quality_feedback(_type: String, msg_de: String, msg_pl: String, is_good: bool) -> void:
+func _on_qcpr_quality_feedback(type: String, msg_de: String, msg_pl: String, is_good: bool) -> void:
+	# The simulator's own inactivity alarm runs every frame and before CPR starts;
+	# pauses are already handled by the bystanders (Anna: "Bitte nicht aufhören!").
+	if type == "inactivity" or scenario.state != NaretScenario.State.CPR: return
 	var text := msg_de if _language == "de" else msg_pl
 	if not is_good:
 		_toast(text)

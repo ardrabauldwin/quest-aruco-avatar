@@ -49,6 +49,12 @@ language, reset and start controls remain; start also has a voice phrase.
 Missing worker, timeout, unexpected posterior, stale-session result or unavailable
 action never silently advances a step. The app displays an explanatory status.
 
+Exception, desktop only: CCBM is not built for Windows. When the desktop app has no
+worker endpoint, spoken reports skip CCBM and only the scenario stage guards judge
+them. The log says `NARET_CCBM_BYPASS`, the toast says "CCBM aus (Desktop)", and the
+decision carries `inference_engine: none_desktop_bypass`. Setting `NARET_CCBM_URL`
+or `user://ccbm.cfg` turns the bypass off. The Quest never bypasses CCBM.
+
 ## Bring up the real engine
 
 1. On this PC, WSL Ubuntu and the generator are installed at `/opt/naret-ccbm`.

@@ -13,6 +13,8 @@ signal head_tilt_gesture_detected
 var head_tilt_gesture := NaretHeadTiltGesture.new()
 
 const HAND_NAMES := [&"/user/hand_tracker/left", &"/user/hand_tracker/right"]
+## The fingertips NaretHeadTiltGesture reads on the chin, by its finger names.
+const CHIN_TIPS := {"index": XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, "middle": XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP}
 ## Near interaction, MRTK style: a fingertip this close to a panel pokes it.
 const POKE_RANGE_M := 0.06
 const POKE_THROUGH_M := 0.04
@@ -75,7 +77,8 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		var motion: RefCounted = _zone.get("motion_session")
 		# The scenario owns breathing pauses; disable the standalone demo scheduler.
 		motion.set("automatic_breathing_pause", false)
-		motion.set("metronome_enabled", true)
+		# Silent until the scenario reaches compressions (set_cpr_feedback_visible).
+		motion.set("metronome_enabled", false)
 		_zone.get_node("CollisionShape3D").position = Vector3.ZERO
 		# Keep the user's original hand-zone dimensions and acceptance logic.
 		_zone.get_node("Highlight").position = Vector3.ZERO
@@ -93,6 +96,8 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		var guide_mesh := _zone.get_node("Highlight").mesh as QuadMesh
 		if guide_mesh != null:
 			guide_mesh.size = Vector2(0.14, 0.14)
+		_guide_layers = (_zone.get_node("Highlight") as VisualInstance3D).layers
+		_update_guide()
 		var camera := _origin.find_child("*", true, false)
 		for child in _origin.get_children():
 			if child is XRCamera3D:
@@ -131,9 +136,27 @@ const SHOW_CPR_GAUGES := true
 ## Chest dent under resting hands (NaretMannequin.set_hand_press). Off since 2026-10-29.
 const SHOW_HAND_DENT := false
 
+## True while the trainee should be compressing (main.gd sets it with the gauges). The
+## metronome beeps only then: not before CPR, not during the breaths, not in the AED step.
+var _compressing := false
+
 func set_cpr_feedback_visible(value: bool) -> void:
 	if is_instance_valid(_cpr_feedback_root):
 		_cpr_feedback_root.visible = value and SHOW_CPR_GAUGES
+	if value != _compressing:
+		_compressing = value
+		_update_metronome()
+		_update_guide()
+
+## The green square shows only while compressing too (2026-11-06). The zone itself stays
+## visible: it counts only while visible in the tree, and it switches the square's
+## `visible` every frame, so the square is hidden from cameras by its render layers.
+var _guide_layers := 1
+
+func _update_guide() -> void:
+	var guide := _zone.get_node_or_null("Highlight") as VisualInstance3D if _zone != null else null
+	if guide != null:
+		guide.layers = _guide_layers if _compressing else 0
 
 func set_cpr_enabled(value: bool) -> void:
 	# Scenario stages enable/disable CPR. Reset rate history at each transition.
@@ -151,9 +174,13 @@ func set_aed_active(value: bool) -> void:
 
 func set_audio_busy(value: bool) -> void:
 	_audio_busy = value
+	_update_metronome()
+
+func _update_metronome() -> void:
 	if _zone == null: return
-	_zone.get("motion_session").set("metronome_enabled", not value)
-	if value:
+	var on := _compressing and not _audio_busy
+	_zone.get("motion_session").set("metronome_enabled", on)
+	if not on:
 		_zone.get("_metronome").stop()
 
 func rearm_cpr_cycle() -> void:
@@ -244,21 +271,23 @@ func _update_head_tilt(delta: float) -> void:
 	var hands: Array = []
 	for index in range(2):
 		var hand := hand_tracker(index)
-		var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM) if hand else null
-		var thumb: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_THUMB_TIP) if hand else null
-		if palm == null or thumb == null:
-			hands.append({})
-			continue
-		var palm_world := _origin.global_transform * (palm as Transform3D)
-		hands.append({"palm": palm_world.origin, "basis": palm_world.basis, "thumb": (_origin.global_transform * (thumb as Transform3D)).origin})
+		var points := {}
+		if hand:
+			var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM)
+			if palm != null:
+				points.palm = (_origin.global_transform * (palm as Transform3D)).origin
+			for finger: String in CHIN_TIPS:
+				var tip: Variant = tracked_joint(hand, CHIN_TIPS[finger])
+				if tip != null:
+					points[finger] = (_origin.global_transform * (tip as Transform3D)).origin
+		hands.append(points)
 	var was_active := head_tilt_gesture.active
 	var on := head_tilt_gesture.observe(hands, _mannequin.gesture_forehead(), _mannequin.gesture_chin(),
 		_mannequin.global_basis.y.normalized(), -_mannequin.global_basis.z.normalized(), delta)
-	# Both zones lit: the head follows the forehead palm's rotation. The detected
-	# gesture below no longer plays the fixed tilt animation on top of it.
-	var steer: int = head_tilt_gesture.steer_hand
+	# A fingertip held still on the chin takes the head: it follows that finger about
+	# the ear line. The detected gesture below no longer plays the fixed tilt animation.
 	if _ragdoll:
-		_ragdoll.steer_head(steer >= 0, hands[steer].basis if steer >= 0 else Basis.IDENTITY)
+		_ragdoll.steer_head(head_tilt_gesture.steer_hand >= 0, head_tilt_gesture.steer_point)
 	if on and not was_active:
 		print("NARET_HEAD_TILT gesture_detected technique_unverified")
 		head_tilt_gesture_detected.emit()

@@ -26,3 +26,6 @@ assets/models/mannequin_texgen_0.png
 !addons/naret_upstream/**
 !assets/models/mannequin_upstream.glb
 !assets/models/mannequin_texgen_0.png
+
+# Local headset recordings (large videos)
+recordings/

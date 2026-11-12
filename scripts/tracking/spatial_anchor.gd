@@ -27,7 +27,8 @@ var chest_fit := "shift"
 ## Hand-measured chin calibration (main.gd's chin_touch): how far the full-body
 ## head is raised along the chest normal, in mannequin metres; 0 = not measured.
 var head_lift_m := 0.0
-const MAX_HEAD_LIFT_M := 0.08
+## 8 -> 30 cm (2026-11-06): on the headset the real face measured 10.5 cm above the model's.
+const MAX_HEAD_LIFT_M := 0.30
 
 func set_head_lift(value: float) -> void:
 	head_lift_m = value

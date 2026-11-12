@@ -9,6 +9,10 @@ const Speech = preload("res://scripts/scenario/spoken_observation.gd")
 const ACTIONS := ["begin_check", "check_responsiveness", "call_emergency", "check_breathing", "compression", "ventilation", "compression_only", "handover"]
 var endpoint := ""
 var threshold := 0.90 # Prototype acceptance policy, not a measured optimum.
+## Desktop development only. CCBM is built for Linux/Android, not Windows: without
+## a worker endpoint, the scenario stage guards alone judge spoken reports, labelled
+## as such. Never on Quest, never when a worker is configured. Off by default.
+var desktop_bypass := false
 var _scenario: NaretScenario
 var _http: HTTPRequest
 var _pending := false
@@ -36,6 +40,14 @@ func _ready() -> void:
 	_http = HTTPRequest.new()
 	_http.timeout = 10.0
 	add_child(_http)
+	if bypass_active():
+		print("NARET_CCBM_BYPASS active: desktop without CCBM worker, scenario guards only")
+
+func _endpoint_valid() -> bool:
+	return endpoint.begins_with("https://") or endpoint.begins_with("http://127.0.0.1:")
+
+func bypass_active() -> bool:
+	return desktop_bypass and not OS.has_feature("android") and _native == null and not _endpoint_valid()
 
 func reset() -> void:
 	_generation += 1
@@ -118,7 +130,16 @@ func _request(action: String) -> void:
 	if _pending:
 		status_changed.emit("ccbm_busy_repeat")
 		return
-	if _native == null and (OS.has_feature("android") or not (endpoint.begins_with("https://") or endpoint.begins_with("http://127.0.0.1:"))):
+	if bypass_active():
+		if action not in _scenario.get_available_actions():
+			status_changed.emit("ccbm_out_of_order")
+			return
+		print("NARET_CCBM_BYPASS ", action)
+		decision.emit(action, {"source": "speech", "measurement_verified": false,
+			"evidence_kind": "spoken_report", "inference_engine": "none_desktop_bypass"})
+		status_changed.emit("ccbm_bypassed")
+		return
+	if _native == null and (OS.has_feature("android") or not _endpoint_valid()):
 		status_changed.emit("ccbm_unavailable")
 		return
 	if _history.size() >= 256:

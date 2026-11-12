@@ -1,15 +1,17 @@
 class_name NaretRagdoll
 extends Node
 ## Anatomical posing of the CPR mannequin: hinge-limited arm IK and head tilt.
-## Arms are grabbed with a fist; the head is steered by a palm on the forehead
+## Arms are grabbed with a fist; the head is steered by a fingertip on the chin
 ## (steer_head, driven by NaretHeadTiltGesture), never grabbed.
 
 const GRAB_RANGE_M := 0.22
 const REACH_M := 0.52
 const MAX_ELBOW_FLEX_DEG := 140.0
 # Head tilt is signed: positive bends the head forward, negative tilts it back.
-const MAX_HEAD_FLEXION_DEG := 35.0
-const MAX_HEAD_EXTENSION_DEG := 35.0
+# The rest pose counts as neutral and the head never bends forward of it. Backward
+# it goes well past the ideal slight tilt, as the physical mannequin's (~60°) does.
+const MAX_HEAD_FLEXION_DEG := 0.0
+const MAX_HEAD_EXTENSION_DEG := 40.0
 # Midpoint of the ears on the rest mesh, in skeleton space (ears at x = ±0.085).
 const EAR_LINE_POINT := Vector3(0.0, 1.615, 0.040)
 
@@ -39,7 +41,7 @@ var _targets: Dictionary = {}
 var _head_tilt := 0.0
 var _head_target_tilt := 0.0
 var _head_steered := false
-var _steer_start := Quaternion.IDENTITY
+var _steer_start := Vector3.ZERO
 var _steer_start_tilt := 0.0
 var _head_posed := false
 var _head_pivot := Vector3.ZERO
@@ -172,26 +174,29 @@ func move(id: String, world_point: Vector3) -> void:
 			target = bounded_target + dir * (_l2 * 0.5)
 		_arms[part].target = target
 
-func steer_head(on: bool, palm_basis: Basis = Basis.IDENTITY) -> void:
-	## While `on`, the head turns about the ear line as far as the forehead palm
-	## (`palm_basis`, world) has turned about that line since steering began; off,
-	## it eases back to rest. Only the palm's twist about the ear line counts.
+func steer_head(on: bool, chin_point: Vector3 = Vector3.ZERO) -> void:
+	## While `on`, the head turns about the ear line as far as the fingertip on the
+	## chin (`chin_point`, world) has swung about that line since steering began;
+	## off, it eases back to rest. Only the swing about the ear line counts.
 	if not on or not _home.has("head"):
 		if _head_steered:
 			_head_steered = false
 			_head_target_tilt = 0.0
 		return
-	var palm := palm_basis.get_rotation_quaternion()
 	if not _head_steered:
 		_head_steered = true
-		_steer_start = palm
+		_steer_start = chin_point
 		_steer_start_tilt = _head_tilt
 		_head_target_tilt = _head_tilt
 		return
-	var turned := palm * _steer_start.inverse()
-	# Twist about the head's own +X (the tilt axis of _apply_to_skeleton), from rest.
+	# Swing about the head's own +X (the tilt axis of _apply_to_skeleton), from rest.
 	var axis := (_skeleton.global_basis * _skeleton.get_bone_global_rest(_home["head"]).basis * Vector3.RIGHT).normalized()
-	var angle := wrapf(2.0 * atan2(Vector3(turned.x, turned.y, turned.z).dot(axis), turned.w), -PI, PI)
+	var pivot := _skeleton.global_transform * EAR_LINE_POINT
+	var from := (_steer_start - pivot).slide(axis)
+	var to := (chin_point - pivot).slide(axis)
+	if from.is_zero_approx() or to.is_zero_approx():
+		return
+	var angle := atan2(axis.dot(from.cross(to)), from.dot(to))
 	_head_target_tilt = clampf(_steer_start_tilt + rad_to_deg(angle), -MAX_HEAD_EXTENSION_DEG, MAX_HEAD_FLEXION_DEG)
 
 func release(id: String) -> void:

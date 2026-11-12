@@ -14,7 +14,7 @@ class Bridge extends Node:
 
 class Voice extends NaretAudioManager:
 	var questions: Array[String] = []
-	func speak(text: String, _lang: String = "pl", _clip: String = "calm", _speaker: String = "bystander") -> void:
+	func speak(text: String, _lang: String = "pl", _clip: String = "calm", _speaker: String = "bystander", _fallback: String = "") -> void:
 		questions.append(text)
 
 func run() -> Array[String]:

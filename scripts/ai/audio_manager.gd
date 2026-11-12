@@ -335,15 +335,17 @@ func _transcribe_audio(wav: PackedByteArray) -> void:
 		_: status_changed.emit("asr_offline_use_text")
 
 
-func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander") -> void:
+func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander", fallback_text: String = "") -> void:
 	## `speaker` says who is talking. Language no longer distinguishes them: in the
 	## own-language mode the instructor and the bystander share one language.
+	## `fallback_text` is spoken instead when `text` has no recording and no TTS answers;
+	## it should be a baked coach line (data/coach_steps.json), e.g. the current step.
 	var target_language := lang if lang in ["de", "pl", "en"] else language
 	if speaker == "anna": speaker = "bystander"
 	if _pending.size() >= 6:
 		_pending.pop_front()
 	var item := {"text": text.left(1000), "language": target_language, "clip_key": clip_key, "speaker": speaker,
-		"queued_ms": Time.get_ticks_msec()}
+		"queued_ms": Time.get_ticks_msec(), "fallback_text": fallback_text}
 	if speaker == "instructor":
 		_instruction_revision += 1
 		item["instruction_revision"] = _instruction_revision
@@ -414,14 +416,21 @@ func _prepare_next() -> void:
 			# Unscripted clarification has no matching recording. Keep its displayed
 			# text instead of replacing it with the unrelated bystander calm clip.
 			if str(item["clip_key"]).is_empty():
-				status_changed.emit("audio_clip_missing")
-				continue
-			var clip_id: String = item["language"] + "/" + item["clip_key"]
-			if not _clips.has(clip_id):
-				clip_id = item["language"] + "/calm"
-			stream = _clips.get(clip_id)
-			item["text"] = _clip_texts.get(clip_id, item["text"])
-			status_changed.emit("tts_offline_clip")
+				# A baked coach line the caller named (the current step) still gets spoken.
+				var fallback := str(item.get("fallback_text", ""))
+				stream = _coach_clips.get(str(item["language"]) + ":" + str(item.get("speaker", "bystander")) + ":" + fallback) if not fallback.is_empty() else null
+				if stream == null:
+					status_changed.emit("audio_clip_missing")
+					continue
+				item["text"] = fallback
+				status_changed.emit("tts_offline_clip")
+			else:
+				var clip_id: String = item["language"] + "/" + item["clip_key"]
+				if not _clips.has(clip_id):
+					clip_id = item["language"] + "/calm"
+				stream = _clips.get(clip_id)
+				item["text"] = _clip_texts.get(clip_id, item["text"])
+				status_changed.emit("tts_offline_clip")
 		if stream != null:
 			item["stream"] = stream
 			item["source"] = source

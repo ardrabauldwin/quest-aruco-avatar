@@ -104,17 +104,33 @@ func _test_ragdoll() -> void:
 	# The head is never grabbed: a fist on the forehead holds nothing.
 	var forehead := skeleton.global_transform * (NaretRagdoll.EAR_LINE_POINT + Vector3(0, 0.05, 0.11))
 	check(not ragdoll.grab("head_hand", forehead), "a fist on the forehead does not take hold of the head")
-	# A palm on the forehead steers it: turned about the head's own tilt axis (+X).
+	# A fingertip on the chin steers it: swung about the head's own tilt axis (+X).
 	var axis := (skeleton.global_basis * skeleton.get_bone_global_rest(head).basis * Vector3.RIGHT).normalized()
-	var palm := Basis(Vector3.UP, 0.6) * Basis(Vector3.RIGHT, 0.3)
-	ragdoll.steer_head(true, palm)
+	var pivot := skeleton.global_transform * NaretRagdoll.EAR_LINE_POINT
+	var chin := skeleton.global_transform * (NaretRagdoll.EAR_LINE_POINT + Vector3(0, -0.08, 0.1))
+	var swung := func(degrees: float) -> Vector3:
+		return pivot + (chin - pivot).rotated(axis, deg_to_rad(degrees))
+	ragdoll.steer_head(true, chin)
 	check(ragdoll._head_target_tilt == 0.0, "starting to steer does not move the head")
-	ragdoll.steer_head(true, Basis(axis, deg_to_rad(-20.0)) * palm)
-	check(absf(ragdoll._head_target_tilt + 20.0) < 0.5, "the palm tilts the head back as far as it turns, got %s" % ragdoll._head_target_tilt)
-	ragdoll.steer_head(true, Basis(axis, deg_to_rad(15.0)) * Basis(axis.cross(Vector3.UP).normalized(), 0.4) * palm)
-	check(absf(ragdoll._head_target_tilt - 15.0) < 3.0, "turning the palm about other axes barely counts, got %s" % ragdoll._head_target_tilt)
-	ragdoll.steer_head(true, Basis(axis, deg_to_rad(-90.0)) * palm)
+	ragdoll.steer_head(true, swung.call(-6.0))
+	check(absf(ragdoll._head_target_tilt + 6.0) < 0.5, "the chin tilts the head back as far as it swings, got %s" % ragdoll._head_target_tilt)
+	ragdoll.steer_head(true, swung.call(-6.0) + axis * 0.03)
+	check(absf(ragdoll._head_target_tilt + 6.0) < 0.5, "moving along the ear line does not count, got %s" % ragdoll._head_target_tilt)
+	ragdoll.steer_head(true, swung.call(15.0))
+	check(ragdoll._head_target_tilt == NaretRagdoll.MAX_HEAD_FLEXION_DEG, "the head never bends forward past rest")
+	ragdoll.steer_head(true, swung.call(-90.0))
 	check(ragdoll._head_target_tilt == -NaretRagdoll.MAX_HEAD_EXTENSION_DEG, "tilting back stops at its limit")
+	# The chin swings the head about the ears: a chin moved by an extension of the
+	# head reads back as that extension.
+	ragdoll._head_tilt = -8.0
+	ragdoll._apply_to_skeleton()
+	var lifted := skeleton.global_transform * (skeleton.get_bone_global_pose(head) * (head_rest.affine_inverse() * (skeleton.global_transform.affine_inverse() * chin)))
+	ragdoll._head_tilt = 0.0
+	ragdoll._apply_to_skeleton()
+	ragdoll.steer_head(false)
+	ragdoll.steer_head(true, chin)
+	ragdoll.steer_head(true, lifted)
+	check(absf(ragdoll._head_target_tilt + 8.0) < 0.5, "a chin carried by the head's extension reads as that extension, got %s" % ragdoll._head_target_tilt)
 	ragdoll.steer_head(false)
 	check(ragdoll._head_target_tilt == 0.0, "leaving the zones returns the head")
 	model.queue_free()

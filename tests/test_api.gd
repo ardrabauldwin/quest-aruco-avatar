@@ -7,8 +7,22 @@ func run() -> Array[String]:
 	check(NaretAudioManager._queue_slot(queue, "instructor") == 3, "an instructor line waits at the end")
 	failures.clear()
 	var deadlines := NaretUniAPIClient.new()
-	check(deadlines.service_timeout("asr") == 0.0, "cloud ASR can wait without an automatic deadline")
-	check(deadlines.service_timeout("llm") == 2.0 and deadlines.service_timeout("tts") == 2.0, "speech deadline does not delay dialogue or voice fallbacks")
+	check(deadlines.service_timeout("asr") == 40.0, "cloud ASR has a deadline, far longer than the old two seconds")
+	var second := AudioStreamWAV.new()
+	second.format = AudioStreamWAV.FORMAT_16_BITS
+	second.mix_rate = 44100
+	second.stereo = true
+	var pcm := PackedByteArray()
+	pcm.resize(44100 * 4)
+	for i in 44100:
+		pcm.encode_s16(i * 4, 1000)
+		pcm.encode_s16(i * 4 + 2, 3000)
+	second.data = pcm
+	var small := NaretUniAPIClient.speech_wav(second)
+	check(small.size() == 44 + 16000 * 2 and small.decode_u16(22) == 1 and small.decode_u32(24) == 16000, "speech goes up as 16 kHz mono, 5.5 times smaller than the recording")
+	check(small.decode_s16(44 + 2000) == 2000, "both channels are mixed into the one that is sent")
+	check(deadlines.service_timeout("tts") == 2.0, "voice deadline does not delay the recorded voice fallback")
+	check(deadlines.service_timeout("llm") == 15.0, "understanding a report waits for a slower cloud answer")
 	deadlines.free()
 	check(NaretLLMOrchestrator.parse_response('{"text":"Ich helfe.","action":"calm","language":"de"}', "de").get("action") == "calm", "valid JSON accepted")
 	check(NaretLLMOrchestrator.parse_response('{"text":"X","action":"admin","language":"de"}', "de").is_empty(), "unknown actions rejected")

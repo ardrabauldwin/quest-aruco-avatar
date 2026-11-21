@@ -83,7 +83,12 @@ func _test_real_patient() -> void:
 	(Engine.get_main_loop() as SceneTree).root.add_child(anchor)
 	var patient: Node3D = load("res://scenes/mannequin.tscn").instantiate()
 	anchor.add_child(patient)
-	check((patient.get_node("Model") as Node3D).scale.is_equal_approx(Vector3(0.9, 0.9, 0.9)), "patient uses modest uniform fitting without changing proportions")
+	# The scene scales the model uniformly; the Little Anne fit (65 x 34 cm head and torso)
+	# is in the model file itself (tools/fit_patient_glb.py), on its top node.
+	var fitted := (patient.get_node("Model") as Node3D).scale
+	check(fitted.is_equal_approx(Vector3(0.9, 0.9, 0.9)), "the scene scales the patient uniformly (%s)" % fitted)
+	var fit_node := patient.get_node("Model").find_child("PatientFitLittleAnne", true, false) as Node3D
+	check(fit_node != null and fit_node.scale.is_equal_approx(Vector3(1.057111, 1.0, 0.8971521)), "the model file carries the Little Anne fit")
 	await (Engine.get_main_loop() as SceneTree).process_frame
 	anchor.default_model_rotation_degrees = Vector3(180, 0, 0)
 	anchor.marker_to_mannequin = anchor.sternum_offset()
@@ -111,7 +116,7 @@ func _test_real_patient() -> void:
 	anchor.chest_fit = "flatten"
 	anchor.refresh()
 	check(absf(patient.get_sternum_transform().origin.y - anchor.chest_height_m) < 0.003, "flatten puts the sternum on the measured chest height")
-	check(absf(_lowest(anchor)) < 0.001 and model.scale.y < 0.9 and is_equal_approx(model.scale.x, 0.9), "flatten keeps the back on the floor and only thins the body")
+	check(absf(_lowest(anchor)) < 0.001 and model.scale.y < 0.9 and is_equal_approx(model.scale.x, fitted.x) and is_equal_approx(model.scale.z, fitted.z), "flatten keeps the back on the floor and only thins the body")
 	anchor.chest_fit = "shift"
 	anchor.refresh()
 	check(absf(patient.get_sternum_transform().origin.y - anchor.chest_height_m) < 0.003, "shift puts the sternum on the measured chest height")

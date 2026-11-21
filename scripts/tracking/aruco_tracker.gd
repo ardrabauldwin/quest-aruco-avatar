@@ -110,6 +110,18 @@ func get_provider() -> Node:
 func get_layout_ids() -> Array:
 	return _layout.offsets.keys() if _layout != null else []
 
+## Detections per second at most (0 = unlimited). Applied to the provider when it has the
+## property; the desktop preview provider has none.
+var detection_rate := 0.0
+
+func set_detection_rate(per_second: float) -> void:
+	if is_equal_approx(per_second, detection_rate):
+		return
+	detection_rate = per_second
+	if _provider != null and _provider.get("max_detections_per_second") != null:
+		_provider.set("max_detections_per_second", per_second)
+		print("NARET_DETECTION_RATE max_per_second=", per_second)
+
 func set_view_camera(camera: Camera3D) -> void:
 	_camera = camera
 
@@ -158,9 +170,66 @@ func _apply_marker_configuration(provider: Node) -> void:
 	sizes.fill(marker_size_m)
 	provider.set("marker_sizes", sizes)
 
+## What the camera sees while no marker is found (14 Nov 2026). The log of a session
+## without any marker reading showed the camera delivering 60 frames a second and the
+## detector looking at 35 of them, with no error anywhere: nothing in it says WHY no
+## marker was in those frames. So while there has been no reading for 3 s, every 5 s
+## one frame is measured (size, brightness, contrast) and saved as a picture next to
+## the log, and one frame is saved while the marker IS tracked, to compare with.
+const VIEW_AFTER_MS := 3000
+const VIEW_EVERY_MS := 5000
+const VIEW_KEEP := 24
+var _view_count := 0
+var _view_connected := false
+var _view_ms := -100000
+var _view_tracked_saved := false
+var _other_ids_ms := -100000
+
+func _connect_camera_view() -> void:
+	var cam: Variant = _provider.get("_android_cam")
+	if cam == null or not (cam is Object) or not cam.has_signal("camera_frame"): return
+	cam.connect("camera_frame", _on_camera_view)
+	_view_connected = true
+
+func _on_camera_view(_timestamp_ns: int, data: PackedByteArray, width: int, height: int) -> void:
+	var now := Time.get_ticks_msec()
+	var searching := _last_detection_ms < 0 or now - _last_detection_ms >= VIEW_AFTER_MS
+	if searching:
+		if now - _view_ms < VIEW_EVERY_MS: return
+	elif _view_tracked_saved: return
+	if width <= 0 or height <= 0 or data.size() < width * height: return
+	var total := 0
+	var count := 0
+	var darkest := 255
+	var brightest := 0
+	var dark := 0
+	var bright := 0
+	for y in range(0, height, 8):
+		for x in range(0, width, 8):
+			var value := data[y * width + x]
+			total += value
+			count += 1
+			darkest = mini(darkest, value)
+			brightest = maxi(brightest, value)
+			if value < 40: dark += 1
+			if value > 215: bright += 1
+	var picture := Image.create_from_data(width, height, false, Image.FORMAT_L8, data.slice(0, width * height))
+	if searching:
+		_view_ms = now
+		# The last VIEW_KEEP pictures are kept: a single file was overwritten by the
+		# view of the bed once the headset was put down.
+		picture.save_png("user://logs/camera_view_searching_%02d.png" % (_view_count % VIEW_KEEP))
+		_view_count += 1
+		print("NARET_CAMERA_VIEW searching picture=%02d size=%dx%d mean=%d darkest=%d brightest=%d dark_pct=%d bright_pct=%d enabled=%s" % [(_view_count - 1) % VIEW_KEEP, width, height, total / count, darkest, brightest, dark * 100 / count, bright * 100 / count, str(_provider.get("enabled"))])
+	else:
+		_view_tracked_saved = true
+		picture.save_png("user://logs/camera_view_tracked.png")
+		print("NARET_CAMERA_VIEW tracked size=%dx%d mean=%d darkest=%d brightest=%d dark_pct=%d bright_pct=%d" % [width, height, total / count, darkest, brightest, dark * 100 / count, bright * 100 / count])
+
 func _process(_delta: float) -> void:
 	if _provider == null:
 		return
+	if not _view_connected: _connect_camera_view()
 	var fresh := false
 	for id in _used_ids:
 		var age := float(_provider.call("marker_age_ms", id))
@@ -197,6 +266,15 @@ func _on_markers_updated(ids: Array) -> void:
 	var pose := Transform3D.IDENTITY
 	if _layout != null:
 		var poses := {}
+		var now_ms := Time.get_ticks_msec()
+		if now_ms - _other_ids_ms >= 2000:
+			for id in ids:
+				if not _layout.offsets.has(id):
+					# A marker is seen, but not one of this patient's: say which.
+					_other_ids_ms = now_ms
+					var where: Transform3D = _provider.call("get_marker_world_pose", id)
+					print("NARET_MARKER_OTHER seen=", ids, " expected=", _layout.offsets.keys(), " at=", where.origin)
+					break
 		for id in ids:
 			var age := float(_provider.call("marker_age_ms", id))
 			if _layout.offsets.has(id) and age >= 0.0 and age <= FRESHNESS_MS:
@@ -249,6 +327,40 @@ func _usable_pose(id: int, raw: Transform3D) -> Dictionary:
 		held_flips += 1
 		return {"pose": last.pose}
 	return {}
+
+func set_camera_streaming(active: bool) -> void:
+	## Stop or restart the Android camera stream itself. The provider's `enabled` flag only
+	## drops frames in GDScript; the Java side keeps capturing and queues every frame for
+	## the engine loop. Three out-of-memory crashes (2026-11-03) filled 512 MB in ~45 s while
+	## the headset session was not focused and rendering had stopped consuming that queue.
+	if _provider == null:
+		return
+	var cam: Variant = _provider.get("_android_cam")
+	if cam == null:
+		return
+	var started := bool(_provider.get("_android_cam_started"))
+	if active and not started:
+		_provider.call("_start_android_camera")
+	elif not active and started:
+		cam.call("stop_camera")
+		_provider.set("_android_cam_started", false)
+	print("NARET_CAMERA streaming=", active)
+
+## Called from the watchdog THREAD while the main loop is stalled (headset asleep or
+## session paused): stop the Java camera directly through its singleton, bypassing the
+## scene tree. The frames would otherwise queue in Java memory until the process dies.
+func stop_camera_from_thread() -> void:
+	if not Engine.has_singleton("GodotAndroidCamera"):
+		return
+	Engine.get_singleton("GodotAndroidCamera").stopCamera()
+	print("NARET_CAMERA stopped by watchdog (main loop stalled)")
+
+## Main-thread follow-up after a watchdog stop: restart the stream unless it is parked.
+func restart_camera_after_stall() -> void:
+	if _provider == null:
+		return
+	_provider.set("_android_cam_started", false)
+	set_camera_streaming(true)
 
 func forget_pose() -> void:
 	_last_good.clear()

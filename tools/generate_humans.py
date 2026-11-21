@@ -11,6 +11,7 @@ import hashlib
 import importlib
 import json
 import math
+import re
 from pathlib import Path
 import subprocess
 import shutil
@@ -30,6 +31,23 @@ ASSETS = CACHE / 'assets'
 PACK_URL = 'https://files2.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip'
 OUTPUT = ROOT / 'assets/models'
 SOURCE_PAGE = 'https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html'
+# ARKit-style face units by Mika Suominen, each target declared CC0 in packs/faceunits01.json.
+FACE_PACK_URL = 'https://files2.makehumancommunity.org/functional/faceunits01.zip'
+FACE_PACK_PAGE = 'https://static.makehumancommunity.org/assets/assetpacks/faceunits01.html'
+# Speaker face morphs (rig_animator.gd drives them): canonical name -> face units mixed 1:1.
+FACE_SHAPES = {
+    'blink_l': ['eyeBlinkLeft'],
+    'blink_r': ['eyeBlinkRight'],
+    'brow_up': ['browInnerUp', 'browOuterUpLeft', 'browOuterUpRight'],
+    'jaw_open': ['jawOpen'],
+    'lips_round': ['mouthFunnel'],
+    'lips_wide': ['mouthStretchLeft', 'mouthStretchRight'],
+    'smile': ['mouthSmileLeft', 'mouthSmileRight'],
+}
+# Only the face parts keep the propagated morphs; a blink on a shirt is dead weight.
+FACE_FOLLOWERS = ('eyebrow', 'eyelash', 'teeth')
+# Extra Kimodo takes (data/motion/prompts.tsv); generated only where the BVH exists.
+OPTIONAL_CLIPS = ('talk_2', 'talk_3', 'talk_4', 'talk_5', 'talk_6', 'listen')
 
 
 def service(module, name):
@@ -50,6 +68,123 @@ def prepare_assets():
                 if Path(name).is_absolute() or '..' in Path(name).parts:
                     raise RuntimeError('Unsafe path in asset archive')
             packed.extractall(ASSETS)
+
+
+def prepare_face_targets():
+    if (ASSETS / 'targets/faceunits/jawOpen.target').exists():
+        return
+    archive = CACHE / 'faceunits01.zip'
+    if not archive.exists():
+        subprocess.run(['curl', '--fail', '--location', '--output', str(archive), FACE_PACK_URL], check=True)
+    with zipfile.ZipFile(archive) as packed:
+        for name in packed.namelist():
+            if Path(name).is_absolute() or '..' in Path(name).parts:
+                raise RuntimeError('Unsafe path in face pack archive')
+        packed.extractall(ASSETS)
+
+
+ORIG_INDEX = 'naret_orig_index'
+
+
+def capture_face_deltas(body):
+    """Per face unit {original vertex index: delta (Blender units)}, read on the untouched
+    MakeHuman basemesh, whose vertex order the targets refer to. Tags every vertex with its
+    index so the morphs can be rebuilt after the bake renumbers the mesh."""
+    T = service('services.targetservice', 'TargetService')
+    units = sorted({unit for mix in FACE_SHAPES.values() for unit in mix})
+    if body.data.shape_keys is None:
+        body.shape_key_add(name='Basis')
+    basis = body.data.shape_keys.key_blocks['Basis']
+    deltas = {}
+    for unit in units:
+        key = T.load_target(body, str(ASSETS / 'targets/faceunits' / (unit + '.target')), weight=0., name='unit_' + unit)
+        moved = {}
+        for index, (point, rest) in enumerate(zip(key.data, basis.data)):
+            delta = point.co - rest.co
+            if delta.length_squared > 1e-14:
+                moved[index] = delta
+        deltas[unit] = moved
+        body.shape_key_remove(key)
+    attribute = body.data.attributes.new(ORIG_INDEX, 'INT', 'POINT')
+    for index in range(len(body.data.vertices)):
+        attribute.data[index].value = index
+    return deltas
+
+
+def read_mhclo_weights(path):
+    """Follower vertex -> [(body vertex, weight)] from the asset's mhclo (original indices)."""
+    weights = []
+    active = False
+    for line in Path(path).read_text(encoding='utf-8', errors='replace').splitlines():
+        if line.startswith('verts'):
+            active = True
+            continue
+        if not active:
+            continue
+        parts = line.split()
+        if not parts:
+            continue
+        if not re.match(r'^-?[0-9.]+$', parts[0]):
+            break
+        if len(parts) >= 6:
+            weights.append([(int(parts[i]), float(parts[3 + i])) for i in range(3)])
+        else:
+            weights.append([(int(parts[0]), 1.)])
+    return weights
+
+
+def add_face_shapes(body, meshes, deltas, mhclos):
+    """Rebuild FACE_SHAPES on the baked body from the captured deltas, and give the lashes,
+    brows and teeth the same motion through their mhclo weights."""
+    attribute = body.data.attributes.get(ORIG_INDEX)
+    original = [attribute.data[i].value for i in range(len(body.data.vertices))]
+    if body.data.shape_keys is None:
+        body.shape_key_add(name='Basis')
+    basis = body.data.shape_keys.key_blocks['Basis']
+    mixed = {}
+    for name, mix in FACE_SHAPES.items():
+        total = {}
+        for unit in mix:
+            for index, delta in deltas[unit].items():
+                total[index] = total.get(index, Vector((0, 0, 0))) + delta
+        mixed[name] = total
+        key = body.shape_key_add(name=name, from_mix=False)
+        for index, orig in enumerate(original):
+            delta = total.get(orig)
+            if delta is not None:
+                key.data[index].co = basis.data[index].co + delta
+        key.slider_min = 0.
+        key.slider_max = 1.
+    body.data.attributes.remove(attribute)
+    for mesh in meshes:
+        asset = next((name for name in mhclos if name in mesh.name and any(token in name for token in FACE_FOLLOWERS)), None)
+        if asset is None:
+            continue
+        weights = read_mhclo_weights(mhclos[asset])
+        if len(weights) != len(mesh.data.vertices):
+            print('NARET_FACE_FOLLOWER_SKIPPED', mesh.name, len(weights), len(mesh.data.vertices), flush=True)
+            continue
+        if mesh.data.shape_keys is None:
+            mesh.shape_key_add(name='Basis')
+        follower_basis = mesh.data.shape_keys.key_blocks['Basis']
+        for name, total in mixed.items():
+            key = mesh.shape_key_add(name=name, from_mix=False)
+            moved = 0
+            for index, mapping in enumerate(weights):
+                delta = Vector((0, 0, 0))
+                for vertex, weight in mapping:
+                    d = total.get(vertex)
+                    if d is not None:
+                        delta += d * weight
+                if delta.length_squared > 1e-14:
+                    key.data[index].co = follower_basis.data[index].co + delta
+                    moved += 1
+            key.slider_min = 0.
+            key.slider_max = 1.
+            if moved == 0:
+                mesh.shape_key_remove(key)
+        if len(mesh.data.shape_keys.key_blocks) <= 1:
+            mesh.shape_key_remove(follower_basis)
 
 
 def activate(obj):
@@ -154,7 +289,8 @@ def create_shorts(body, rig):
 
 
 def setup_shapes(body, sternum, mouth):
-    body.shape_key_add(name='Basis')
+    if body.data.shape_keys is None:   # the speakers already carry their face morphs
+        body.shape_key_add(name='Basis')
     for name in ['breathing', 'compression', 'mouth_open']:
         key = body.shape_key_add(name=name)
         for point in key.data:
@@ -291,6 +427,9 @@ def create_animations(rig, body, patient):
         # start as `kneel`, its end looping as `cpr`.
         for name in ('idle', 'talk', 'anxious', 'phone', 'walk', 'relief'):
             motion_clip(rig, body, name)
+        for name in OPTIONAL_CLIPS:
+            if (ROOT / 'data/motion' / (name + '.bvh')).exists():
+                motion_clip(rig, body, name)
         motion_clip(rig, body, 'reach', 1.6)
         motion_clip(rig, body, 'kneel', source='cpr', head=1.9)
         motion_clip(rig, body, 'cpr', 3.0)
@@ -372,6 +511,8 @@ def make_character(name, gender, patient=False):
         obj=H.add_mhclo_asset(str(asset_path(kind,asset)),body,asset_type=typ,subdiv_levels=0,material_type='GAMEENGINE')
         if obj:loaded.append(obj)
     meshes=[obj for obj in bpy.context.scene.objects if obj.type=='MESH']
+    face_deltas=None if patient else capture_face_deltas(body)
+    mhclos={asset:asset_path(kind,asset) for kind,asset,typ in assets}
     for mesh in meshes:bake_geometry(mesh)
     relax_and_bake_rest(rig,meshes)
     if patient:
@@ -415,6 +556,8 @@ def make_character(name, gender, patient=False):
         # The marker sits on the front surface; the bone pivots at the ball centre.
         front=centre.copy();front.y=min(v.y for v in points);eyes.append(front)
     add_eye_bones(rig,eye_mesh,centres)
+    if not patient:
+        add_face_shapes(body, meshes, face_deltas, mhclos)
     setup_shapes(body,sternum,mouth)
     markers=[marker('Sternum',rig,'spine_03',sternum),marker('Mouth',rig,'head',mouth),marker('Forehead',rig,'head',forehead),marker('EyeLeft',rig,'eye_l',eyes[0]),marker('EyeRight',rig,'eye_r',eyes[1])]
     desired_height=1.76 if patient else (1.70 if gender<.5 else 1.78)
@@ -441,12 +584,16 @@ def make_character(name, gender, patient=False):
     for obj in chosen:obj.select_set(True)
     bpy.context.view_layer.objects.active=rig
     rig['source']='MakeHuman Community / MPFB';rig['asset_license']='CC0-1.0'
+    if not patient:rig['face_units']='faceunits01 (Mika Suominen, CC0-1.0)'
     rig['clinical_pose']='supine, head -Z' if patient else 'upright, forward +Z'
     output=OUTPUT/(name+'.glb')
     bpy.ops.export_scene.gltf(filepath=str(output),export_format='GLB',use_selection=True,export_apply=False,export_animations=True,export_animation_mode='ACTIONS',export_merge_animation='NONE',export_force_sampling=True,export_morph=True,export_skins=True,export_def_bones=True,export_yup=True,export_extras=True,export_image_format='AUTO')
     normalize_gltf(output)
     points={o.name:[round(o.matrix_world.translation.x,5),round(o.matrix_world.translation.z,5),round(-o.matrix_world.translation.y,5)] for o in markers}
-    info={'file':output.name,'source':SOURCE_PAGE,'license':'CC0-1.0','adult_height_m':desired_height,'skin':skin_name,'assets':[x[1] for x in assets],'rig':'MakeHuman game_engine','bones':[bone.name for bone in rig.data.bones],'markers_godot':points,'blend_shapes':['breathing','compression','mouth_open'],'triangles':sum(sum(len(p.vertices)-2 for p in m.data.polygons) for m in meshes),'mesh_count':len(meshes),'file_bytes':output.stat().st_size,'sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
+    shapes=['breathing','compression','mouth_open']+([] if patient else list(FACE_SHAPES))
+    clips=[action.name for action in bpy.data.actions if not action.name.endswith('_morphs')]
+    info={'file':output.name,'source':SOURCE_PAGE,'license':'CC0-1.0','adult_height_m':desired_height,'skin':skin_name,'assets':[x[1] for x in assets],'rig':'MakeHuman game_engine','bones':[bone.name for bone in rig.data.bones],'markers_godot':points,'blend_shapes':shapes,'clips':clips,'triangles':sum(sum(len(p.vertices)-2 for p in m.data.polygons) for m in meshes),'mesh_count':len(meshes),'file_bytes':output.stat().st_size,'sha256':hashlib.sha256(output.read_bytes()).hexdigest()}
+    if not patient:info['face_units']={'pack':'faceunits01','page':FACE_PACK_PAGE,'author':'Mika Suominen','license':'CC0-1.0'}
     CACHE.mkdir(parents=True,exist_ok=True)
     bpy.ops.wm.save_as_mainfile(filepath=str(CACHE/(name+'.blend')))
     source_dir=ROOT/'build/source';source_dir.mkdir(parents=True,exist_ok=True)
@@ -477,7 +624,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--only',choices=['patient','female','male'])
     args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
     if not any(m.endswith('mpfb.services.humanservice') for m in sys.modules):bpy.ops.preferences.addon_enable(module='bl_ext.blender_org.mpfb')
-    prepare_assets();OUTPUT.mkdir(parents=True,exist_ok=True)
+    prepare_assets();prepare_face_targets();OUTPUT.mkdir(parents=True,exist_ok=True)
     specs=[('human_patient',1.,True,'patient'),('human_bystander',.08,False,'female'),('human_bystander_male',.95,False,'male')]
     reports=[]
     for name,gender,patient,key in specs:

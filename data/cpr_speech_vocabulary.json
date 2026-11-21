@@ -1,0 +1,260 @@
+{
+  "note": "Recognition vocabulary and natural wording, not a medical protocol, expected answer, or evidence of action completion. Polish wording requires native-speaker review.",
+  "sources": [
+    "https://www.erc.edu/media/wrhj5sye/gl2025-04-bls-e.pdf",
+    "https://www.grc-org.de/wissenschaft/leitlinien",
+    "https://www.prc.krakow.pl/wytyczne-2025/",
+    "https://www.prc.krakow.pl/wp-content/uploads/2026/04/Broszura-ERC-2025-i.pdf",
+    "https://arxiv.org/abs/2409.09554",
+    "https://arxiv.org/abs/2505.24347"
+  ],
+  "asr_hints": {
+    "en": "CPR, cardiac arrest, collapsed, scene, safe, unsafe, unconscious, responsive, unresponsive, breathing, normal, not normal, gasping, agonal breathing, airway, head tilt, chin lift, ambulance, call 112, one one two, Anna, Jan, chest compressions, sternum, recoil, rescue breath, rescue breaths, ventilation, one, two, handover, medical history, medication, Marek, AED, defibrillator, pads, electrodes, shock, no shock, clear",
+    "de": "Reanimation, Herz-Kreislauf-Stillstand, Umgebung, sicher, unsicher, bewusstlos, ansprechbar, reagiert, keine Reaktion, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, 112, eins eins zwei, Anna, Jan, Herzdruckmassage, Brustbein, entlasten, Beatmung, Atemspende, Atemzug, eine, zwei, Übergabe, Vorerkrankungen, Marek, AED, Defibrillator, Elektroden, Schock, kein Schock, zurücktreten",
+    "pl": "RKO, resuscytacja, zatrzymanie krążenia, otoczenie, bezpieczne, niebezpieczne, nieprzytomny, reaguje, nie reaguje, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, łapie powietrze, drogi oddechowe, odchylenie głowy, uniesienie bródki, karetka, 112, sto dwanaście, Anna, Jan, uciski klatki piersiowej, mostek, oddech ratowniczy, wdech, jeden, dwa, przekazanie, choroby, Marek, AED, defibrylator, elektrody, wyładowanie, bez wyładowania, odsunąć się"
+  },
+  "languages": {
+    "en": {
+      "safety": [
+        "scene",
+        "surroundings",
+        "safe",
+        "unsafe",
+        "danger",
+        "hazard"
+      ],
+      "responsiveness": [
+        "responsive",
+        "unresponsive",
+        "conscious",
+        "unconscious",
+        "reacts",
+        "no response",
+        "responds to voice",
+        "responds to touch"
+      ],
+      "breathing": [
+        "breathing normally",
+        "not breathing normally",
+        "not breathing",
+        "gasping",
+        "agonal breathing",
+        "panting",
+        "slow laboured breathing",
+        "chest rise"
+      ],
+      "airway": [
+        "airway",
+        "open airway",
+        "head tilt",
+        "chin lift"
+      ],
+      "emergency_call": [
+        "Anna",
+        "Jan",
+        "112",
+        "one one two",
+        "call emergency services",
+        "ambulance",
+        "speakerphone"
+      ],
+      "compressions": [
+        "chest compressions",
+        "sternum",
+        "centre of chest",
+        "lower half of sternum",
+        "compression rate",
+        "compression depth",
+        "recoil",
+        "release",
+        "resume compressions"
+      ],
+      "ventilation": [
+        "rescue breath",
+        "rescue breaths",
+        "ventilation",
+        "one",
+        "two",
+        "first",
+        "second",
+        "completed",
+        "not completed"
+      ],
+      "handover": [
+        "handover",
+        "take over",
+        "emergency team",
+        "ambulance crew"
+      ],
+      "history": [
+        "medical history",
+        "known illness",
+        "medication",
+        "allergy",
+        "diabetes",
+        "asthma"
+      ]
+    },
+    "de": {
+      "safety": [
+        "Umgebung",
+        "Einsatzstelle",
+        "sicher",
+        "unsicher",
+        "Gefahr"
+      ],
+      "responsiveness": [
+        "Bewusstsein",
+        "ansprechbar",
+        "bewusstlos",
+        "reagiert",
+        "reagiert nicht",
+        "keine Reaktion",
+        "Ansprache",
+        "Berührung"
+      ],
+      "breathing": [
+        "Atmung",
+        "normale Atmung",
+        "keine normale Atmung",
+        "atmet nicht",
+        "Schnappatmung",
+        "schnappt nach Luft",
+        "röchelt",
+        "Brustkorb hebt sich"
+      ],
+      "airway": [
+        "Atemwege",
+        "Atemwege öffnen",
+        "Kopf überstrecken",
+        "Kinn anheben"
+      ],
+      "emergency_call": [
+        "Anna",
+        "Jan",
+        "112",
+        "eins eins zwei",
+        "Notruf",
+        "Rettungsdienst",
+        "Krankenwagen",
+        "Freisprechen"
+      ],
+      "compressions": [
+        "Herzdruckmassage",
+        "Brustkompressionen",
+        "Brustbein",
+        "Brustkorbmitte",
+        "untere Hälfte des Brustbeins",
+        "Drucktiefe",
+        "Druckfrequenz",
+        "Entlastung",
+        "weiterdrücken"
+      ],
+      "ventilation": [
+        "Beatmung",
+        "Atemspende",
+        "Atemzug",
+        "gegeben",
+        "durchgeführt",
+        "eine",
+        "zwei",
+        "erste",
+        "zweite",
+        "nicht durchgeführt"
+      ],
+      "handover": [
+        "Übergabe",
+        "übernehmen",
+        "Rettungsteam"
+      ],
+      "history": [
+        "Vorerkrankungen",
+        "Erkrankungen",
+        "Medikamente",
+        "Allergien",
+        "Diabetes",
+        "Asthma"
+      ]
+    },
+    "pl": {
+      "safety": [
+        "miejsce zdarzenia",
+        "otoczenie",
+        "bezpieczne",
+        "niebezpieczne",
+        "zagrożenie"
+      ],
+      "responsiveness": [
+        "przytomny",
+        "nieprzytomny",
+        "reaguje",
+        "nie reaguje",
+        "brak reakcji",
+        "reakcja na głos",
+        "reakcja na dotyk"
+      ],
+      "breathing": [
+        "oddycha prawidłowo",
+        "nie oddycha prawidłowo",
+        "nie oddycha",
+        "oddech agonalny",
+        "dyszy",
+        "łapie powietrze",
+        "klatka piersiowa unosi się"
+      ],
+      "airway": [
+        "drogi oddechowe",
+        "udrożnienie dróg oddechowych",
+        "odchylenie głowy",
+        "uniesienie bródki"
+      ],
+      "emergency_call": [
+        "Anna",
+        "Anno",
+        "Jan",
+        "112",
+        "sto dwanaście",
+        "pogotowie",
+        "karetka",
+        "wezwij pomoc",
+        "tryb głośnomówiący"
+      ],
+      "compressions": [
+        "uciski klatki piersiowej",
+        "uciskanie",
+        "mostek",
+        "środek klatki piersiowej",
+        "dolna połowa mostka",
+        "głębokość ucisków",
+        "częstość ucisków",
+        "odciążenie",
+        "kontynuuj uciski"
+      ],
+      "ventilation": [
+        "oddech ratowniczy",
+        "oddechy ratownicze",
+        "wentylacja",
+        "wykonałem",
+        "wykonałam",
+        "jeden",
+        "dwa",
+        "pierwszy",
+        "drugi",
+        "nie wykonałem"
+      ],
+      "handover": [
+        "przekazanie",
+        "przejmij",
+        "zespół ratownictwa medycznego"
+      ],
+      "history": [
+        "choroby przewlekłe",
+        "choroby",
+        "leki",
+        "alergie",
+        "cukrzyca",
+        "astma"
+      ]
+    }
+  }
+}

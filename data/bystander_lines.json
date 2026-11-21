@@ -103,7 +103,8 @@
     "speaker": "marek",
     "de": "Ich hole den Defibrillator!",
     "pl": "Idę po defibrylator!",
-    "style": "[urgent]"
+    "style": "[urgent]",
+    "en": "I will get the defibrillator."
   },
   "marek_prompt_aed": {
     "speaker": "marek",
@@ -115,7 +116,8 @@
     "speaker": "marek",
     "de": "Hier ist der AED! Machen Sie ihn an.",
     "pl": "Tu jest AED! Proszę go włączyć.",
-    "style": "[out of breath]"
+    "style": "[out of breath]",
+    "en": "Here is the AED. Please switch it on."
   },
   "marek_faster": {
     "speaker": "marek",
@@ -157,42 +159,62 @@
     "speaker": "aed",
     "de": "Kleben Sie die Elektroden auf die nackte Brust des Patienten.",
     "pl": "Naklej elektrody na odsłoniętą klatkę piersiową pacjenta.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "Attach the electrode pads to the patient’s bare chest."
   },
   "aed_analyse": {
     "speaker": "aed",
     "de": "Patienten nicht berühren. Herzrhythmus wird analysiert.",
     "pl": "Nie dotykaj pacjenta. Trwa analiza rytmu serca.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "Do not touch the patient. Analysing heart rhythm."
   },
   "aed_shock_advised": {
     "speaker": "aed",
     "de": "Schock empfohlen. Zurücktreten, niemand berührt den Patienten.",
     "pl": "Zalecane wyładowanie. Odsuń się, nikt nie dotyka pacjenta.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "Shock advised. Press the flashing orange button now."
   },
   "aed_shocked": {
     "speaker": "aed",
     "de": "Schock abgegeben. Beginnen Sie sofort mit der Herzdruckmassage.",
     "pl": "Wyładowanie wykonane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "Shock delivered."
   },
   "aed_no_shock": {
     "speaker": "aed",
     "de": "Kein Schock empfohlen.",
     "pl": "Wyładowanie niezalecane.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "No shock advised."
   },
   "aed_stop_cpr": {
     "speaker": "aed",
     "de": "Herzdruckmassage unterbrechen. Patienten nicht berühren.",
     "pl": "Przerwij uciskanie. Nie dotykaj pacjenta.",
-    "style": "[calm, clear, steady]"
+    "style": "[calm, clear, steady]",
+    "en": "Do not touch the patient."
   },
   "marek_take_over": {
     "speaker": "marek",
     "de": "Ich drücke weiter – kleben Sie die Elektroden!",
     "pl": "Ja uciskam dalej – proszę naklejać elektrody!",
     "style": "[urgent, determined]"
+  },
+  "marek_take_aed": {
+    "speaker": "marek",
+    "de": "Hier ist der AED!",
+    "pl": "Tu jest AED!",
+    "style": "[out of breath]",
+    "en": "I have brought the defibrillator."
+  },
+  "aed_press_shock": {
+    "speaker": "aed",
+    "de": "Drücken Sie jetzt die blinkende Schocktaste.",
+    "pl": "Naciśnij teraz migający przycisk wyładowania.",
+    "style": "[calm, clear, steady]",
+    "en": "Press the flashing orange button now."
   }
 }

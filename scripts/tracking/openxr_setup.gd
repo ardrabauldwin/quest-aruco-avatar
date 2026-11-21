@@ -19,6 +19,7 @@ func _ready() -> void:
 	get_viewport().use_xr = true
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
+	_log_reference_space()
 	var blend_modes := interface.get_supported_environment_blend_modes()
 	if XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND in blend_modes:
 		interface.environment_blend_mode = XRInterface.XR_ENV_BLEND_MODE_ALPHA_BLEND
@@ -30,6 +31,19 @@ func _ready() -> void:
 	if OS.get_name() == "Android":
 		OS.request_permissions()
 
+func _log_reference_space() -> void:
+	## Where the app's floor (world y = 0) comes from: requested 1 = Stage (boundary
+	## floor), 2 = Local Floor. Without XR_EXT_local_floor Godot emulates the local
+	## floor from a start-up guess, which put the characters 7–9 cm in the air on
+	## 9 Nov 2026. play_area 4 = STAGE means the boundary floor is in use.
+	var local_floor_ext := "unknown"
+	if ClassDB.class_exists("OpenXRAPIExtension"):
+		var api = ClassDB.instantiate("OpenXRAPIExtension")
+		if api != null and api.has_method("is_extension_enabled"):
+			local_floor_ext = str(api.is_extension_enabled("XR_EXT_local_floor"))
+	print("NARET_XR_SPACE requested=%d play_area=%d local_floor_ext=%s" % [
+		int(ProjectSettings.get_setting("xr/openxr/reference_space", -1)), interface.get_play_area_mode(), local_floor_ext])
+
 static func prepare_passthrough_environment(environment: Environment) -> void:
 	# An opaque BG_COLOR/SKY can cover passthrough despite transparent_bg=true.
 	# Match Godot's documented AR setup, retaining this scene's ambient color/energy.
@@ -38,10 +52,12 @@ static func prepare_passthrough_environment(environment: Environment) -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 
 func floor_height_world(origin: XROrigin3D) -> float:
-	# Match the original xr_startup.gd floor provider. LOCAL_FLOOR is requested
-	# in project.godot, but the runtime can fall back to a non-floor-based space.
-	# Do not label origin Y=0 as a measured floor in that case. Recentring applies
-	# XRServer's reference transform to tracked poses, so apply it to the floor too.
+	# The STAGE space (the headset's boundary floor) is requested in project.godot
+	# since 9 Nov 2026; before that LOCAL_FLOOR, which Godot may emulate from a
+	# start-up guess, left the characters 7–9 cm in the air. The runtime can still
+	# fall back to a non-floor-based space: do not label origin Y=0 as a floor then.
+	# Recentring applies XRServer's reference transform to tracked poses, so apply
+	# it to the floor too.
 	if not active or interface == null or not interface.is_initialized():
 		return NAN
 	if interface.get_play_area_mode() not in [XRInterface.XR_PLAY_AREA_ROOMSCALE, XRInterface.XR_PLAY_AREA_STAGE]:
@@ -60,7 +76,7 @@ func install_hands(origin: XROrigin3D) -> void:
 		var root := XRNode3D.new()
 		root.name = side.capitalize() + "TrackedHand"
 		root.tracker = StringName("/user/hand_tracker/" + side)
-		root.set_script(load("res://addons/naret_upstream/vendors/hand_mesh.gd"))
+		root.set_script(preload("res://scripts/tracking/tracked_hand_visibility.gd"))
 		var mesh: Node3D = ClassDB.instantiate("OpenXRFbHandTrackingMesh")
 		# The vendor node builds its skeleton on construction, but only when
 		# xr/openxr/extensions/meta/hand_tracking_mesh is enabled; naming bones

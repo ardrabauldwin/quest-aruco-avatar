@@ -188,10 +188,11 @@ func update(delta: float, valid: bool, height_m: float, paused := false) -> void
 func _count_stroke(excursion: float) -> void:
 	last_stroke_travel_m = excursion
 
-	# Classify depth quality: shallow < 5cm, good >= 5cm
+	# User-selected feedback band for estimated hand displacement, not a
+	# measured chest-depth target: shallow <5 cm, good 5-7 cm, deep >7 cm.
 	if excursion < 0.050:
 		last_stroke_quality = "shallow"
-	elif excursion > 0.060:
+	elif excursion > 0.070:
 		last_stroke_quality = "deep"
 	else:
 		last_stroke_quality = "good"

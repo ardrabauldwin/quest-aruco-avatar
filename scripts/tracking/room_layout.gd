@@ -1,56 +1,47 @@
 class_name NaretRoomLayout
 extends Node
-## Places bystanders on real, free floor from the headset's room scan.
-## Headset speakers remain hidden without free scanned floor. Training still runs
-## using audio, and the scan is read only — nothing is written back.
-
+## Read saved room geometry first. System capture runs only after an explicit request.
 signal layout_ready(status: String)
 
-## Meta scene labels that a person cannot stand on or inside.
 const OBSTACLES := ["couch", "table", "bed", "screen", "storage", "lamp", "plant",
 	"other", "wall", "wall_face", "wall_art", "window_frame", "door_frame"]
-## Reduced 2026-10-29 from 0.45 / 0.35 / 0.9 m: with those the strict search needed
-## roughly 3 x 3.5 m of free floor. People do stand near walls; a shoulder sits
-## about 0.25 m from the body centre.
 const WALL_CLEARANCE := 0.30
 const OBSTACLE_CLEARANCE := 0.25
 const SPOT_SEPARATION := 0.6
-## Tried in order: a comfortable distance first, closer only if the room forces it.
-## The trainee needs kneeling room beside the patient that a bystander must not take.
 const RADII := [1.8, 2.2, 1.5, 2.6, 1.2, 0.9]
-## Scored fallback (score_spots) for rooms where the strict search finds nothing.
-## A spot's clearance is the distance from its centre to the nearest wall or object.
-## A standing body is ~0.5 m across the shoulders and needs half of that; with less
-## the character would stand inside the wall, so it stays hidden. Body size, not tuning.
 const STAND_CLEARANCE_M := 0.25
-## Clearance beyond this earns no extra score; distance to the patient decides.
 const SCORE_CLEARANCE_CAP_M := 0.6
 const PREFERRED_DISTANCE_M := 1.5
 const MIN_SCORED_SEPARATION_M := 0.4
-## An idle headset answers the layout query before it has localised into its room.
-const SCAN_RETRIES := 6
 const SCAN_RETRY_SECONDS := 5.0
+const SCAN_WAIT_SECONDS := 120.0
+## Reject a saved floor from another storey; this never changes the patient's floor.
+const ROOM_FLOOR_TOLERANCE_M := 0.30
 
 var available := false
 var floor_y := 0.0
 var _manager: Node
 var _entries: Array[Dictionary] = []
 var _scan_attempts := 0
-var _next_retry_ms := 0
 var _capture_poll_s := 0.0
+var _retry_elapsed_s := 0.0
+var _retry_next_s := SCAN_RETRY_SECONDS
+var _waiting := false
+var _focused := true
+var _capture_in_progress := false
+var _viewer: Node3D
+var _origin: XROrigin3D
 
-func configure(origin: XROrigin3D) -> void:
+func configure(origin: XROrigin3D, viewer: Node3D = null) -> void:
+	_origin = origin
+	_viewer = viewer
 	if origin == null or not ClassDB.class_exists("OpenXRFbSceneManager"):
 		layout_ready.emit("room_scan_unsupported")
 		return
 	_manager = ClassDB.instantiate("OpenXRFbSceneManager")
 	_manager.name = "RoomScan"
-	# Anchors are only queried for geometry; drawing the room over passthrough
-	# would hide the real room the trainee is standing in.
 	_manager.set("visible", false)
 	_manager.set("auto_create", false)
-	# Entities without a scene are silently skipped, so every anchor gets a bare
-	# pose holder; the geometry is read from the entity, not from this node.
 	var holder := Node3D.new()
 	holder.set_script(load("res://scripts/tracking/room_anchor.gd"))
 	var packed := PackedScene.new()
@@ -61,80 +52,175 @@ func configure(origin: XROrigin3D) -> void:
 	_manager.connect("openxr_fb_scene_data_missing", _on_scene_data_missing)
 	_manager.connect("openxr_fb_scene_capture_completed", _on_capture_completed)
 	origin.add_child(_manager)
-	# Main creates this manager after XR initialization. Query explicitly;
-	# auto_create listens for a session-start signal that may already have fired.
-	_query_scene.call_deferred()
+	if XRServer.has_signal("reference_frame_changed"):
+		XRServer.reference_frame_changed.connect(_on_reference_frame_changed)
+	retry_scan.call_deferred()
+
+func _on_reference_frame_changed() -> void:
+	if _focused and not _capture_in_progress: retry_scan()
+
+func set_session_focused(focused: bool) -> void:
+	_focused = focused
+	if focused and not _capture_in_progress:
+		retry_scan()
+
+func retry_scan() -> void:
+	if _manager == null:
+		layout_ready.emit("room_scan_unsupported")
+		return
+	if _capture_in_progress: return
+	# A resumed session may be in another room. Rebuild geometry rather than
+	# assuming that anchors retained from the last location still describe it.
+	if bool(_manager.call("are_scene_anchors_created")):
+		_manager.call("remove_scene_anchors")
+	_entries.clear()
+	available = false
+	_scan_attempts = 0
+	_retry_elapsed_s = 0.0
+	_retry_next_s = SCAN_RETRY_SECONDS
+	_waiting = true
+	layout_ready.emit("room_scan_waiting")
+	if _focused: _query_scene()
 
 func _query_scene() -> void:
-	if _manager == null:
-		return
+	if _manager == null or not _focused: return
+	_scan_attempts += 1
 	var result: int = _manager.call("create_scene_anchors")
-	print("NARET_ROOM query_result=", result)
-	if result != OK:
-		_on_scene_data_missing()
+	print("NARET_ROOM query_result=", result, " attempt=", _scan_attempts, " anchors=", anchor_count())
+	# Schedule independently of callbacks: OK means accepted, not that anchors exist.
+	_retry_next_s = _retry_elapsed_s + SCAN_RETRY_SECONDS
 
 func _on_anchor_created(scene_node: Object, entity: Object) -> void:
+	if not is_instance_valid(scene_node) or not scene_node is Node3D: return
+	for entry in _entries:
+		if entry.node == scene_node: return
 	var labels: PackedStringArray = entity.call("get_semantic_labels")
-	var label := String(labels[0]).to_lower() if labels.size() > 0 else ""
+	var label := ""
+	for semantic in labels:
+		var value := semantic.to_lower()
+		if value == "floor" or label.is_empty(): label = value
 	_entries.append({"node": scene_node, "entity": entity, "label": label})
-	if label == "floor":
-		available = true
-		_scan_attempts = 0
-		floor_y = (scene_node as Node3D).global_position.y
-		layout_ready.emit("room_scan_ready")
+	print("NARET_ROOM anchor_labels=", labels, " anchors=", anchor_count())
+	_refresh_available()
 
 func anchor_count() -> int:
 	return _entries.size()
 
-func floor_height_world() -> float:
-	# Scene anchors can be refined or recentered after the initial callback.
-	# Read the current node transform instead of the height cached on creation.
-	for entry in _entries:
-		if entry.label == "floor" and is_instance_valid(entry.node):
-			var node := entry.node as Node3D
-			if node is XRNode3D and not node.get_has_tracking_data():
-				continue
-			return node.global_position.y
-	return NAN
+func _entry_outline(entry: Dictionary) -> PackedVector2Array:
+	var outline := PackedVector2Array()
+	if not is_instance_valid(entry.node) or not is_instance_valid(entry.entity): return outline
+	var node := entry.node as Node3D
+	var tracking_node := node if node is XRNode3D else node.get_parent()
+	if tracking_node is XRNode3D and not tracking_node.get_has_tracking_data(): return outline
+	if not node.global_transform.is_finite(): return outline
+	var boundary: PackedVector2Array = entry.entity.call("get_boundary_2d")
+	for point in boundary:
+		var world := node.global_transform * Vector3(point.x, point.y, 0.0)
+		if not world.is_finite(): return PackedVector2Array()
+		outline.append(Vector2(world.x, world.z))
+	return outline
 
-func _on_scene_data_missing() -> void:
-	## An empty answer usually means the headset has not localised into its room yet
-	## rather than that the room is unscanned, so keep asking for a while. NaReT
-	## deliberately never starts the system room capture: pulling a trainee out of a
-	## running resuscitation is worse than the authored fallback layout.
-	var now := Time.get_ticks_msec()
-	if now < _next_retry_ms:
-		return # The manager repeats this signal per query; retry once per round.
-	_next_retry_ms = now + int(SCAN_RETRY_SECONDS * 1000.0)
-	_scan_attempts += 1
-	if _scan_attempts > SCAN_RETRIES:
-		layout_ready.emit("room_scan_missing")
-		return
-	if _scan_attempts == 1:
-		layout_ready.emit("room_scan_waiting")
-	await get_tree().create_timer(SCAN_RETRY_SECONDS).timeout
-	if available or _manager == null:
-		return
-	_query_scene()
-
-func floor_outline() -> PackedVector2Array:
-	## Room outline on the ground plane, in world X/Z metres.
+func outline_for(viewer: Vector3, patient: Vector3, expected_floor_y: float) -> PackedVector2Array:
+	# Several saved rooms may be returned. Select one containing the current
+	# wearer and patient on this floor, not simply the first FLOOR callback.
 	for entry in _entries:
-		if entry.label != "floor":
-			continue
-		var node: Node3D = entry.node
-		var boundary: PackedVector2Array = entry.entity.call("get_boundary_2d")
-		var outline := PackedVector2Array()
-		for point in boundary:
-			var world := node.global_transform * Vector3(point.x, point.y, 0.0)
-			outline.append(Vector2(world.x, world.z))
+		if entry.label != "floor" or not is_instance_valid(entry.node): continue
+		var node := entry.node as Node3D
+		if is_finite(expected_floor_y) and absf(node.global_position.y - expected_floor_y) > ROOM_FLOOR_TOLERANCE_M: continue
+		var outline := _entry_outline(entry)
+		if outline.size() < 3 or absf(_polygon_area(outline)) < 0.001: continue
+		if viewer.is_finite() and not Geometry2D.is_point_in_polygon(Vector2(viewer.x, viewer.z), outline): continue
+		if patient.is_finite() and not Geometry2D.is_point_in_polygon(Vector2(patient.x, patient.z), outline): continue
 		return outline
 	return PackedVector2Array()
+
+static func _polygon_area(outline: PackedVector2Array) -> float:
+	var area := 0.0
+	for i in outline.size(): area += outline[i].cross(outline[(i + 1) % outline.size()])
+	return area * 0.5
+
+func _reference_floor_y() -> float:
+	return (_origin.global_transform * XRServer.get_reference_frame()).origin.y if is_instance_valid(_origin) else NAN
+
+func _viewer_position() -> Vector3:
+	return _viewer.global_position if is_instance_valid(_viewer) else Vector3(NAN, NAN, NAN)
+
+func _refresh_available() -> void:
+	var outline := outline_for(_viewer_position(), Vector3(NAN, NAN, NAN), _reference_floor_y())
+	var was_available := available
+	available = outline.size() >= 3
+	if available:
+		_waiting = false
+		floor_y = floor_height_world()
+		if not was_available: layout_ready.emit("room_scan_ready")
+	elif was_available:
+		# Tracking or room matching was lost. Start another bounded query window.
+		_waiting = true
+		_retry_elapsed_s = 0.0
+		_retry_next_s = SCAN_RETRY_SECONDS
+		layout_ready.emit("room_scan_waiting")
+
+func floor_height_world() -> float:
+	var viewer := _viewer_position()
+	var outline := outline_for(viewer, Vector3(NAN, NAN, NAN), _reference_floor_y())
+	if outline.is_empty(): return NAN
+	for entry in _entries:
+		if entry.label == "floor" and _entry_outline(entry) == outline:
+			return (entry.node as Node3D).global_position.y
+	return NAN
+
+func floor_outline() -> PackedVector2Array:
+	return outline_for(_viewer_position(), Vector3(NAN, NAN, NAN), _reference_floor_y())
+
+func _on_scene_data_missing() -> void:
+	print("NARET_ROOM empty_result anchors=", anchor_count())
+	# _process drives retries even when the native API sends no such signal.
+
+func request_capture() -> bool:
+	if _manager == null or not bool(_manager.call("is_scene_capture_supported")):
+		layout_ready.emit("room_scan_unsupported")
+		return false
+	if _capture_in_progress: return false
+	_capture_in_progress = bool(_manager.call("request_scene_capture", ""))
+	if _capture_in_progress:
+		_waiting = false
+		layout_ready.emit("room_scan_capturing")
+	else: layout_ready.emit("room_scan_missing")
+	print("NARET_ROOM capture_requested=", _capture_in_progress)
+	return _capture_in_progress
+
+func _on_capture_completed(success: bool) -> void:
+	_capture_in_progress = false
+	print("NARET_ROOM capture_completed=", success)
+	if success: retry_scan()
+	else: layout_ready.emit("room_scan_missing")
+
+func _advance_queries(delta: float) -> void:
+	if not _focused or not _waiting or _manager == null: return
+	_retry_elapsed_s += delta
+	if _retry_elapsed_s >= SCAN_WAIT_SECONDS:
+		_waiting = false
+		layout_ready.emit("room_scan_missing")
+	elif _retry_elapsed_s >= _retry_next_s:
+		_query_scene()
+
+func _process(delta: float) -> void:
+	_advance_queries(delta)
+	_capture_poll_s += delta
+	if _capture_poll_s < 1.0: return
+	_capture_poll_s = 0.0
+	_refresh_available()
+	# Existing developer trigger remains explicit; never auto-open system setup.
+	if FileAccess.file_exists("user://room_capture.request"):
+		DirAccess.remove_absolute("user://room_capture.request")
+		request_capture()
 
 func obstacle_footprints() -> Array:
 	## Axis-aligned world X/Z rectangles for everything a person cannot stand in.
 	var result: Array = []
 	for entry in _entries:
+		if not is_instance_valid(entry.node) or not is_instance_valid(entry.entity): continue
+		if entry.node is XRNode3D and not entry.node.get_has_tracking_data(): continue
 		if not OBSTACLES.has(entry.label):
 			continue
 		var node: Node3D = entry.node
@@ -313,30 +399,4 @@ static func _inside(regions: Array, point: Vector2) -> bool:
 			return true
 	return false
 
-func _process(delta: float) -> void:
-	_capture_poll_s += delta
-	if _capture_poll_s < 1.0 or _manager == null:
-		return
-	_capture_poll_s = 0.0
-	# A one-shot diagnostic request opens native setup only when explicitly asked.
-	if not FileAccess.file_exists("user://room_capture.request"):
-		return
-	DirAccess.remove_absolute("user://room_capture.request")
-	if not bool(_manager.call("is_scene_capture_supported")):
-		layout_ready.emit("room_scan_unsupported")
-		return
-	var started: bool = _manager.call("request_scene_capture", "")
-	print("NARET_ROOM capture_requested=", started)
 
-func _on_capture_completed(success: bool) -> void:
-	print("NARET_ROOM capture_completed=", success)
-	if not success:
-		layout_ready.emit("room_scan_missing")
-		return
-	# Old anchors refer to the previous scan; replace them after native setup.
-	_manager.call("remove_scene_anchors")
-	_entries.clear()
-	available = false
-	_scan_attempts = 0
-	_next_retry_ms = 0
-	_query_scene()

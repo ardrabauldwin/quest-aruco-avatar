@@ -37,15 +37,11 @@ var aed_attached := false
 var aed_available := true
 var aed_stage: int = AEDStage.ATTACHED
 var analysis_due := false
-var shock_advised := true # Scripted initial VF; a trainer can configure a nonshockable scenario.
-## Chance that one shock ends the VF. Whether it did only shows at the next rhythm
-## analysis after two minutes of CPR, as in reality; often a second or third shock
-## is needed. ponytail: flat per-shock chance, the third shock always converts so
-## a course session ends; a trainer setting can replace it.
-var shock_success_chance := 0.5
-const MAX_SHOCKS := 3
-var rng := RandomNumberGenerator.new()
-var rosc_pending := false
+## Scripted educational decisions, not measured ECG or clinical recovery odds.
+## True = shock advised; false = no shock. Repeat until an explicit ending.
+var aed_training_pattern: Array[bool] = [true, true, false]
+var aed_decisions_completed := 0
+var shock_advised := true # Result of the current completed analysis.
 var last_error := ""
 var errors := 0
 var reassessments := 0
@@ -97,7 +93,8 @@ func reset() -> void:
 	_aed_cycle_elapsed = 0.0
 	_aed_used = false
 	_event_sequence = 0
-	rosc_pending = false
+	aed_decisions_completed = 0
+	shock_advised = aed_training_pattern[0] if not aed_training_pattern.is_empty() else false
 	state_changed.emit(state)
 
 func submit_action(action: String, details: Dictionary = {}) -> bool:
@@ -130,6 +127,12 @@ func submit_action(action: String, details: Dictionary = {}) -> bool:
 			if action == "check_responsiveness" and not responsiveness_checked:
 				if bool(details.get("responsive", false)):
 					return _reject(action, "error.check_result", details)
+				# 12 Nov 2026: with hand tracking the caller states whether a palm was at the
+				# shoulders (NaretShoulderCheck). A report without that evidence is refused, so
+				# a spoken claim alone cannot close the step. Without the key (desktop, tests,
+				# controllers) the report is taken as before.
+				if details.has("shoulders_seen") and not bool(details.get("shoulders_seen")):
+					return _reject(action, "error.shoulders_not_seen", details)
 				responsiveness_checked = true
 				# ERC 2025: anyone unresponsive -> 112 straight away.
 				_transition(State.CALL_HELP)
@@ -146,6 +149,10 @@ func submit_action(action: String, details: Dictionary = {}) -> bool:
 					return _reject(action, "error.call_first", details)
 				if bool(details.get("normal_breathing", false)):
 					return _reject(action, "error.check_result", details)
+				# 12 Nov 2026: in XR the caller states whether the headset was brought down to
+				# the face (NaretFaceCheck). Without that evidence the report is refused.
+				if details.has("face_seen") and not bool(details.get("face_seen")):
+					return _reject(action, "error.breathing_not_seen", details)
 				breathing_checked = true
 				_transition(State.CPR)
 				return _accept(action, details)
@@ -236,20 +243,17 @@ func _aed_action(action: String, details: Dictionary) -> bool:
 		"analyze_rhythm":
 			if aed_stage != AEDStage.READY_TO_ANALYZE:
 				return _reject(action, "error.aed_safety", details)
-			if rosc_pending:
-				# Organised rhythm with a pulse: no shock, the patient is back.
-				aed_stage = AEDStage.NO_SHOCK
-				outcome = "rosc"
-				_accept(action, details)
-				_transition(State.RECOVERY)
-				return true
+			if aed_training_pattern.is_empty():
+				return _reject(action, "error.invalid_action", details)
+			# Only completing the AED cycle advances the pattern. Repeating an
+			# interrupted analysis must give the same decision, not skip an entry.
+			shock_advised = aed_training_pattern[aed_decisions_completed % aed_training_pattern.size()]
 			aed_stage = AEDStage.SHOCK_ADVISED if shock_advised else AEDStage.NO_SHOCK
 			return _accept(action, details)
 		"shock":
 			if aed_stage != AEDStage.READY_TO_SHOCK or not shock_advised:
 				return _reject(action, "error.aed_safety", details)
 			shock_count += 1
-			rosc_pending = shock_count >= MAX_SHOCKS or rng.randf() < shock_success_chance
 			_resume_after_aed()
 			return _accept(action, details)
 		"resume_cpr":
@@ -260,6 +264,7 @@ func _aed_action(action: String, details: Dictionary) -> bool:
 	return _reject(action, "error.invalid_action", details)
 
 func _resume_after_aed() -> void:
+	aed_decisions_completed += 1
 	_aed_used = true
 	_cpr_after_aed = 0
 	_aed_cycle_elapsed = 0.0
@@ -363,6 +368,7 @@ func get_summary() -> Dictionary:
 		"elapsed_s": snappedf(elapsed, 0.01), "simulation_speed": simulation_speed,
 		"compressions": compressions, "ventilations": ventilations, "cycles": cycles,
 		"compression_only": compression_only, "shocks": shock_count, "reassessments": reassessments,
+		"aed_decision_source": "scripted_repeating_pattern", "aed_training_pattern": aed_training_pattern.duplicate(), "aed_decisions_completed": aed_decisions_completed,
 		"emergency_called": emergency_called, "aed_requested": aed_requested,
 		"responsiveness_checked": responsiveness_checked, "breathing_checked": breathing_checked,
 		"errors": errors, "outcome": outcome,

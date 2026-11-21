@@ -1,6 +1,6 @@
 extends "res://tests/suite.gd"
 const Speech = preload("res://scripts/scenario/spoken_observation.gd")
-const Confirm = preload("res://scripts/scenario/speech_confirmation.gd")
+const Confirm = preload("res://scripts/ai/speech_pipeline.gd").Confirmation
 
 class Bridge extends Node:
 	var pairs := 0

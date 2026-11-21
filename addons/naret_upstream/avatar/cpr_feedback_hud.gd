@@ -238,6 +238,31 @@ func _process(_delta: float) -> void:
 		_status.text = "then continue pressing with the beep"
 		_set_depth(0.0, false)
 		_set_dial(0.0, false)
+	elif zone.get("placed_counting") and _placed_state() != "placed":
+		# Placed counting (cpr_hand_zone.gd): counting only starts once the hands rest still in
+		# the green area, so say so in the large text, also after the hands were lifted.
+		var in_zone: bool = zone.get("hand_over_chest")
+		_title.text = "HOLD STILL" if in_zone else "PLACE HANDS"
+		_counter.text = "%d / 30" % session.count
+		_coach.text = "Keep your hands still on the chest" if in_zone else "Put your hands on the green area"
+		_coach.modulate = COLOR_GOOD
+		_status.text = zone.hand_tracking_status
+		_set_depth(0.0, false)
+		_set_dial(bpm, session.total_count > 0)
+	elif zone.get("placed_counting") and not session.active:
+		# "HANDS PLACED" only for both hands (13 Nov 2026). The counter is ready as soon as
+		# one palm rests still in the zone, and this title used to follow it: one hand on
+		# the chest read "HANDS PLACED". It now follows the same rule as the green box
+		# (cpr_hand_zone.gd: both hands stacked, or one visible and the other last seen
+		# at the chest).
+		var both: bool = zone.get("correct_placement")
+		_title.text = "HANDS PLACED" if both else "PLACE BOTH HANDS"
+		_counter.text = "0 / 30"
+		_coach.text = "Press now, with the beep" if both else "Put your other hand on top"
+		_coach.modulate = COLOR_GOOD
+		_status.text = zone.hand_tracking_status
+		_set_depth(0.0, false)
+		_set_dial(0.0, false)
 	elif not session.active:
 		var placed: bool = zone.get("correct_placement")
 		_title.text = "PRESS WITH THE BEEP" if placed else "PLACE HANDS"
@@ -258,3 +283,8 @@ func _process(_delta: float) -> void:
 		# live marker needs current tracking.
 		_set_depth(travel_cm, session.total_count > 0)
 		_set_dial(bpm, session.total_count > 0)
+
+
+func _placed_state() -> String:
+	var counter = zone.get("_placed_counter")
+	return counter.state if counter != null else "waiting"

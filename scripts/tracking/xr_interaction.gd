@@ -10,7 +10,21 @@ signal compression_measured(depth_m: float, rate_bpm: float, correct_position: b
 signal action_requested(action: String)
 signal placement_changed(correct: bool)
 signal head_tilt_gesture_detected
+## Both hands pinching: the distance between the two index fingertips (metres) and the
+## fingertips' world heights, a tape-measure check of hand tracking (9 Nov 2026).
+signal ruler_measured(distance_m: float, left_tip_y: float, right_tip_y: float)
+const RULER_INTERVAL_S := 0.25
+var _ruler_timer := 0.0
 var head_tilt_gesture := NaretHeadTiltGesture.new()
+## Response check: a palm at a shoulder (NaretShoulderCheck), shown as two soft patches.
+signal shoulders_touched(shaken: bool)
+const ShoulderCheck = preload("res://scripts/tracking/shoulder_check.gd")
+var shoulder_check: RefCounted = ShoulderCheck.new()
+var _shoulder_patches: Array[Node3D] = []
+var _shoulder_materials: Array[StandardMaterial3D] = []
+var _hands_seen_ms := 0
+const PATCH_WAITING := Color(1.0, 0.62, 0.15)
+const PATCH_TOUCHED := Color(0.25, 0.95, 0.40)
 
 const HAND_NAMES := [&"/user/hand_tracker/left", &"/user/hand_tracker/right"]
 ## Near interaction, MRTK style: a fingertip this close to a panel pokes it.
@@ -21,8 +35,14 @@ const POKE_RELEASE_M := 0.015
 var cpr_enabled := false
 var _audio_busy := false
 var aed_active := false
+## Consecutive 0.15 s polls with a hand in the contact envelope; two are needed
+## before clearance is revoked, so a tracking flicker at the edge cannot do it.
+var _contact_hits := 0
+const CONTACT_POLLS_TO_REVOKE := 2
 ## The AED is worked with the hands too: power button, electrodes.
 var aed: NaretAED
+## Bag-valve-mask for the breaths (scripts/mannequin/bvm_device.gd), set by main in XR.
+var bvm: Node3D
 var _mannequin: NaretMannequin
 var _origin: XROrigin3D
 var _zone: Area3D
@@ -47,6 +67,8 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 	_mannequin = mannequin
 	_origin = xr_origin
 	_ragdoll = mannequin.ragdoll
+	if _ragdoll: _ragdoll.enabled_parts = PATIENT_GRAB_PARTS
+	_build_shoulder_patches()
 	for index in range(2):
 		var ray := MeshInstance3D.new()
 		var line := CylinderMesh.new()
@@ -69,6 +91,9 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		_zone.set("guide_only", false)
 		_zone.set("enable_motion_practice", true)
 		_zone.set("require_collision_contact", true)
+		# 2026-11-03, checked against a QCPR manikin: count from where the hands rest in the green
+		# square instead of from palm motion (false presses at rest, wrong-hand switches).
+		_zone.set("placed_counting", true)
 		var motion: RefCounted = _zone.get("motion_session")
 		# The scenario owns breathing pauses; disable the standalone demo scheduler.
 		motion.set("automatic_breathing_pause", false)
@@ -137,6 +162,8 @@ func set_cpr_enabled(value: bool) -> void:
 	if value == cpr_enabled:
 		return
 	cpr_enabled = value
+	if value:
+		off_target.reset()
 	if _zone != null:
 		if value:
 			_zone.call("reset_placement")
@@ -166,12 +193,19 @@ func _process(delta: float) -> void:
 	_update_hands(delta)
 	_update_controller_menu()
 	_update_head_tilt(delta)
+	_update_shoulders(delta)
+	_update_face(delta)
+	_update_off_target(delta)
+	if bvm: bvm.tick(delta)
 	if aed_active:
 		_contact_poll -= delta
 		if _contact_poll <= 0.0:
 			_contact_poll = 0.15
-			if _patient_contact_detected():
+			_contact_hits = _contact_hits + 1 if _patient_contact_detected() else 0
+			if _contact_hits >= CONTACT_POLLS_TO_REVOKE:
 				action_requested.emit("patient_contact")
+	else:
+		_contact_hits = 0
 	if _zone == null:
 		return
 	# The original practice display is available after patient placement, even
@@ -237,6 +271,134 @@ static func press_contact(heel: Vector3, sternum: Vector3) -> Variant:
 		return null
 	return heel
 
+## Each shoulder zone is drawn as a square frame the size of its tolerance box, on the
+## calibrated mannequin, not on the drawn avatar: what the trainee sees is exactly what is
+## counted, and a few centimetres of avatar offset stay invisible inside a 16 x 16 cm frame.
+## Headset 12 Nov 2026: a translucent patch never showed. The real-world depth occlusion
+## (OpenXRMetaEnvironmentDepth) hides transparent surfaces at the real manikin, and
+## transparent materials cannot be moved before its depth pass. So the frame is opaque,
+## unshaded and emissive like the AED pad guides, rendered before the depth pass
+## (render_priority -60, as the patient overlay does) and lifted 4 cm above the shoulder.
+func _build_shoulder_patches() -> void:
+	for side in 2:
+		var frame := Node3D.new()
+		frame.name = "ShoulderZone%d" % side
+		var material := StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = PATCH_WAITING
+		material.emission_enabled = true
+		material.emission = PATCH_WAITING
+		material.emission_energy_multiplier = 1.0
+		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+		material.render_priority = -60
+		var width := ShoulderCheck.HALF_X_M * 2.0
+		var length := ShoulderCheck.HALF_Z_M * 2.0
+		const BAR := 0.012
+		for bar in [[Vector3(width, 0.004, BAR), Vector3(0.0, 0.0, length * 0.5)], [Vector3(width, 0.004, BAR), Vector3(0.0, 0.0, -length * 0.5)],
+				[Vector3(BAR, 0.004, length), Vector3(width * 0.5, 0.0, 0.0)], [Vector3(BAR, 0.004, length), Vector3(-width * 0.5, 0.0, 0.0)]]:
+			var mesh := MeshInstance3D.new()
+			var box := BoxMesh.new()
+			box.size = bar[0]
+			mesh.mesh = box
+			mesh.material_override = material
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mesh.position = bar[1]
+			frame.add_child(mesh)
+		frame.position = ShoulderCheck.zone_centre(side) + Vector3(0.0, 0.04, 0.0)
+		frame.visible = false
+		_mannequin.add_child(frame)
+		_shoulder_patches.append(frame)
+		_shoulder_materials.append(material)
+
+## Breathing check: the headset in the face box (NaretFaceCheck). No drawing, nothing
+## about the hands here: the airway hint only asks whether the head-tilt animation played.
+const FaceCheck = preload("res://scripts/tracking/face_check.gd")
+signal face_checked
+signal face_check_long
+var face_check: RefCounted = FaceCheck.new()
+var head_tilt_played := false
+
+func set_face_check(enabled: bool) -> void:
+	if enabled and not face_check.active:
+		face_check.reset()
+		head_tilt_played = false
+	face_check.active = enabled
+
+func _update_face(delta: float) -> void:
+	if not face_check.active or _mannequin == null:
+		return
+	var camera := get_viewport().get_camera_3d()
+	var mouth := _mannequin.get_node_or_null("MouthZone") as Node3D
+	if camera == null or mouth == null:
+		return
+	var offset: Vector3 = _mannequin.global_transform.affine_inverse() * camera.global_position - mouth.position
+	if face_check.observe(offset, delta):
+		print("NARET_FACE checked at_face_s=%.1f head_tilt_played=%s" % [face_check.seconds_at_face(), head_tilt_played])
+		face_checked.emit()
+	if face_check.too_long():
+		print("NARET_FACE too_long at_face_s=%.1f" % face_check.seconds_at_face())
+		face_check_long.emit()
+
+## Pressing beside the green box (12 Nov 2026): detected here, spoken once by main.
+const OffTarget = preload("res://scripts/tracking/off_target_press.gd")
+signal off_target_press
+var off_target: RefCounted = OffTarget.new()
+
+func _update_off_target(delta: float) -> void:
+	if not cpr_enabled or _mannequin == null or _zone == null:
+		return
+	var to_local := _mannequin.global_transform.affine_inverse()
+	var palms: Array = []
+	for index in range(2):
+		var hand := hand_tracker(index)
+		var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM) if hand else null
+		palms.append(to_local * (_origin.global_transform * palm).origin if palm != null else null)
+	if off_target.observe(palms, bool(_zone.get("correct_placement")), delta):
+		print("NARET_HANDS off_target_press")
+		off_target_press.emit()
+
+## Headset 13 Nov 2026: the yellow frames hung in the air beside the manikin (they sit
+## on the calibrated sternum, 4 cm above a shoulder height taken from an adult manikin),
+## and a hand closing near the patient pulled his arm or shoulder along. The frames are
+## off (the check itself stays), and only the head can still be taken hold of: that is
+## the head tilt of the breathing check.
+const SHOW_SHOULDER_FRAMES := false
+const PATIENT_GRAB_PARTS := ["head"]
+
+func set_shoulder_check(enabled: bool) -> void:
+	## On from the scenario start until the response step is accepted (the trainee often
+	## reaches for the shoulders while "the scene is safe" is still being transcribed).
+	if enabled and not shoulder_check.active:
+		shoulder_check.reset()
+	shoulder_check.active = enabled
+	for i in _shoulder_patches.size():
+		_shoulder_patches[i].visible = enabled and SHOW_SHOULDER_FRAMES
+		_shoulder_materials[i].albedo_color = PATCH_WAITING
+		_shoulder_materials[i].emission = PATCH_WAITING
+
+func hands_seen_recently() -> bool:
+	## A tracked hand within the last 10 s: only then can the shoulder gate be applied.
+	return _hands_seen_ms > 0 and Time.get_ticks_msec() - _hands_seen_ms < 10000
+
+func _update_shoulders(delta: float) -> void:
+	if not shoulder_check.active or _mannequin == null:
+		return
+	var to_local := _mannequin.global_transform.affine_inverse()
+	var palms: Array = []
+	for index in range(2):
+		var hand := hand_tracker(index)
+		var palm: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_PALM) if hand else null
+		if hand != null:
+			_hands_seen_ms = Time.get_ticks_msec()
+		palms.append(to_local * (_origin.global_transform * palm).origin if palm != null else null)
+	if shoulder_check.observe(palms, delta):
+		var side: int = shoulder_check.touched_side()
+		if side >= 0 and side < _shoulder_materials.size():
+			_shoulder_materials[side].albedo_color = PATCH_TOUCHED
+			_shoulder_materials[side].emission = PATCH_TOUCHED
+		print("NARET_SHOULDERS touched side=", side, " shaken=", shoulder_check.shaken())
+		shoulders_touched.emit(shoulder_check.shaken())
+
 func _update_head_tilt(delta: float) -> void:
 	var hands: Array = []
 	for index in range(2):
@@ -249,6 +411,7 @@ func _update_head_tilt(delta: float) -> void:
 		_mannequin.global_basis.y.normalized(), -_mannequin.global_basis.z.normalized(), delta)
 	_mannequin.set_head_tilt(on)
 	if on and not was_active:
+		head_tilt_played = true
 		print("NARET_HEAD_TILT gesture_detected technique_unverified")
 		head_tilt_gesture_detected.emit()
 
@@ -267,11 +430,23 @@ func _patient_contact_detected() -> bool:
 				return true
 	return false
 
+## Body-frame contact envelope: a 10 cm band each side of the patient's centre line
+## (the requested width, 9 Nov 2026: shoulders and arms lie outside it), from 4 cm below
+## the back to 7 cm above the chest (the frame origin is 20.7 cm below the sternum),
+## over the whole length. Kneeling beside the patient or working the AED next to the
+## shoulder is not contact; the earlier 34 cm / 44 cm box took both as contact and
+## revoked every clearance before the AED could finish its 5 s analysis.
+## This can invalidate clearance; absence of tracked contact cannot prove clearance.
+const CONTACT_HALF_WIDTH_M := 0.10
+const CONTACT_BELOW_BACK_M := 0.04
+const CONTACT_ABOVE_BACK_M := 0.28
+const CONTACT_TOWARD_FEET_M := 0.95
+const CONTACT_TOWARD_HEAD_M := 1.10
+
 func _point_near_patient(world_point: Vector3) -> bool:
-	# Conservative contact envelope around the whole supine patient, not just sternum.
-	# This can invalidate clearance; absence of tracked contact cannot prove clearance.
 	var point := _mannequin.get_body_transform().affine_inverse() * world_point
-	return absf(point.x) < 0.34 and point.y > -0.04 and point.y < 0.44 and point.z > -0.95 and point.z < 1.10
+	return absf(point.x) < CONTACT_HALF_WIDTH_M and point.y > -CONTACT_BELOW_BACK_M and point.y < CONTACT_ABOVE_BACK_M \
+		and point.z > -CONTACT_TOWARD_FEET_M and point.z < CONTACT_TOWARD_HEAD_M
 
 func has_active_menu_press() -> bool:
 	# Hold the wrist controls still during approach as well as during contact.
@@ -457,8 +632,27 @@ func _is_hand_grabbing(hand: XRHandTracker, palm_pos: Vector3, currently_grabbin
 	return curled_count >= 2
 
 
+func _update_ruler(delta: float) -> void:
+	## Tape-measure check: while both hands pinch, report the fingertip distance.
+	if not (_pinched[0] and _pinched[1]):
+		_ruler_timer = 0.0
+		return
+	_ruler_timer -= delta
+	if _ruler_timer > 0.0:
+		return
+	_ruler_timer = RULER_INTERVAL_S
+	var tips: Array[Vector3] = []
+	for index in range(2):
+		var hand := hand_tracker(index)
+		var finger: Variant = tracked_joint(hand, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP) if hand != null else null
+		if finger == null:
+			return
+		tips.append((_origin.global_transform * (finger as Transform3D)).origin)
+	ruler_measured.emit(tips[0].distance_to(tips[1]), tips[0].y, tips[1].y)
+
 func _update_hands(delta: float) -> void:
 	var camera := get_viewport().get_camera_3d()
+	_update_ruler(delta)
 	for index in range(2):
 		var pointer_id := String(HAND_NAMES[index])
 		var hand := hand_tracker(index)
@@ -480,7 +674,15 @@ func _update_hands(delta: float) -> void:
 		var gap := tip.distance_to(thumb_tip)
 		var pinched := gap < (0.035 if _pinched[index] else 0.022)
 		var grabbing := _is_hand_grabbing(hand, palm_pos, _grabbing[index])
-		if aed and aed.touch(pointer_id, tip, (tip + thumb_tip) * 0.5, pinched):
+		# The bag-valve-mask takes a whole-hand grab before the patient does.
+		if bvm and bvm.touch(pointer_id, palm_world, grabbing, _grabbing[index]):
+			_rays[index].visible = false
+			if _pinched[index]:
+				_click_from_pose(Transform3D.IDENTITY, false, pointer_id)
+			_pinched[index] = false
+			_grabbing[index] = grabbing
+			continue
+		if aed and aed.touch(pointer_id, tip, (tip + thumb_tip) * 0.5, pinched, palm_pos, grabbing):
 			_rays[index].visible = false
 			if _pinched[index]:
 				_click_from_pose(Transform3D.IDENTITY, false, pointer_id)
@@ -558,5 +760,9 @@ func _update_grab(pointer_id: String, point: Vector3, grabbing: bool, was_grabbi
 		_ragdoll.release(pointer_id)
 		return false
 	if grabbing and not was_grabbing:
-		return _ragdoll.grab(pointer_id, point)
+		if not _ragdoll.grab(pointer_id, point): return false
+		# Only the head can be held: this is the trainee tilting it.
+		if not head_tilt_played: print("NARET_HEAD_TILT head_held")
+		head_tilt_played = true
+		return true
 	return false

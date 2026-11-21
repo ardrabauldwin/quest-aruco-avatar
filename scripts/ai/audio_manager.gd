@@ -19,6 +19,8 @@ const VAD_SILENCE_MS := 1200
 ## Keep audio just before activation so the first word is not clipped.
 const PRE_ROLL_SECONDS := 0.35
 var language := "pl"
+var recording_language := "" # Setting when capture began.
+var recognition_language := "" # Actual language passed to the last/current ASR request.
 var recording := false
 var listening := false
 var _api: NaretUniAPIClient
@@ -49,6 +51,8 @@ var _spectrum: AudioEffectSpectrumAnalyzerInstance
 var _generation := 0
 var _recent_frames := PackedVector2Array()
 var _recording_prefix := PackedVector2Array()
+var _last_recording_s := 0.0        # length of the last upload, for the invented-speech check
+var _last_recording_silent := false
 
 
 func configure(api_client: NaretUniAPIClient) -> void:
@@ -122,6 +126,18 @@ func get_speech_amplitude() -> float:
 	if not _playing or _spectrum == null: return 0.0
 	var magnitude := _spectrum.get_magnitude_for_frequency_range(90.0, 4000.0)
 	return clampf(maxf(magnitude.x, magnitude.y) * 18.0, 0.0, 1.0)
+
+
+## Speech energy in three bands for the lips: low (jaw), mid (rounded vowels), high
+## (wide vowels, sibilants); each 0..1 on the same scale as get_speech_amplitude().
+func get_speech_bands() -> Vector3:
+	if not _playing or _spectrum == null: return Vector3.ZERO
+	var bands := Vector3.ZERO
+	var edges := [90.0, 400.0, 1500.0, 4000.0]
+	for i in 3:
+		var magnitude := _spectrum.get_magnitude_for_frequency_range(edges[i], edges[i + 1])
+		bands[i] = clampf(maxf(magnitude.x, magnitude.y) * 18.0, 0.0, 1.0)
+	return bands
 
 
 func set_language(lang: String) -> void:
@@ -271,6 +287,7 @@ func begin_recording() -> void:
 	if not _microphone_available():
 		recording_changed.emit(false)
 		return
+	recording_language = language
 	_recording_prefix = _recent_frames.duplicate()
 	stop_speech()
 	recording = true
@@ -307,19 +324,34 @@ func end_recording() -> void:
 	if not _recording_prefix.is_empty():
 		captured.data = encode_prefix(_recording_prefix, captured.stereo) + captured.data
 	_recording_prefix.clear()
-	_transcribe_audio(NaretUniAPIClient.encode_wav(captured))
+	# A recording that never got clearly louder than the VAD trigger holds no speech: warn
+	# about the microphone instead of letting Whisper invent "Thank you." (2026-11-05).
+	var stats := NaretRecordingCheck.level_stats(captured.data, captured.stereo, captured.mix_rate)
+	_last_recording_s = float(stats.seconds)
+	_last_recording_silent = NaretRecordingCheck.near_silent(stats)
+	print("NARET_RECORDING seconds=%.1f peak_rms=%.3f voiced=%.2f silent=%s" % [stats.seconds, stats.peak_rms, stats.voiced_fraction, _last_recording_silent])
+	if _last_recording_silent:
+		status_changed.emit("microphone_silent")
+		return
+	_transcribe_audio(NaretUniAPIClient.speech_wav(captured))
 
 func _transcribe_audio(wav: PackedByteArray) -> void:
 	_ensure_api()
 	var generation := _capture_generation
 	_transcribing = true
+	recognition_language = language
 	status_changed.emit("transcribing")
-	var result: Dictionary = await _api.transcribe(wav, language)
+	var result: Dictionary = await _api.transcribe(wav, recognition_language)
 	if generation != _capture_generation: return
 	_transcribing = false
 	if result.get("ok", false):
 		var transcript: Variant = result.get("json", {}).get("text", "")
 		if transcript is String and not transcript.strip_edges().is_empty():
+			var why := NaretRecordingCheck.invented(transcript, recognition_language, _last_recording_s, _last_recording_silent)
+			if not why.is_empty():
+				print("NARET_TRANSCRIPT_REJECTED reason=", why, " seconds=%.1f text=" % _last_recording_s, transcript.strip_edges().left(80))
+				status_changed.emit("microphone_silent")
+				return
 			status_changed.emit("transcribed")
 			transcript_ready.emit(transcript.strip_edges().left(1000))
 			return
@@ -368,7 +400,11 @@ static func _queue_slot(queue: Array, speaker: String) -> int:
 	return queue.size()
 
 
+## The sentence being spoken now ("" when nobody speaks).
+var current_text := ""
+
 func stop_speech() -> void:
+	current_text = ""
 	_pending.clear()
 	_ready_audio.clear()
 	_generation += 1 # In-flight HTTP audio is discarded after a barge-in.
@@ -403,6 +439,9 @@ func _prepare_next() -> void:
 			var result: Dictionary = await _api.synthesize(spoken_text, item["language"], item.get("speaker", "bystander"))
 			if result.get("ok", false):
 				stream = NaretUniAPIClient.decode_audio(result["body"])
+				# The AED is a machine and sounds like one (13 Nov 2026).
+				if stream != null and str(item.get("speaker", "")) == "aed":
+					stream = robot_voice(stream)
 				if stream != null:
 					source = str(result.get("source", "cloud"))
 					if _voice_cache.size() >= 32: _voice_cache.erase(_voice_cache.keys()[0])
@@ -449,6 +488,7 @@ func _play_next() -> void:
 	var player := _players[_player_index]
 	player.stream = item["stream"]
 	player.play()
+	current_text = str(item["text"])
 	print("NARET_VOICE_START speaker=", item.get("speaker", "bystander"), " source=", item["source"])
 	if not _playing:
 		_playing = true
@@ -464,6 +504,7 @@ func _on_playback_finished() -> void:
 			return
 	if _ready_audio.is_empty():
 		_playing = false
+		current_text = ""
 		playback_changed.emit(false)
 	else:
 		_play_next()
@@ -487,6 +528,48 @@ func _load_offline_clips() -> void:
 		if ResourceLoader.exists(path):
 			_clips[clip_id] = load(path)
 			_clip_texts[clip_id] = item["text"]
+
+## A machine's voice from a natural one: a 7 ms comb (metallic ring) and a 95 Hz tremolo
+## (buzz), at the loudness it had. The words stay clear; the recorded German and Polish
+## AED lines carry the same effect (build/tmp/robot_aed_clips.py). 16-bit mono only;
+## anything else is returned as it is.
+const ROBOT_DELAY_S := 0.007
+const ROBOT_DRY := 0.6
+const ROBOT_WET := 0.45
+const ROBOT_TREMOLO_HZ := 95.0
+const ROBOT_TREMOLO_DEPTH := 0.3
+
+static func robot_voice(stream: AudioStream) -> AudioStream:
+	var wav := stream as AudioStreamWAV
+	if wav == null or wav.format != AudioStreamWAV.FORMAT_16_BITS or wav.stereo or wav.mix_rate <= 0:
+		return stream
+	var source := wav.data
+	var count := source.size() / 2
+	if count < 2: return stream
+	var delay := int(ROBOT_DELAY_S * wav.mix_rate)
+	var mixed := PackedFloat32Array()
+	mixed.resize(count)
+	var peak_in := 1.0
+	var peak_out := 1.0
+	var step := TAU * ROBOT_TREMOLO_HZ / wav.mix_rate
+	for i in count:
+		var dry := float(source.decode_s16(i * 2))
+		var wet := float(source.decode_s16((i - delay) * 2)) if i >= delay else 0.0
+		var value := (ROBOT_DRY * dry + ROBOT_WET * wet) * ((1.0 - ROBOT_TREMOLO_DEPTH) + ROBOT_TREMOLO_DEPTH * sin(step * i))
+		mixed[i] = value
+		peak_in = maxf(peak_in, absf(dry))
+		peak_out = maxf(peak_out, absf(value))
+	var gain := peak_in / peak_out
+	var out := PackedByteArray()
+	out.resize(count * 2)
+	for i in count:
+		out.encode_s16(i * 2, int(clampf(mixed[i] * gain, -32768.0, 32767.0)))
+	var robot := AudioStreamWAV.new()
+	robot.format = AudioStreamWAV.FORMAT_16_BITS
+	robot.mix_rate = wav.mix_rate
+	robot.stereo = false
+	robot.data = out
+	return robot
 
 static func encode_prefix(frames: PackedVector2Array, stereo: bool) -> PackedByteArray:
 	## Encode the same signed, little-endian 16-bit PCM as AudioEffectRecord.

@@ -6,6 +6,8 @@ extends RefCounted
 ##   3. Smooth toward the selected measurement.
 ##   4. If enabled, pull gently toward session rest.
 
+# Callers with checkpoint-confirmed targets can own rest explicitly.
+var automatic_reanchor := true
 var window := 3
 var position_dead_zone_m := 0.005
 var rotation_dead_zone_deg := 1.5
@@ -77,7 +79,7 @@ func update(
 		use_rest_prior: bool = false
 ) -> Transform3D:
 	var accepted_detection := _accept_new_detection(raw_pose, detection_ms)
-	if accepted_detection and use_rest_prior:
+	if accepted_detection and use_rest_prior and automatic_reanchor:
 		_update_stable_endpoint_state(rest_pose)
 	# After a complete tracking gap, hold the existing avatar until a full fresh medoid window is
 	# available. This prevents one bad first reacquired detection from moving the avatar.
@@ -135,7 +137,7 @@ func _accept_new_detection(raw_pose: Transform3D, detection_ms: int) -> bool:
 		return true
 
 	# Before the window fills, use the newest measurement instead of a weak partial medoid.
-	_set_measurement_target(_medoid() if _recent_poses.size() == window else raw_pose)
+	_set_measurement_target(_medoid() if window > 1 and _recent_poses.size() == window else raw_pose)
 	return true
 
 

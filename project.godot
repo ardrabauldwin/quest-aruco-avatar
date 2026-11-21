@@ -20,6 +20,12 @@ config/icon="res://assets/icon.svg"
 
 driver/enable_input=true
 
+[debug]
+
+file_logging/enable_file_logging=true
+file_logging/log_path="user://logs/naret.log"
+file_logging/max_log_files=10
+
 [display]
 
 window/size/viewport_width=1440
@@ -47,7 +53,7 @@ environment/defaults/default_clear_color=Color(0.031, 0.047, 0.064, 1)
 [xr]
 
 openxr/enabled=true
-openxr/reference_space=2
+openxr/reference_space=1
 openxr/environment_blend_mode=2
 openxr/extensions/hand_tracking=true
 openxr/extensions/hand_tracking_unobstructed_data_source=true
@@ -56,6 +62,3 @@ shaders/enabled=true
 openxr/extensions/meta/passthrough=true
 openxr/extensions/meta/hand_tracking_mesh=true
 openxr/extensions/meta/anchor_api=true
-openxr/extensions/meta/scene_api=true
-; Disabled after Quest runtime aborted importing the environment-depth swapchain.
-openxr/extensions/meta/environment_depth=false

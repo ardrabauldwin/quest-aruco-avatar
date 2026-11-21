@@ -3,7 +3,7 @@ extends RefCounted
 ## Decides whether a new marker pose may update the already placed patient.
 ## tick() reads HMD movement every rendered frame; evaluate() receives detections.
 ## Returning {} means HOLD. Returning {"pose": ...} supplies a filter target.
-## This preserves the user's old gate; it does not prove the markers are accurate.
+## Stable marker estimates do not prove physical movement.
 ## Patient heading is local -Z. Only horizontal position and yaw are judged here.
 var head: Node3D
 var moving := true
@@ -12,37 +12,34 @@ const HEAD_STILL_SPEED_MPS := 0.15
 const HEAD_STILL_TURN_DPS := 20.0
 const HEAD_WINDOW_S := 0.3
 const HEAD_SETTLE_S := 0.5
-# These are pose differences, not head-motion speed limits. BOTH limits must
-# pass to save the initial post-movement difference as viewpoint bias.
-const VIEW_BIAS_MAX_M := 0.10
-const VIEW_BIAS_MAX_DEG := 10.0
-const VIEW_BIAS_SAMPLES := 5
-const FOLLOW_ANYWAY_M := 0.30
-# Large-change override: either limit exceeded for three full-evidence detections.
-# This is a heuristic: a persistent detection error can still look like a real move.
-const FOLLOW_ANYWAY_DEG := 25.0
+# For a new move: distance<=15cm OR heading<=15degrees means hold/button.
+# Only BOTH distance>15cm AND heading>15degrees open automatic confirmation.
+const FOLLOW_ANYWAY_M := 0.15
+const FOLLOW_ANYWAY_DEG := 15.0
+const BIG_MOVE_FIRST_CHECK := 30
+const BIG_MOVE_CHECK_STEP := 3
+const BIG_MOVE_STABLE_CHECKS := 4
+const BIG_MOVE_MAX_SAMPLES := 100
+var _big_samples: Array[Transform3D] = []
+var _big_readings := 0
+var _big_last_ms := -1
+var _big_next_check := BIG_MOVE_FIRST_CHECK
+var _big_previous := Transform3D.IDENTITY
+var _big_have_previous := false
+var _big_stable := 0
+var _big_confirmed := Transform3D.IDENTITY
+var _big_following := false
+# Default consumed by the separate optional checkpoint gate; not an outside-update rule.
 const JUDGE_MOVE_MAX_RANGE_M := 1.8
-var _head_samples: Array = []      # [time_s, position, yaw]
+var _head_samples: Array = []      # [time_s, position, full rotation]
 var _head_time_s := 0.0
 var _head_still_s := 0.0
-var _view_bias_ready := false
-var _view_bias_position := Vector3.ZERO
-var _view_bias_yaw := 0.0
-var _view_bias_samples: Array = []
-var _view_bias_last_ms := -1
-var _follow_big_count := 0
-var _window_partial := false   # a settle window that saw hidden markers or a hand on the chest
-var _follow_big_last_ms := -1
-const FOLLOW_ANYWAY_DETECTIONS := 3
-
 func tick(delta: float) -> void:
-	# Compare the newest HMD position/yaw with the oldest in a 0.3-second window.
-	# Position change / elapsed time gives speed; yaw change / time gives turn rate.
-	# Only yaw is measured: looking up/down does not directly trigger the turn limit.
+	# Classify position and full rotation over the recent 0.3-second window.
 	_head_time_s += delta
 	var t: Transform3D = head.global_transform
-	var yaw := _head_yaw(t.basis)
-	_head_samples.append([_head_time_s, t.origin, yaw])
+	var rotation := t.basis.orthonormalized().get_rotation_quaternion()
+	_head_samples.append([_head_time_s, t.origin, rotation])
 	while _head_samples.size() > 1 and float(_head_samples[0][0]) < _head_time_s - HEAD_WINDOW_S:
 		_head_samples.pop_front()
 	var first: Array = _head_samples[0]
@@ -50,7 +47,7 @@ func tick(delta: float) -> void:
 	var sample_moving := false
 	if span > 0.05:
 		var speed := t.origin.distance_to(first[1]) / span
-		var turn := rad_to_deg(absf(wrapf(yaw - float(first[2]), -PI, PI))) / span
+		var turn := rad_to_deg(rotation.angle_to(first[2])) / span
 		sample_moving = speed > HEAD_STILL_SPEED_MPS or turn > HEAD_STILL_TURN_DPS
 	if sample_moving:
 		_head_still_s = 0.0
@@ -61,98 +58,98 @@ func tick(delta: float) -> void:
 
 
 func evaluate(raw_pose: Transform3D, display: Transform3D, detection_ms: int, full_evidence: bool = true) -> Dictionary:
+	var large := _evaluate_large_change(raw_pose, display, detection_ms, full_evidence)
+	if not full_evidence or moving or not large.is_empty() or gate_state == "big_collecting":
+		return large
+	gate_state = "hold_outside"
+	return {}
+
+
+## Complete evidence and a settled viewer are mandatory for every update.
+## Every passing target still uses the common filter.
+func evaluate_large_change(raw_pose: Transform3D, display: Transform3D, detection_ms: int, full_evidence: bool = true) -> Dictionary:
+	return _evaluate_large_change(raw_pose, display, detection_ms, full_evidence)
+
+func _evaluate_large_change(raw_pose: Transform3D, display: Transform3D, detection_ms: int, full_evidence: bool) -> Dictionary:
 	# raw_pose is the new marker-based anchor; display is the held patient anchor.
 	# full_evidence is supplied by the caller: all required markers visible,
 	# with no hand covering the chest. It is not calculated from pose size here.
 	if not full_evidence:
-		_window_partial = true
-		# Missing/covered markers must not drive an already-established anchor.
-		# Previously this flag protected settling, but later biased updates still
-		# passed through to the smoother. Require fresh full evidence to resume.
-		_follow_big_count = 0
+		# Missing or covered markers must not drive the placed patient.
+		_clear_big_move()
+		_big_following = false
 		gate_state = "hold_partial"
+		return {}
+	if moving:
+		_clear_big_move()
+		_big_following = false
+		gate_state = "hold_moving"
 		return {}
 	var offset := raw_pose.origin - display.origin
 	offset.y = 0.0   # height is held separately
 	var offset_deg := rad_to_deg(absf(wrapf(_yaw_of(raw_pose.basis) - _yaw_of(display.basis), -PI, PI)))
-	if (offset.length() > FOLLOW_ANYWAY_M or offset_deg > FOLLOW_ANYWAY_DEG) and full_evidence:
-		# A single far-range spike must not count: the move has to persist over detections.
-		if detection_ms != _follow_big_last_ms:
-			_follow_big_last_ms = detection_ms
-			_follow_big_count += 1
-		if _follow_big_count >= FOLLOW_ANYWAY_DETECTIONS:
-			_view_bias_ready = false
-			_view_bias_samples.clear()
-			gate_state = "follow_big"
-			return {"pose": raw_pose}
-	else:
-		_follow_big_count = 0
-	if moving:
-		# Normal head movement discards the old bias and starts a new settling window.
-		_view_bias_ready = false
-		_view_bias_samples.clear()
-		_window_partial = false
-		gate_state = "hold_moving"
-		return {}
-	if head.global_position.distance_to(display.origin) > JUDGE_MOVE_MAX_RANGE_M:
-		# Too far to trust the markers for anything but a big move: hold. Smaller moves are
-		# picked up when the viewer comes closer (the near settle then reads them as a move).
-		_view_bias_ready = false
-		_view_bias_samples.clear()
-		gate_state = "hold_far"
-		return {}
-	if not _view_bias_ready:
-		# Collect five different camera results after the head settles.
-		if detection_ms != _view_bias_last_ms:
-			_view_bias_last_ms = detection_ms
-			_view_bias_samples.append(raw_pose)
-		if _view_bias_samples.size() < VIEW_BIAS_SAMPLES:
-			gate_state = "settling"
+	# Respect exact boundary values despite Vector3/Basis rounding.
+	var moved := offset.length_squared() > Vector3(FOLLOW_ANYWAY_M, 0.0, 0.0).length_squared()
+	var turned := offset_deg > FOLLOW_ANYWAY_DEG and not is_equal_approx(offset_deg, FOLLOW_ANYWAY_DEG)
+	if moved and turned:
+		var confirmed := _confirm_big_move(raw_pose, detection_ms)
+		if confirmed.is_empty():
+			if _big_following:
+				gate_state = "follow_fixed"
+				return {"pose": _big_confirmed}
+			gate_state = "big_collecting"
 			return {}
-		var xs: Array[float] = []
-		var zs: Array[float] = []
-		var yaws: Array[float] = []
-		var display_yaw := _yaw_of(display.basis)
-		for sample in _view_bias_samples:
-			xs.append((sample as Transform3D).origin.x - display.origin.x)
-			zs.append((sample as Transform3D).origin.z - display.origin.z)
-			yaws.append(wrapf(_yaw_of((sample as Transform3D).basis) - display_yaw, -PI, PI))
-		xs.sort()
-		zs.sort()
-		yaws.sort()
-		var mid := VIEW_BIAS_SAMPLES / 2
-		# Median of five = middle sorted value, separately for X, Z and yaw difference.
-		var bias := Vector3(xs[mid], 0.0, zs[mid])
-		var bias_yaw: float = yaws[mid]
-		_view_bias_samples.clear()
-		_view_bias_ready = true
-		if bias.length() <= VIEW_BIAS_MAX_M and rad_to_deg(absf(bias_yaw)) <= VIEW_BIAS_MAX_DEG:
-			# Remember this initial shift, then subtract it from later readings.
-			# Example: held X=1.00 m, settled X=1.04 -> save +0.04 m.
-			# A later X=1.06 -> corrected X=1.02, so later small moves CAN pass.
-			_view_bias_position = bias
-			_view_bias_yaw = bias_yaw
-			gate_state = "biased"
-			print("Viewer gate: settled; viewpoint bias %.1f cm / %.1f deg absorbed." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
-		elif _window_partial:
-			# Not enough evidence for a move: markers were hidden or a hand was on the chest during
-			# the window. Hold the avatar and judge again from the next full window.
-			_view_bias_ready = false
-			_window_partial = false
-			gate_state = "hold_partial"
-			print("Viewer gate: %.1f cm / %.1f deg difference with markers hidden or hands on the chest - holding." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
-			return {}
-		else:
-			_view_bias_position = Vector3.ZERO
-			_view_bias_yaw = 0.0
-			gate_state = "follow_moved"
-			print("Viewer gate: settled; markers moved %.1f cm / %.1f deg while the head was still - following." % [bias.length() * 100.0, rad_to_deg(bias_yaw)])
-	var corrected := raw_pose
-	# This is an additive position/yaw correction, not a distance-scale correction.
-	# The spatial anchor then holds height and smooths this target separately.
-	corrected.origin -= _view_bias_position
-	corrected.basis = Basis(Vector3.UP, -_view_bias_yaw) * corrected.basis
-	return {"pose": corrected}
+		_big_confirmed = confirmed.pose
+		_big_following = true
+		gate_state = "follow_big"
+		print("Viewer gate: big move %.0f cm / %.0f deg confirmed after %d readings - following." % [offset.length() * 100.0, offset_deg, confirmed.samples])
+		return {"pose": confirmed.pose, "confirmed": true}
+	_clear_big_move()
+	if _big_following:
+		gate_state = "follow_fixed"
+		return {"pose": _big_confirmed}
+	gate_state = "no_large_change"
+	return {}
+
+
+## The startup placement's rule applied to readings that disagree with the shown patient by
+## more than the large-change limits. {} while collecting; {pose, samples} once confirmed.
+func _confirm_big_move(raw_pose: Transform3D, detection_ms: int) -> Dictionary:
+	if detection_ms <= _big_last_ms or not NaretMarkerLayout.rigid(raw_pose):
+		return {}
+	_big_last_ms = detection_ms
+	_big_samples.append(raw_pose.orthonormalized())
+	_big_readings += 1
+	while _big_samples.size() > BIG_MOVE_MAX_SAMPLES:
+		_big_samples.pop_front()
+	if _big_readings < _big_next_check:
+		return {}
+	_big_next_check += BIG_MOVE_CHECK_STEP
+	var estimate: Transform3D = NaretStartupPlacement.new()._robust_estimate(_big_samples)
+	var stable := _big_have_previous and _big_near(estimate, _big_previous)
+	for i in range(_big_samples.size() - 3, _big_samples.size()):
+		stable = stable and _big_near(_big_samples[i], estimate)
+	_big_stable = _big_stable + 1 if stable else 0
+	_big_previous = estimate
+	_big_have_previous = true
+	if _big_stable < BIG_MOVE_STABLE_CHECKS:
+		return {}
+	var count := _big_readings
+	_clear_big_move()
+	return {"pose": estimate, "samples": count}
+
+
+func _big_near(a: Transform3D, b: Transform3D) -> bool:
+	return a.origin.distance_to(b.origin) <= NaretStartupPlacement.STABLE_POSITION_M \
+		and a.basis.get_rotation_quaternion().angle_to(b.basis.get_rotation_quaternion()) <= NaretStartupPlacement.STABLE_ROTATION_RAD
+
+
+func _clear_big_move() -> void:
+	_big_samples.clear()
+	_big_readings = 0
+	_big_next_check = BIG_MOVE_FIRST_CHECK
+	_big_have_previous = false
+	_big_stable = 0
 
 
 func _yaw_of(basis: Basis) -> float:
@@ -160,3 +157,8 @@ func _yaw_of(basis: Basis) -> float:
 
 func _head_yaw(basis: Basis) -> float:
 	return atan2(-basis.z.x, -basis.z.z)
+
+## Clear candidate evidence when switching regions or replacing placement.
+func reset_pose_evidence() -> void:
+	_big_following = false
+	_clear_big_move()

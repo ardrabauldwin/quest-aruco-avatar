@@ -16,12 +16,15 @@ signal status_changed(status_text: String)
 const Constants = preload("res://scripts/qcpr/qcpr_constants.gd")
 const RealBackend = preload("res://scripts/qcpr/qcpr_ble_real_backend.gd")
 const SimBackend = preload("res://scripts/qcpr/simulated_manikin_backend.gd")
+const BridgeBackend = preload("res://scripts/qcpr/qcpr_bridge_backend.gd")
 
 var active_backend: NaretQcprBackend
 var real_backend: NaretQcprBleRealBackend
 var sim_backend: NaretSimulatedManikinBackend
+var bridge_backend: NaretQcprBridgeBackend
 
 var prefer_real_hardware := false
+var simulator_enabled := OS.get_environment("NARET_QCPR_SIM") == "1"
 var scenario: NaretScenario = null
 var current_depth_mm := 0.0
 var current_rate_bpm := 0.0
@@ -40,12 +43,45 @@ func _setup_backends() -> void:
 	sim_backend.name = "SimulatedBackend"
 	add_child(sim_backend)
 
+	# The laptop bridge (tools/qcpr_probe.py --udp) listens from the start; as soon as
+	# manikin packets arrive it becomes the active backend (see _process).
+	bridge_backend = BridgeBackend.new()
+	bridge_backend.name = "BridgeBackend"
+	add_child(bridge_backend)
+	bridge_backend.start_listening()
+	# The very first manikin compression arrives before the bridge is the active backend;
+	# it must switch the backend and still be counted.
+	bridge_backend.compression_event.connect(_on_bridge_compression)
+
 	# Auto-Fallback: Wenn reale Hardware gewünscht und Plugin da ist, versuchen.
-	# Standardmäßig ist der Simulator aktiv (Dennis hat die Hardware nicht zur Hand).
+	# The simulator authenticates itself in _ready and starts automatic CPR, i.e. fake
+	# compressions every frame. It is only ever active when asked for explicitly
+	# (NARET_QCPR_SIM=1); in the app the manikin data comes from the bridge or the native
+	# plugin, and without either there is simply no manikin backend (9 Nov 2026).
 	if prefer_real_hardware and real_backend.is_native_plugin_available():
 		set_active_backend(real_backend)
-	else:
+	elif simulator_enabled:
 		set_active_backend(sim_backend)
+	else:
+		sim_backend.stop_session()
+		sim_backend.set_process(false)
+
+func _process(_delta: float) -> void:
+	if bridge_backend and active_backend != bridge_backend and bridge_backend.is_live():
+		set_active_backend(bridge_backend)
+
+func _on_bridge_compression(max_depth_mm: float, rate_bpm: float, recoil_ok: bool, duration_ms: float) -> void:
+	if active_backend == bridge_backend:
+		return # the regular backend connection handles it
+	set_active_backend(bridge_backend)
+	_on_backend_compression_event(max_depth_mm, rate_bpm, recoil_ok, duration_ms)
+
+## True while the real manikin is delivering data (bridge or native): then hand-tracked
+## strokes are not submitted as compressions, to avoid counting every stroke twice.
+func manikin_live() -> bool:
+	if bridge_backend and bridge_backend.is_live():
+		return true
+	return real_backend != null and real_backend.is_device_authenticated()
 
 func set_active_backend(new_backend: NaretQcprBackend) -> void:
 	if active_backend == new_backend:

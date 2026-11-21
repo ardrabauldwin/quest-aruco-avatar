@@ -6,8 +6,8 @@ func run() -> Array[String]:
 		check(NaretLanguage.STRINGS.en.has(key), "English translation exists: " + key)
 	check(NaretLanguage.next_language("pl") == "en", "headset language button reaches English")
 	check(NaretLanguage.next_language("en") == "de", "language cycle wraps")
-	check(NaretLanguage.infer_action("Please call 112") == "call_emergency", "English emergency-call intent")
-	check(NaretLanguage.infer_action("Do not call 112") == "", "English negation is respected")
+	check(preload("res://scripts/scenario/spoken_observation.gd").infer_action("Please call 112") == "call_emergency", "English emergency-call intent")
+	check(preload("res://scripts/scenario/spoken_observation.gd").infer_action("Do not call 112") == "", "English negation is respected")
 	check(NaretLLMOrchestrator.fallback_reply("Thank you", "en").language == "en", "English reply remains English")
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/manifest.json"))
 	var english := {}

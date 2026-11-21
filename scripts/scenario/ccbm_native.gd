@@ -2,7 +2,8 @@ extends RefCounted
 ## Executes the actual compiled CCBM filter on Quest, off the render thread.
 ## No network service and no replacement posterior/state-machine approximation.
 const MODEL := "res://addons/ccbm_native/model.json"
-const ACTIONS := ["begin_check", "check_responsiveness", "call_emergency", "check_breathing", "compression", "compression_only", "ventilation", "handover"]
+const Protocol = preload("res://scripts/scenario/ccbm_protocol.gd")
+const ACTIONS := Protocol.ACTIONS
 var _executable := ""
 var _states := ""
 var last_error := ""
@@ -16,6 +17,7 @@ func configure_android() -> bool:
 	if not FileAccess.file_exists(MODEL): return _unavailable("model_missing")
 	var model: Variant = JSON.parse_string(FileAccess.get_file_as_string(MODEL))
 	if not model is Dictionary or model.get("engine") != "ccbm": return _unavailable("model_format")
+	if not supports_aed(model): return _unavailable("aed_model_mismatch")
 	var android := Engine.get_singleton("AndroidRuntime")
 	# JavaObject exposes methods, not ApplicationInfo instance fields. Ask
 	# Android's application class loader for the packaged native artifact.
@@ -100,7 +102,7 @@ static func parse_posterior(output: String, steps: int) -> Dictionary:
 		var value := float(row[index + 1])
 		if not is_finite(value) or value < 0: return {}
 		var action := str(names[index]).trim_prefix("(").trim_suffix(")").split(" ", false)[0]
-		if action in ["ventilation_first", "ventilation_second"]: action = "ventilation"
+		action = Protocol.canonical(action)
 		masses[action] = float(masses.get(action, 0.0)) + value
 		total += value
 	if total <= 0 or absf(total - 1.0) > 0.01: return {}
@@ -113,3 +115,11 @@ static func parse_posterior(output: String, steps: int) -> Dictionary:
 	# Keep BLOCKED/FINISHED mass; the existing bridge rejects an unavailable
 	# winning action. Do not force/renormalize it into the expected report.
 	return {"engine": "ccbm", "action": winner, "probability": probability / total}
+
+static func supports_aed(model: Dictionary) -> bool:
+	if model.get("protocol_schema", 0) != 2 or model.get("revisiting_factor", 0) != 1: return false
+	var supported: Variant = model.get("observation_codes", [])
+	if not supported is Array: return false
+	for code in ACTIONS:
+		if code not in supported: return false
+	return true

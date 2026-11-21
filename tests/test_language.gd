@@ -32,5 +32,5 @@ func run() -> Array[String]:
 		"    ": "",
 	}
 	for transcript: String in cases:
-		check(Language.infer_action(transcript) == cases[transcript], "Intent: " + transcript)
+		check(preload("res://scripts/scenario/spoken_observation.gd").infer_action(transcript) == cases[transcript], "Intent: " + transcript)
 	return failures

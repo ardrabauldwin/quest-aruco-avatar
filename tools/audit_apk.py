@@ -47,8 +47,16 @@ def main() -> int:
     badging = subprocess.run([str(aapt), "dump", "badging", str(apk)], check=True, capture_output=True, text=True, timeout=30).stdout
     permissions = subprocess.run([str(aapt), "dump", "permissions", str(apk)], check=True, capture_output=True, text=True, timeout=30).stdout
     checks["package"] = "name='de.uni_greifswald.naret.cprwitness'" in badging
-    for permission in ["android.permission.INTERNET", "android.permission.RECORD_AUDIO", "android.permission.CAMERA", "horizonos.permission.HEADSET_CAMERA", "com.oculus.permission.USE_SCENE"]:
+    for permission in ["android.permission.INTERNET", "android.permission.RECORD_AUDIO", "android.permission.CAMERA", "horizonos.permission.HEADSET_CAMERA"]:
         checks[permission] = permission in permissions
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    scene_enabled = any(setting in project for setting in [
+        "openxr/extensions/meta/scene_api=true", "openxr/extensions/meta/environment_depth=true"])
+    if scene_enabled:
+        checks["scene_permission"] = "com.oculus.permission.USE_SCENE" in permissions
+    else:
+        checks["room_scene_permission_absent"] = not any(permission in permissions for permission in [
+            "com.oculus.permission.USE_SCENE", "horizonos.permission.USE_SCENE"])
     signed = subprocess.run([str(aapt.parent / ("apksigner.bat" if os.name == "nt" else "apksigner")), "verify", str(apk)], capture_output=True, text=True, timeout=30)
     checks["signature_valid"] = signed.returncode == 0
     report = {

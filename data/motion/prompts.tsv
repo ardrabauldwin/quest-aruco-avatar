@@ -6,3 +6,9 @@ relief	5	A relieved person exhales, puts a hand on their chest and relaxes their
 talk	6	A person stands and talks to someone in front of them, gesturing with both hands.
 reach	3	A worried woman bends forward from the hips and reaches down with both hands toward someone lying on the floor, then holds still.
 cpr	1.5 6	A person standing next to someone lying on the floor kneels down on both knees beside them. The kneeling person performs fast chest compressions on the lying person, pushing straight down with locked arms, shoulders above the hands.
+talk_2	6	A calm instructor stands and explains something to a person in front of them, raising one open hand palm up at chest height and moving it gently while talking, the other arm relaxed.
+talk_3	6	A person stands and talks to someone in front of them, pointing down with the right hand toward the floor beside them, then bringing the hand back up while continuing to speak.
+talk_4	6	A person stands and talks while counting on the fingers of one raised hand, one finger at a time, nodding slightly.
+talk_5	6	A person stands and speaks calmly with both hands held open in front of the waist, making small symmetrical gestures and nodding.
+talk_6	6	A person stands and raises one hand in a gentle stop gesture at chest height while speaking, then lowers it slowly.
+listen	8	A person stands and listens attentively to someone in front of them, nodding occasionally, hands relaxed at the sides, shifting weight slightly.

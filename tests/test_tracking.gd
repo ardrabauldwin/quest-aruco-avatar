@@ -320,7 +320,7 @@ func _test_hand_menu(tree: SceneTree) -> void:
 	var start_node: Node3D = menu._large_start
 	var index_tip := hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP).origin
 	check(start_node.visible and start_node.label.text == "Start training", "idle scenario offers the start node")
-	check(not menu._action_keys[0].visible, "Start is not duplicated in the dynamic action list")
+	check(not menu._action_keys.any(func(key): return key.visible and key.label.text == "Start training"), "Start is not duplicated in the dynamic action list")
 	var hit: Dictionary = interaction._poke_panel(start_node.global_transform * Vector3(0, 0, 0.002))
 	check(hit.get("target") == start_node, "fingertip in front of the start node pokes that node, not the palm panel")
 	interaction._send_pointer(hit, true, true)
@@ -456,14 +456,19 @@ func _test_aed_by_hand(tree: SceneTree) -> void:
 		if i == 0:
 			# Let go in mid-air first: the electrode goes back to the device.
 			aed.touch("h", far, rest + Vector3(0, 0.3, 0), true)
-			aed.touch("h", far, rest + Vector3(0, 0.3, 0), false)
-			check(aed._placed.is_empty(), "AED: a pad dropped off target does not stick")
+			check(aed.touch("h", far, rest + Vector3(0, 0.3, 0), false) and aed._holding.has("h"), "AED: the pad stays with an open hand, nothing has to be held")
+			check(pad.global_position.distance_to(rest + Vector3(0, 0.3, 0)) < 0.001, "AED: and goes where the hand goes")
+			aed._pinch_seen_ms["h"] = 0 # the hand is no longer tracked
+			aed._return_lost_pads()
+			check(aed._placed.is_empty() and not aed._holding.has("h"), "AED: a pad whose hand is lost goes back, it does not stick")
 			await tree.create_timer(0.4).timeout
 			aed.touch("h", far, rest, true)
 		var target: Vector3 = aed._pad_target(names[i]).origin + Vector3(0.02, 0.01, 0)
-		aed.touch("h", far, target, true)
 		aed.touch("h", far, target, false)
+		check(not aed._holding.has("h"), "AED: %s puts itself on the chest when the hand brings it there" % names[i])
 	check(aed._placed.size() == 2, "AED: both electrodes stick on the chest")
+	var third: Node3D = aed._pads[names[0]]
+	check(not aed.touch("h", third.global_position, far, false), "AED: a placed pad is not picked up again by a touch")
 	var scenario := NaretScenario.new()
 	stage.add_child(scenario)
 	scenario.start()

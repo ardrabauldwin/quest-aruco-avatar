@@ -96,7 +96,9 @@ def main():
         aar.writestr("assets/ccbm_UPSTREAM_LICENSE.txt", license_text)
         for name, path in dependency_notices.items():
             aar.writestr("assets/ccbm_" + name, path.read_bytes())
-    model = {"engine": "ccbm", "upstream_revision": revision,
+    model = {"engine": "ccbm", "upstream_revision": revision, "protocol_schema": 2, "revisiting_factor": 1,
+             "observation_codes": json.loads((HERE / "observation_codes.json").read_text())["actions"],
+             "observation_likelihood": {"spoken_matched": 0.98, "spoken_remaining_mass": 0.02, "normalised_over_other_spoken_codes": True, "accepted_software_events_exact": True},
              "domain_sha256": hashlib.sha256((HERE / "d.pddl").read_bytes().replace(b"\r\n", b"\n")).hexdigest(),
              "states_sha256": hashlib.sha256(args.states.read_bytes()).hexdigest(),
              "states_base64": base64.b64encode(args.states.read_bytes()).decode(),

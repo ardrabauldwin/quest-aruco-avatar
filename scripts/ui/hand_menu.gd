@@ -17,6 +17,7 @@ signal mode_requested(mode: String)
 signal recording_requested(active: bool)
 signal export_requested
 signal voice_sample_requested
+signal reposition_requested
 signal alignment_save_requested
 signal floor_calibration_requested
 signal reference_scan_toggled(visible: bool)
@@ -29,6 +30,7 @@ signal marker_gizmos_toggled(visible: bool)
 ## Forget floor/chest measurements and placement and begin afresh, in the app.
 signal fresh_start_requested
 var _controls: Node3D
+var _reposition_key: Key3D
 var _large_align: Key3D
 var _floor_key: Key3D
 var _scan_key: Key3D
@@ -566,6 +568,10 @@ func _build_exercise_controls() -> void:
 		alignment_save_requested.emit(), _controls)
 	_large_align.position = Vector3(0.050, -0.022, 0)
 	_large_align.label.font_size = 20
+	_reposition_key = _key("Reposition", Vector2(0.110, 0.035), "key", func(): reposition_requested.emit(), _controls)
+	_reposition_key.position = Vector3(0, -0.067, 0)
+	_reposition_key.label.font_size = 20
+	_refresh_reposition_text()
 	# The language row above replaces the cuff's language key; mode, mic and
 	# floor calibration live on the cuff.
 	_lang_key.visible = false
@@ -821,6 +827,7 @@ func _set_shown(value: bool) -> void:
 
 func update_session(scenario: NaretScenario) -> void:
 	var actions := scenario.get_interface_actions()
+	# Reuse existing fingertip action slots; keep the wrist/cuff layout unchanged.
 	_start_action = "start" if scenario.state == NaretScenario.State.IDLE else "restart"
 	_large_start.set_text("Start training" if _start_action == "start" else "Restart training")
 	var training_active := scenario.state != NaretScenario.State.IDLE and scenario.state != NaretScenario.State.RECOVERY
@@ -859,8 +866,15 @@ func update_session(scenario: NaretScenario) -> void:
 		_action_keys[i].visible = false
 
 
+func _refresh_reposition_text() -> void:
+	if _reposition_key:
+		var labels := {"en": "Reposition", "de": "Neu platzieren", "pl": "Ustaw ponownie"}
+		_reposition_key.set_text(str(labels.get(language, labels.en)))
+
+
 func set_language(value: String) -> void:
 	language = value
+	_refresh_reposition_text()
 	_refresh_language_selection()
 	_last_key = ""
 	_lang_key.set_text(language.to_upper())
@@ -963,3 +977,4 @@ func _refresh_mic() -> void:
 	material.emission = color
 	material.emission_energy_multiplier = 1.5 if (_recording or _mic_on) else 0.0
 	_mic_key.set_text((NaretLanguage.ui("Aufnahme", "Nagrywanie", language)) if _recording else ("Microphone" if language == "en" else "Mikrofon"))
+

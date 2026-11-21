@@ -16,19 +16,27 @@ func radius(person: Node3D) -> float:
 			continue
 		var key := str(mesh.mesh.get_instance_id()) + ":" + str(mesh.skin.get_instance_id())
 		if not _cache.has(key): _cache[key] = _bone_boxes(mesh, skeleton)
-		var boxes: Dictionary = _cache[key]
+		var data: Dictionary = _cache[key]
+		var boxes: Dictionary = data.get("base", {})
 		if boxes.is_empty(): return INF # Unknown geometry must not become a zero-sized body.
 		for bind: int in boxes:
 			var bone := mesh.skin.get_bind_bone(bind)
 			if bone < 0: bone = skeleton.find_bone(mesh.skin.get_bind_name(bind))
 			if bone < 0: return INF
 			var transform := skeleton.global_transform * skeleton.get_bone_global_pose(bone)
-			maximum = maxf(maximum, _box_radius(boxes[bind], transform, person.global_position))
+			var padding := Vector3.ZERO
+			for shape: int in data.padding[bind]:
+				padding += data.padding[bind][shape] * absf(mesh.get_blend_shape_value(shape))
+			var box: AABB = boxes[bind]
+			box.position -= padding
+			box.size += padding * 2.0
+			maximum = maxf(maximum, _box_radius(box, transform, person.global_position))
 	return maximum if maximum > 0.0 else INF
 
 
 func _bone_boxes(mesh: MeshInstance3D, _skeleton: Skeleton3D) -> Dictionary:
 	var boxes: Dictionary = {}
+	var padding_by_bind: Dictionary = {}
 	for surface in mesh.mesh.get_surface_count():
 		var arrays := mesh.mesh.surface_get_arrays(surface)
 		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -39,14 +47,6 @@ func _bone_boxes(mesh: MeshInstance3D, _skeleton: Skeleton3D) -> Dictionary:
 		var influences := bones.size() / vertices.size()
 		var morphs := mesh.mesh.surface_get_blend_shape_arrays(surface)
 		for i in vertices.size():
-			# Reserve all morph displacement directions up to the rig's existing
-			# 2.2 maximum weight. This is conservative, including combinations.
-			var padding := Vector3.ZERO
-			for morph in morphs:
-				var mv: PackedVector3Array = morph[Mesh.ARRAY_VERTEX]
-				if mv.size() != vertices.size(): continue
-				var displacement := mv[i] - vertices[i] if mesh.mesh.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED else mv[i]
-				padding += displacement.abs() * 2.2
 			var total := 0.0
 			for j in influences:
 				var index := i * influences + j
@@ -55,11 +55,18 @@ func _bone_boxes(mesh: MeshInstance3D, _skeleton: Skeleton3D) -> Dictionary:
 				if weights[index] <= 0.0: continue
 				var bind := bones[index]
 				if bind < 0 or bind >= mesh.skin.get_bind_count(): return {}
-				var box := AABB(vertices[i] - padding, padding * 2.0)
+				if not padding_by_bind.has(bind): padding_by_bind[bind] = {}
+				for shape in morphs.size():
+					var mv: PackedVector3Array = morphs[shape][Mesh.ARRAY_VERTEX]
+					if mv.size() != vertices.size(): continue
+					var displacement := mv[i] - vertices[i] if mesh.mesh.blend_shape_mode == Mesh.BLEND_SHAPE_MODE_NORMALIZED else mv[i]
+					var pad := (mesh.skin.get_bind_pose(bind).basis * displacement).abs()
+					padding_by_bind[bind][shape] = (padding_by_bind[bind].get(shape, Vector3.ZERO) as Vector3).max(pad)
+				var box := AABB(vertices[i], Vector3.ZERO)
 				var transformed := mesh.skin.get_bind_pose(bind) * box
 				boxes[bind] = (boxes[bind] as AABB).merge(transformed) if boxes.has(bind) else transformed
 			if absf(total - 1.0) > 0.001: return {}
-	return boxes
+	return {"base": boxes, "padding": padding_by_bind}
 
 
 func _box_radius(box: AABB, transform: Transform3D, centre: Vector3) -> float:

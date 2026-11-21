@@ -46,10 +46,17 @@ func _test_app_source() -> void:
 	app._refresh_floor_reference()
 	check(not anchor.floor_locked and room.reads == 0, "room scan cannot supply height when local floor is missing")
 	xr.sample = -0.05
+	# A saved correction beyond the 30 cm plausibility window that this session did not
+	# verify is dropped (9 Nov 2026: +64 cm from a fingertip on the manikin).
+	anchor.floor_touch_source = "local_floor"
+	anchor.floor_touch_offset_m = 0.641
+	app._refresh_floor_reference()
+	check(anchor.floor_locked and is_equal_approx(anchor.floor_y, -0.05), "an implausible saved fingertip correction is not applied")
+	check(is_zero_approx(anchor.floor_touch_offset_m) and anchor.floor_touch_source.is_empty(), "the implausible saved correction is cleared")
 	anchor.floor_touch_source = "local_floor"
 	anchor.floor_touch_offset_m = 0.03
 	app._refresh_floor_reference()
-	check(anchor.floor_locked and is_equal_approx(anchor.floor_y, -0.02), "optional local-floor touch correction remains applied")
+	check(is_equal_approx(anchor.floor_y, -0.02), "optional local-floor touch correction remains applied")
 	xr.sample = 0.05
 	app._refresh_floor_reference()
 	check(is_equal_approx(anchor.floor_y, -0.02), "app holds floor despite later different sample")

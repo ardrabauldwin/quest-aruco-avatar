@@ -37,6 +37,16 @@ signal placement_restarted
 ## Contact arms counting. Small spheres represent tracked hand joints and heel;
 ## overlap with the chest BoxShape3D is virtual contact, not a force sensor.
 @export var require_collision_contact := false
+## Count from where the hands rest (scripts/tracking/placed_press_counter.gd) instead of the
+## palm-motion detector below: place the hands in the green area, hold still, then press.
+@export var placed_counting := false
+var _placed_counter: RefCounted
+var _trace_points := {}   # tracker -> _measuring_points(), recorded for choosing the depth point
+var _placed_trace := {"state": "", "left_h": NAN, "right_h": NAN, "left_in": false, "right_in": false, "drop": 0.0}
+## The counting footprint comes from the visible green guide, not separate X/Z limits.
+## The vertical band remains relative to the sternum surface.
+const PLACED_ABOVE_M := 0.03
+const PLACED_BELOW_M := 0.03
 var _contact_armed := false
 const CONTACT_RADIUS_M := 0.015
 @export_range(100.0, 120.0, 5.0) var target_bpm := 110.0
@@ -51,6 +61,25 @@ var correct_placement: bool:
 ## The hand whose estimated heel is in the chest contact slab, or empty when incorrect.
 var lower_hand: StringName = &""
 var _placement_correct := false
+## 12 Nov 2026: the target is shown until the hands are on it, then bright green for
+## PLACED_SHOW_S so the trainee sees the confirmation, then hidden so the real hands stay
+## visible. Not orange: an orange box read as an error (headset review 2026-09-15).
+## 14 Nov 2026: blue instead of soft yellow ("yellow is not professional"). Blue is the
+## calm, clinical "act here" colour, and it stays apart from the green confirmation, the
+## gold pad outlines of the AED and its orange shock button. White vanished on the shirt.
+## Later the same evening: green, and it stays green ("let the sternum box be green,
+## don't change its colour"). One colour while waiting and while placed; the box simply
+## disappears PLACED_SHOW_S after both hands are on it. The instructor says "the green
+## box".
+const PLACED_SHOW_S := 1.5
+const WAITING_COLOR := Color(0.15, 0.85, 0.35, 0.65)
+const PLACED_COLOR := WAITING_COLOR
+var _placed_at_ms := -1
+## A hand stacked on the other is within a hand's width of the target; a hand at the
+## trainee's side or on his own knee is not.
+const OTHER_HAND_NEAR_M := 0.20
+## Per hand, whether it was at the chest target when the cameras last saw it.
+var _last_seen_at_chest: Dictionary = {}
 var is_cpr_started := false
 var _paused := false
 @onready var _shape: CollisionShape3D = $CollisionShape3D
@@ -67,6 +96,7 @@ var _trace: FileAccess
 var _trace_grace_s := 0.0
 var _trace_unflushed := 0
 var _motion_tracker: StringName = &""
+var _trace_heights := {}   # tracker -> this frame's palm height (NAN when untracked), for the trace
 var _last_chest_pose := Transform3D.IDENTITY
 var _have_chest_pose := false
 var hand_tracking_status := "Show your hands"
@@ -108,6 +138,10 @@ func _process(delta: float) -> void:
 	var right := _read_hand(right_tracker) if read_hands else {}
 	left_hand_inside = not guide_only and _heel_on_target(left)
 	right_hand_inside = not guide_only and _heel_on_target(right)
+	for seen: Array in [[&"left", left], [&"right", right]]:
+		var hand: Dictionary = seen[1]
+		if not hand.is_empty() and _shape != null and (hand.heel as Vector3).is_finite():
+			_last_seen_at_chest[seen[0]] = (hand.heel as Vector3).distance_to(_shape.global_position) <= OTHER_HAND_NEAR_M
 	lower_hand = &""
 	if left_hand_inside and _is_stacked(left, right):
 		lower_hand = &"left"
@@ -119,8 +153,17 @@ func _process(delta: float) -> void:
 		# "not_tracked" in every status line). Accept that hand anywhere between the contact slab
 		# and the stack height above the target footprint. With both hands visible the strict
 		# heel-plus-stack check above still applies.
+		#
+		# 13 Nov 2026: that also showed "hands placed" for ONE hand on the chest while the
+		# other was simply somewhere the cameras do not see. The two cases differ in where
+		# the unseen hand was when it was last seen: a hand that slid under the other one
+		# vanished AT the chest; a hand hanging at the trainee's side vanished far from it,
+		# or was never seen at the chest at all. So the one visible hand counts only if
+		# the other was last seen within OTHER_HAND_NEAR_M of the target. Both hands have
+		# to come to the chest once; after that the occlusion costs nothing.
 		var visible_hand := left if not left.is_empty() else right
-		if _single_hand_on_target(visible_hand):
+		var hidden: StringName = &"right" if not left.is_empty() else &"left"
+		if bool(_last_seen_at_chest.get(hidden, false)) and _single_hand_on_target(visible_hand):
 			lower_hand = &"left" if not left.is_empty() else &"right"
 	_placement_correct = lower_hand != &""
 	if correct_placement != was_correct:
@@ -141,6 +184,9 @@ func _process(delta: float) -> void:
 func _update_hand_motion(delta: float, available: bool, left: Dictionary, right: Dictionary) -> void:
 	motion_session.target_bpm = target_bpm
 	motion_session.breathing_duration_s = breathing_duration_s
+	if placed_counting:
+		_update_placed_counting(delta, available)
+		return
 	var sample := {}
 	var chosen: StringName = &""
 	var left_usable := available and _motion_hand_usable(left)
@@ -286,6 +332,153 @@ Press the Meta button, then close the menu."
 		_metronome.stop()
 
 
+func _update_placed_counting(delta: float, available: bool) -> void:
+	if _placed_counter == null:
+		# Both calibrated hands feed one shared stroke detector; never add two hand counts.
+		_placed_counter = load("res://scripts/tracking/two_hand_press_counter.gd").new()
+		_placed_counter.placed.connect(func(hand: String, rest_m: float):
+			print("CPR hands placed: %s palm reference, rest %.1f cm above the chest" % [hand, rest_m * 100.0]))
+		_placed_counter.lifted.connect(func(): print("CPR hands lifted: place them again to continue"))
+		_placed_counter.pressed.connect(_on_placed_press)
+	# Rate staleness, breathing phase and the metronome keep running; strokes come from the counter.
+	# update() with no sample clears the previous-press flag the rate needs, so keep it.
+	var had_previous: bool = motion_session._have_previous_stroke
+	motion_session.update(delta, false, 0.0, not available)
+	motion_session._have_previous_stroke = had_previous
+	if not available:
+		_metronome.stop()
+		return
+	var hands := {}
+	for tracker in [left_tracker, right_tracker]:
+		var read := _read_counting_palm(tracker)
+		var in_zone := false
+		# Actual tracked joints only: no estimated heel enters the counting gate.
+		for point in _hand_contact_points(tracker, false):
+			in_zone = in_zone or _in_placed_zone(point)
+		hands[tracker] = {"in_zone": in_zone, "height": _palm_height(read),
+			"usable": not read.is_empty(), "source": "palm"}
+	var left: Dictionary = hands[left_tracker]
+	var right: Dictionary = hands[right_tracker]
+	_placed_counter.update(delta, left, right)
+	var counting: Dictionary = left if _placed_counter.hand == "left" else (right if _placed_counter.hand == "right" else {})
+	var counting_height := float(counting.get("height", NAN))
+	if _placed_counter.state == "placed" and is_finite(counting_height):
+		_stroke_top = maxf(_stroke_top, counting_height)
+		_stroke_bottom = minf(_stroke_bottom, counting_height)
+	elif _placed_counter.state != "placed":
+		_stroke_top = -INF
+		_stroke_bottom = INF
+	motion_session.tracking_available = _placed_counter.state == "placed"
+	motion_session.travel_m = maxf(0.0, _placed_counter.drop_m) if _placed_counter.pressing else 0.0
+	hand_over_chest = left.in_zone or right.in_zone
+	if _placed_counter.state == "placed":
+		hand_tracking_status = "Hands placed - press"
+	elif hand_over_chest:
+		hand_tracking_status = "Hold your hands still"
+	else:
+		hand_tracking_status = "Place your hands on the green area"
+	if hand_tracking_status != _last_tracking_status:
+		_last_tracking_status = hand_tracking_status
+		print("CPR hands: ", hand_tracking_status)
+	_trace_points = {left_tracker: _measuring_points(left_tracker), right_tracker: _measuring_points(right_tracker)}
+	_placed_trace = {"state": _placed_counter.state, "left_h": left.height, "right_h": right.height,
+		"left_in": left.in_zone, "right_in": right.in_zone, "drop": _placed_counter.drop_m}
+	var chosen: StringName = left_tracker if _placed_counter.hand == "left" else (right_tracker if _placed_counter.hand == "right" else &"")
+	var height: float = float(hands[chosen].height) if chosen != &"" else 0.0
+	_write_cpr_trace(delta, true, _placed_counter.state == "placed", not hand_over_chest, chosen, height if is_finite(height) else 0.0)
+
+
+## ESTIMATED chest depth from the visible (counting) palm: its travel within the stroke,
+## top to bottom, times this factor. Against the QCPR manikin on 9 Nov 2026 (40 continuous
+## strokes of 22–34 mm) the top palm travelled 2.2–2.9x the chest; x 0.40 gives +0.3 cm
+## mean error, 0.5 cm spread. But palm travel hardly follows the chest (correlation 0.37):
+## the hands move 5–9 cm while the chest moves 2–3 cm, so this is a population average,
+## not a per-stroke measurement. Reliable depth needs the manikin's own sensor. The
+## hidden lower palm's lowest point was useless (spread 6.3 cm, one 23 cm glitch), and
+## the counter's own travel from the saved rest counted the descent from a hover.
+const TOP_PALM_DEPTH_FACTOR := 0.40
+const MAX_CHEST_DEPTH_M := 0.10
+var _stroke_top := -INF
+var _stroke_bottom := INF
+
+func _on_placed_press(travel_m: float) -> void:
+	var stroke_travel := _stroke_top - _stroke_bottom if is_finite(_stroke_top) and is_finite(_stroke_bottom) else travel_m
+	var chest_depth := clampf(stroke_travel * TOP_PALM_DEPTH_FACTOR, 0.0, MAX_CHEST_DEPTH_M)
+	_stroke_top = -INF
+	_stroke_bottom = INF
+	motion_session._count_stroke(chest_depth)
+	print("CPR press #%d  chest_depth=%.1f cm  palm_travel=%.1f cm  %s  interval=%.2f s  hand=%s  mode=placed" % [
+		motion_session.total_count, chest_depth * 100.0, travel_m * 100.0, motion_session.last_stroke_quality,
+		motion_session.last_interval_s, _placed_counter.hand])
+	if motion_session.active and not is_cpr_started:
+		is_cpr_started = true
+		cpr_started.emit()
+
+
+## Candidate depth points of one hand, heights above the chest surface in metres (NAN when not
+## seen): palm centre, wrist, knuckles (mean of the four proximal finger joints) and the full hand
+## (mean of every tracked joint). Trace only:
+## a recording against the QCPR manikin decides which point measures depth best.
+func _measuring_points(tracker_name: StringName) -> Dictionary:
+	var result := {"palm": NAN, "wrist": NAN, "knuckles": NAN, "full": NAN}
+	var hand := XRServer.get_tracker(tracker_name) as XRHandTracker
+	if xr_origin == null or hand == null or not hand.has_tracking_data:
+		return result
+	if hand.hand_tracking_source in [XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER, XRHandTracker.HAND_TRACKING_SOURCE_NOT_TRACKED]:
+		return result
+	var required := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+	var knuckles := [XRHandTracker.HAND_JOINT_INDEX_FINGER_PHALANX_PROXIMAL, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_PHALANX_PROXIMAL,
+		XRHandTracker.HAND_JOINT_RING_FINGER_PHALANX_PROXIMAL, XRHandTracker.HAND_JOINT_PINKY_FINGER_PHALANX_PROXIMAL]
+	var full_sum := 0.0
+	var full_n := 0
+	var knuckle_sum := 0.0
+	var knuckle_n := 0
+	for joint in range(XRHandTracker.HAND_JOINT_MAX):
+		if (hand.get_hand_joint_flags(joint) & required) != required:
+			continue
+		var position := hand.get_hand_joint_transform(joint).origin
+		if not position.is_finite():
+			continue
+		var pose := XRPose.new()
+		pose.transform = Transform3D(Basis.IDENTITY, position)
+		var height := _palm_height({"point": xr_origin.global_transform * pose.get_adjusted_transform().origin})
+		full_n += 1
+		full_sum += height
+		if joint == XRHandTracker.HAND_JOINT_PALM:
+			result.palm = height
+		elif joint == XRHandTracker.HAND_JOINT_WRIST:
+			result.wrist = height
+		elif joint in knuckles:
+			knuckle_sum += height
+			knuckle_n += 1
+	if full_n > 0:
+		result.full = full_sum / full_n
+	if knuckle_n > 0:
+		result.knuckles = knuckle_sum / knuckle_n
+	return result
+
+
+func _points_row(tracker_name: StringName) -> Array:
+	var p: Dictionary = _trace_points.get(tracker_name, {})
+	return [float(p.get("palm", NAN)), float(p.get("wrist", NAN)), float(p.get("knuckles", NAN)),
+		float(p.get("full", NAN))]
+
+
+## Inside the green square and between PLACED_ABOVE_M above and PLACED_BELOW_M below the chest.
+func _in_placed_zone(point: Vector3) -> bool:
+	if not point.is_finite() or _shape.disabled:
+		return false
+	var chest := _shape.global_transform
+	var offset := (point - chest.origin) / _units_per_metre()
+	var height := offset.dot(chest.basis.y.normalized())
+	var guide := _highlight.mesh as QuadMesh
+	if guide == null: return false
+	var local := _highlight.to_local(point)
+	var half := guide.size * 0.5
+	return absf(local.x) <= half.x and absf(local.y) <= half.y \
+		and height <= PLACED_ABOVE_M and height >= -PLACED_BELOW_M
+
+
 ## One CSV row per frame while a palm is usable over the chest, and for 1 s after it is lost,
 ## so dropouts are visible. Columns are the counter's inputs and its internal state, enough to
 ## replay cpr_motion_session.gd on a PC with other thresholds against the real hand signal.
@@ -303,19 +496,25 @@ func _write_cpr_trace(delta: float, available: bool, valid: bool, no_sample: boo
 		_trace = FileAccess.open(path, FileAccess.WRITE)
 		if _trace == null:
 			return
-		_trace.store_line("t_ms,valid,hand,height_m,top_m,bottom_m,recoil_peak_m,descending,travel_m,count,since_stroke_s,left_move_m,right_move_m")
+		# unix_ms lines the trace up with other recordings (QCPR manikin); both palm heights let
+		# hand-selection rules be replayed on the PC (tools/replay_cpr_trace.gd).
+		_trace.store_line("t_ms,valid,hand,height_m,top_m,bottom_m,recoil_peak_m,descending,travel_m,count,since_stroke_s,left_move_m,right_move_m,unix_ms,left_height_m,right_height_m,contact_armed,placed_state,left_count_height_m,right_count_height_m,left_in_zone,right_in_zone,drop_m,left_palm_m,left_wrist_m,left_knuckles_m,left_full_m,right_palm_m,right_wrist_m,right_knuckles_m,right_full_m")
 		print("CPR trace: ", path)
 	var hand := "none"
 	if chosen == left_tracker:
 		hand = "left"
 	elif chosen == right_tracker:
 		hand = "right"
-	_trace.store_line("%d,%d,%s,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%d,%.2f,%.4f,%.4f" % [
+	_trace.store_line("%d,%d,%s,%.4f,%.4f,%.4f,%.4f,%d,%.4f,%d,%.2f,%.4f,%.4f,%d,%.4f,%.4f,%d,%s,%.4f,%.4f,%d,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f" % ([
 		Time.get_ticks_msec(), int(valid), hand, height,
 		motion_session._top, motion_session._bottom, motion_session._recoil_peak,
 		int(motion_session._descending), motion_session.travel_m,
 		motion_session.total_count, motion_session._since_stroke,
-		_hand_movement(left_tracker), _hand_movement(right_tracker)])
+		_hand_movement(left_tracker), _hand_movement(right_tracker),
+		int(Time.get_unix_time_from_system() * 1000.0),
+		float(_trace_heights.get(left_tracker, NAN)), float(_trace_heights.get(right_tracker, NAN)),
+		int(_contact_armed), _placed_trace.state, float(_placed_trace.left_h), float(_placed_trace.right_h),
+		int(_placed_trace.left_in), int(_placed_trace.right_in), float(_placed_trace.drop)] + _points_row(left_tracker) + _points_row(right_tracker)))
 	_trace_unflushed += 1
 	if _trace_unflushed >= 36:
 		_trace.flush()
@@ -333,6 +532,7 @@ func _palm_height(hand: Dictionary) -> float:
 func _record_hand_height(tracker_name: StringName, hand: Dictionary) -> void:
 	var history: Array = _hand_history.get(tracker_name, [])
 	var height := _palm_height(hand)
+	_trace_heights[tracker_name] = height
 	if is_finite(height):
 		history.append([_motion_time_s, height])
 	while not history.is_empty() and float(history[0][0]) < _motion_time_s - MOVEMENT_WINDOW_S:
@@ -440,6 +640,23 @@ func _read_motion_hand(tracker_name: StringName) -> Dictionary:
 	return {"point": position_world}
 
 
+## Counting uses the tracked palm centre directly. No wrist, orientation, skin
+## offset or assumed hand dimensions are required. Placement visuals below retain
+## their separate legacy contact geometry; it does not supply counting heights.
+func _read_counting_palm(tracker_name: StringName) -> Dictionary:
+	if xr_origin == null: return {}
+	var tracker := XRServer.get_tracker(tracker_name) as XRHandTracker
+	if tracker == null or not tracker.has_tracking_data: return {}
+	if tracker.hand_tracking_source in [XRHandTracker.HAND_TRACKING_SOURCE_CONTROLLER, XRHandTracker.HAND_TRACKING_SOURCE_NOT_TRACKED]: return {}
+	var required := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+	if (tracker.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM) & required) != required: return {}
+	var palm := tracker.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM).origin
+	if not palm.is_finite(): return {}
+	var pose := XRPose.new()
+	pose.transform = Transform3D(Basis.IDENTITY, palm)
+	return {"point": xr_origin.global_transform * pose.get_adjusted_transform().origin}
+
+
 ## Only a tracked palm POSITION is required. The wrist joint and the palm orientation improve
 ## the heel estimate when they are tracked, but their loss must not make a real hand "disappear":
 ## on the Quest the wrist is the first joint lost during placement (under the other hand, or at
@@ -483,10 +700,18 @@ func _read_hand(tracker_name: StringName) -> Dictionary:
 	pose.transform = Transform3D(palm.basis.orthonormalized() if orientation_ok else Basis.IDENTITY, heel)
 	# Apply the same reference frame and world scale as XRNode3D, then the scene origin.
 	var world := xr_origin.global_transform * pose.get_adjusted_transform()
-	var result := {"heel": world.origin, "wrist_tracked": wrist_ok}
+	# Counting needs tracked palm position plus either tracked wrist position or
+	# tracked palm orientation for the existing wrist-free heel estimate.
+	var result := {"heel": world.origin, "wrist_tracked": wrist_ok,
+		"heel_usable": heel_estimate_usable(true, wrist_ok, orientation_ok),
+		"heel_source": "wrist_oriented" if wrist_ok and orientation_ok else ("wrist" if wrist_ok else "palm_oriented")}
 	if orientation_ok:
 		result["palm_normal"] = world.basis.z.normalized()
 	return result
+
+
+static func heel_estimate_usable(palm_position_tracked: bool, wrist_position_tracked: bool, palm_orientation_tracked: bool) -> bool:
+	return palm_position_tracked and (wrist_position_tracked or palm_orientation_tracked)
 
 
 func _heel_on_target(hand: Dictionary) -> bool:
@@ -551,7 +776,7 @@ func contact_overlaps(point: Vector3) -> bool:
 	var nearest := local.clamp(-half, half)
 	return point.distance_to(_shape.to_global(nearest)) <= CONTACT_RADIUS_M * _units_per_metre()
 
-func _hand_contact_points(tracker_name: StringName) -> Array[Vector3]:
+func _hand_contact_points(tracker_name: StringName, include_estimated_heel := true) -> Array[Vector3]:
 	var points: Array[Vector3] = []
 	if xr_origin == null: return points
 	var hand := XRServer.get_tracker(tracker_name) as XRHandTracker
@@ -565,8 +790,9 @@ func _hand_contact_points(tracker_name: StringName) -> Array[Vector3]:
 		var pose := XRPose.new()
 		pose.transform = Transform3D(Basis.IDENTITY, position)
 		points.append(xr_origin.global_transform * pose.get_adjusted_transform().origin)
-	var estimated := _read_hand(tracker_name)
-	if estimated.has("heel"): points.append(estimated.heel)
+	if include_estimated_heel:
+		var estimated := _read_hand(tracker_name)
+		if estimated.has("heel"): points.append(estimated.heel)
 	return points
 
 func _points_touch_chest(points: Array[Vector3]) -> bool:
@@ -618,6 +844,10 @@ func start_cpr() -> void:
 	cpr_started.emit()
 
 func reset_placement() -> void:
+	_last_seen_at_chest.clear()
+	# Explicit exercise/setup reset is the only way to learn new resting heights.
+	# A visibility gap during compressions never resets this counter.
+	_placed_counter = null
 	_contact_armed = false
 	is_cpr_started = false
 	motion_session.reset()
@@ -651,12 +881,16 @@ func _update_feedback() -> void:
 	# hands are not yet on it, hidden while they are, back the moment they leave. It no longer
 	# depends on the session having started (2026-09-22: B toggled the session and the user was
 	# left without a target after a restart).
-	_highlight.visible = not _paused and not correct_placement
+	if correct_placement:
+		if _placed_at_ms < 0:
+			_placed_at_ms = Time.get_ticks_msec()
+	else:
+		_placed_at_ms = -1
+	var showing_green := correct_placement and Time.get_ticks_msec() - _placed_at_ms < int(PLACED_SHOW_S * 1000.0)
+	_highlight.visible = not _paused and (not correct_placement or showing_green)
 	_instruction.visible = _highlight.visible
 	if not guide_only:
-		# Green is the instruction colour ("put your hands here"), brighter once the hands are on it.
-		# Never orange: an orange box read as an error, not as a target (headset review 2026-09-15).
-		_material.albedo_color = Color(0.10, 0.95, 0.30, 0.90) if correct_placement else Color(0.15, 0.80, 0.35, 0.60)
+		_material.albedo_color = PLACED_COLOR if correct_placement else WAITING_COLOR
 
 
 func _on_start_button(button: StringName) -> void:

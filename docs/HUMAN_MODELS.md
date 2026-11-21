@@ -19,11 +19,13 @@ Find the imported `Skeleton3D` and `AnimationPlayer` recursively under the model
 | Character | Exact animation names |
 | --- | --- |
 | Patient | `idle`, `breathing`, `compression` |
-| Bystanders | `idle`, `talk`, `anxious`, `relief` |
+| Bystanders | `idle`, `talk`, `anxious`, `relief`, `phone`, `walk`, `reach`, `kneel`, `cpr`; optional takes `talk_2` … `talk_6` and `listen` |
+
+Talk takes (2026-11-06): `NaretRigAnimator` treats `talk` plus every `talk_<n>` clip as one family. A speaker starts on a random take and, when it runs out, crossfades (0.4 s) to a different one, never the same twice in a row, so a long instruction does not loop a single gesture. `listen` replaces `idle` for a calm, silent speaker. The takes come from [data/motion/prompts.tsv](../data/motion/prompts.tsv) and are exported only when their BVH exists.
 
 The patient's **idle is completely still**, with zero breathing and compression weights. `breathing` and `compression` are explicit training effects. They do not imply circulation, successful CPR or patient recovery. Bystander animations use real spine/head/arm rotations. `talk` also contains a varying mouth morph; these are authored example gestures, not captured human motion.
 
-The body mesh exposes three blend shapes: `breathing`, `compression`, `mouth_open`, each in the range 0–1. Patient breathing raises the anterior thorax; compression deforms the sternum region smoothly inward. Clothing masks remove the concealed torso from bystanders, whose chest motion is primarily skeletal. These visual deformations do not measure real compression depth.
+The body mesh exposes three blend shapes: `breathing`, `compression`, `mouth_open`, each in the range 0–1. Bystanders additionally carry speaker face morphs mixed from the CC0 [faceunits01](https://static.makehumancommunity.org/assets/assetpacks/faceunits01.html) ARKit targets (Mika Suominen): `blink_l`, `blink_r`, `brow_up`, `jaw_open`, `lips_round`, `lips_wide`, `smile`; eyelashes, brows, teeth and eyes follow them. The animator blinks every 2–6 s, lifts the brow at the start of an utterance, nods the head on speech onsets, and shapes the lips from three speech bands (`NaretAudioManager.get_speech_bands()`: low → jaw, mid → rounded, high → wide). `mouth_open` is kept and driven together with `jaw_open` so older models and tests still work. Patient breathing raises the anterior thorax; compression deforms the sternum region smoothly inward. Clothing masks remove the concealed torso from bystanders, whose chest motion is primarily skeletal. These visual deformations do not measure real compression depth.
 
 Blender's current `NLA_TRACKS` export path produced constant action slots in this environment. The generator uses `ACTIONS` and then joins each skeleton action with its corresponding `*_morphs` action into a single standard glTF animation. Verification checks the actual binary animation samples: patient compression/breathing vary from 0 to 1 and back; bystander talk contains five changing bone-rotation tracks. This avoids accepting clips that exist by name but contain no movement.
 
@@ -49,6 +51,12 @@ Install/enable the official [MPFB extension](https://extensions.blender.org/add-
 
 ```sh
 /Applications/Blender.app/Contents/MacOS/Blender --background --python tools/generate_humans.py
+```
+
+On Windows (Blender 5.2 from winget, MPFB via `blender --command extension install --sync --enable mpfb`):
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.2lender.exe" --background --python tools/generate_humans.py -- --only male
 ```
 
 Use `-- --only patient`, `-- --only female` or `-- --only male` for one character. The first run downloads the official 267 MB CC0 system asset pack into ignored `.cache/makehuman/`. Subsequent runs use that cache. No synthesis model, asset pack, Blender installation or MPFB addon is packaged on Quest. Studio preview renders are written beside the cached Blender projects.

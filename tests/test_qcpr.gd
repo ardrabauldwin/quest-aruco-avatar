@@ -211,9 +211,12 @@ func _test_simulated_backend() -> void:
 
 func _test_manager_integration() -> void:
 	var manager := Manager.new()
+	# Since 9 Nov 2026 the simulator is opt-in (it generates compressions on its own);
+	# this integration test asks for it explicitly.
+	manager.simulator_enabled = true
 	manager._setup_backends()
 	check(manager.active_backend != null, "Manager has active backend")
-	check(manager.active_backend.is_simulated(), "Default backend falls back to simulator")
+	check(manager.active_backend.is_simulated(), "Requested simulator becomes the active backend")
 
 	var feedbacks: Array = []
 	manager.quality_feedback.connect(func(type: String, de: String, pl: String, good: bool):

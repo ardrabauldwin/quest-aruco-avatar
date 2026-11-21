@@ -63,11 +63,13 @@ func load_profile(path: String) -> Error:
 	common_to_sternum = bridge
 	return OK
 
-## From the side a flat marker can return its mirror solution: 2026-09-15 recordings show
-## 30-40 deg of heading and 12-14 cm of position error. Markers lying on the mannequin face up,
-## so an estimate tilted past this limit is rejected. Good markers measured 5-25 deg, mirrored
-## ones 85-95 deg. Only meaningful for a mannequin lying flat (floor_orientation).
-const MAX_TILT_DEG := 45.0
+## Gross-tilt rejection before fusion and horizontal orientation flattening.
+## The mannequin is assumed horizontal; this checks its reconstructed common UP,
+## not yaw. User selected 15 degrees on 2026-11-08 (previously 45).
+## Passing this heuristic does not prove position/heading accuracy. The saved
+## diagnostic sample audit is not an end-to-end validation of this tighter limit.
+## Only enabled for a mannequin lying flat (floor_orientation).
+const MAX_TILT_DEG := 15.0
 
 func tilt_deg(id: int, world_pose: Transform3D) -> float:
 	## Angle between this marker's common-anchor estimate and world up.

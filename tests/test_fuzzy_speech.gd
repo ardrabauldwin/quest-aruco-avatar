@@ -1,6 +1,6 @@
 extends "res://tests/suite.gd"
-const Gate = preload("res://scripts/scenario/speech_confirmation.gd")
-const Fuzzy = preload("res://scripts/scenario/fuzzy_speech.gd")
+const Gate = preload("res://scripts/ai/speech_pipeline.gd").Confirmation
+const Fuzzy = preload("res://scripts/scenario/spoken_observation.gd")
 
 func run() -> Array[String]:
 	failures.clear()

@@ -54,6 +54,18 @@ func run() -> Array[String]:
 	interaction._click_hit(hit, true, "test")
 	interaction._click_hit({}, false, "test")
 	check(saves.size() == 1 and actions == ["start"], "save-alignment key replaces the controller A button")
+	var repositions: Array = []
+	menu.reposition_requested.connect(func(): repositions.append(true))
+	hit = interaction._poke_panel(menu._reposition_key.global_position + Vector3(0,0,.003))
+	check(hit.get("target")==menu._reposition_key, "Reposition has its own reachable hand-menu hit target")
+	interaction._click_hit(hit,true,"test")
+	interaction._click_hit({},false,"test")
+	check(repositions.size()==1 and actions==["start"] and saves.size()==1, "Reposition emits once without Start or Save")
+	menu.set_language("de")
+	check(menu._reposition_key.label.text=="Neu platzieren", "German Reposition label")
+	menu.set_language("pl")
+	check(menu._reposition_key.label.text=="Ustaw ponownie", "Polish Reposition label")
+	menu.set_language("en")
 	var floor_requests: Array = []
 	menu.floor_calibration_requested.connect(func(): floor_requests.append(true))
 	hit = interaction._poke_panel(menu._floor_key.global_position + menu._floor_key.global_basis.z * 0.003)

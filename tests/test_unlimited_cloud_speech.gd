@@ -40,7 +40,7 @@ func run() -> Array[String]:
 	var client := Client.new()
 	client.base_url = "http://127.0.0.1:" + str(endpoint.server.get_local_port())
 	tree.root.add_child(client)
-	check(client._requests.asr.timeout == 0.0, "actual ASR request has no automatic timeout")
+	check(client._requests.asr.timeout == NaretUniAPIClient.CLOUD_ASR_DEADLINE_S, "the ASR request gives up after its deadline instead of waiting for ever")
 	check(not client._requests.asr.use_threads, "cloud recognition remains nonblocking and cancellable")
 	_recognise(client)
 	await tree.create_timer(2.2).timeout

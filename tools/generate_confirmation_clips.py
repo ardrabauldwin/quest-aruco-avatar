@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
-    source = (ROOT / "scripts/scenario/speech_confirmation.gd").read_text(encoding="utf-8")
+    source = (ROOT / "scripts/ai/speech_pipeline.gd").read_text(encoding="utf-8")
     # The localized question tables are literal JSON dictionaries in GDScript.
     tables = {language: json.loads(table) for language, table in
               re.findall(r'"(en|de|pl)": (\{[^\n]+\})', source)}

@@ -5,8 +5,10 @@ extends Node
 ## CCBM tracks exercise progression, not the physical correctness of a spoken claim.
 signal decision(action: String, details: Dictionary)
 signal status_changed(status: String)
+signal tracking_updated(posterior: Dictionary)
 const Speech = preload("res://scripts/scenario/spoken_observation.gd")
-const ACTIONS := ["begin_check", "check_responsiveness", "call_emergency", "check_breathing", "compression", "ventilation", "compression_only", "handover"]
+const Protocol = preload("res://scripts/scenario/ccbm_protocol.gd")
+const ACTIONS := Protocol.ACTIONS
 var endpoint := ""
 var threshold := 0.90 # Prototype acceptance policy, not a measured optimum.
 var _scenario: NaretScenario
@@ -17,9 +19,21 @@ var _history: Array[String] = []
 var _compression_observed := false
 var _mode_observed := false
 var _native: RefCounted
+var _history_revision := 0
+var _safety_changed := false
+var _tracking_dirty := false
+var _tracking_active := false
+var last_tracking: Dictionary = {}
 
 func configure(scenario: NaretScenario) -> void:
+	if is_instance_valid(_scenario) and _scenario.state_changed.is_connected(_on_scenario_state_changed):
+		_scenario.state_changed.disconnect(_on_scenario_state_changed)
 	_scenario = scenario
+	if not _scenario.state_changed.is_connected(_on_scenario_state_changed):
+		_scenario.state_changed.connect(_on_scenario_state_changed)
+
+func _on_scenario_state_changed(state: int) -> void:
+	if state == NaretScenario.State.IDLE: reset()
 
 func _ready() -> void:
 	if OS.has_feature("android"):
@@ -44,6 +58,11 @@ func reset() -> void:
 		_http.request_completed.emit(HTTPRequest.RESULT_REQUEST_FAILED, 0, PackedStringArray(), PackedByteArray())
 	_pending = false
 	_history.clear()
+	_history_revision += 1
+	_safety_changed = false
+	_tracking_dirty = false
+	_tracking_active = false
+	last_tracking.clear()
 	_compression_observed = false
 	_mode_observed = false
 	# An in-flight old result is discarded using _generation.
@@ -57,7 +76,7 @@ func observe_action(action: String) -> bool:
 	if action not in ACTIONS and action != "start": return false
 	# Saying "I am compressing" must never create a counted physical stroke.
 	# Detected strokes reach observe_accepted() through the scenario event signal.
-	if action == "compression":
+	if action not in Protocol.SPOKEN and action != "start":
 		status_changed.emit("ccbm_compression_requires_tracking")
 		return true
 	if action == "start":
@@ -65,33 +84,85 @@ func observe_action(action: String) -> bool:
 			decision.emit("start", {"source": "speech", "measurement_verified": false})
 		return true
 	if _scenario.state == NaretScenario.State.IDLE and action == "begin_check":
-		# Headset review 2026-10-29: the first spoken report ("the scene is safe") came
-		# before anyone said "start exercise" and was refused as out of order every time.
-		# A safety report is a clear intent to begin: start, then judge it as usual.
+		# A safety report while idle starts the exercise (2026-10-29) but is not accepted
+		# as the first step (2026-11-03): the trainee must first hear the instructor's
+		# "check whether the scene is safe" and then report it, as in the real sequence.
 		decision.emit("start", {"source": "speech", "measurement_verified": false})
+		return true
 	if action not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_out_of_order")
 		return true
 	_request(action)
 	return true
 
+func _append_observation(action: String) -> void:
+	_history.append(action)
+	_history_revision += 1
+
 func observe_accepted(event: Dictionary) -> void:
-	if not event.get("accepted", false): return
 	var action := str(event.get("action", ""))
-	# Keep the model in sync with fallback/trainer actions too.
+	if not event.get("accepted", false):
+		# The scenario rejects contact as an exercise action while actually revoking clearance.
+		# Keep that real sensor event, once, rather than preserving stale clearance in CCBM.
+		if action == "patient_contact" and event.get("reason") == "error.contact_during_analysis":
+			if _safety_changed:
+				_append_observation("patient_contact")
+				_safety_changed = false
+				_tracking_dirty = true
+				_schedule_tracking()
+			elif _pending:
+				# A contact sample during an in-flight clearance invalidates that
+				# decision too, even if the model was already in its uncleared state.
+				_history_revision += 1
+		return
 	if action in ["start", "reset"]:
 		reset()
-	elif action == "compression":
-		# Count every stroke locally; CCBM models the onset, not 100 network calls/min.
-		if not _compression_observed:
-			_history.append("compression")
-			_compression_observed = true
+		return
+	if action == "compression":
+		if _compression_observed: return # One onset, not a native process for every stroke.
+		_append_observation("compression")
+		_compression_observed = true
 	elif action == "compression_only":
 		if not _mode_observed:
-			_history.append(action)
+			_append_observation(action)
 			_mode_observed = true
 	elif action in ACTIONS:
-		_history.append(action)
+		_append_observation(action)
+	else:
+		return
+	if action in ["attach_aed", "reassess", "shock", "resume_cpr"]:
+		_compression_observed = false
+		_safety_changed = false
+	if action == "clear_patient": _safety_changed = true
+	if action == "analyze_rhythm":
+		# Result is read from the accepted simulator event, never from TTS or an LLM claim.
+		_append_observation("shock_advised" if _scenario.aed_stage == NaretScenario.AEDStage.SHOCK_ADVISED else "no_shock_advised")
+		if _scenario.outcome == "rosc": _append_observation("recovery")
+	if action in ["request_aed", "attach_aed", "clear_patient", "analyze_rhythm", "shock", "resume_cpr", "reassess"] or (_scenario._aed_used and action == "compression"):
+		_tracking_dirty = true
+		_schedule_tracking()
+
+func _schedule_tracking() -> void:
+	if _tracking_dirty and not _tracking_active and not _pending and _native != null:
+		_refresh_tracking.call_deferred()
+
+func _refresh_tracking() -> void:
+	if not _tracking_dirty or _tracking_active or _pending or _native == null: return
+	_tracking_active = true
+	_tracking_dirty = false
+	var generation := _generation
+	var revision := _history_revision
+	var sequence: Array[String] = _history.duplicate()
+	var result: Variant = await _native.infer(sequence)
+	if generation != _generation: return
+	_tracking_active = false
+	if revision == _history_revision and result is Dictionary and result.get("engine") == "ccbm":
+		last_tracking = result.duplicate()
+		last_tracking["observation_count"] = sequence.size()
+		tracking_updated.emit(last_tracking)
+	elif revision == _history_revision:
+		status_changed.emit("ccbm_tracking_unavailable")
+	_schedule_tracking()
 
 func observe_breath_pair() -> bool:
 	# Each reported breath still requires its own CCBM decision and scenario guard.
@@ -126,6 +197,7 @@ func _request(action: String) -> void:
 		return
 	_pending = true
 	var generation := _generation
+	var revision := _history_revision
 	var sequence: Array[String] = _history.duplicate()
 	sequence.append(action)
 	var parsed: Variant
@@ -133,12 +205,17 @@ func _request(action: String) -> void:
 		parsed = await _native.infer(sequence)
 		if generation != _generation: return
 		_pending = false
+		_schedule_tracking()
 		if not parsed is Dictionary or parsed.has("error") or parsed.is_empty():
 			status_changed.emit("ccbm_unavailable")
 			return
 	else:
 		parsed = await _request_external(sequence, generation)
 		if generation != _generation or parsed == null: return
+	_schedule_tracking()
+	if revision != _history_revision:
+		status_changed.emit("ccbm_uncertain_repeat")
+		return
 	if not accepts(parsed, action, threshold) or action not in _scenario.get_available_actions():
 		status_changed.emit("ccbm_uncertain_repeat")
 		return

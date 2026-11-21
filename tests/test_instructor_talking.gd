@@ -12,7 +12,7 @@ func run() -> Array[String]:
 	actor.speaking = true
 	actor._face_scene(Vector3(3, 1, 0), 0.016)
 	check(actor._turning, "first instruction can begin while instructor turns toward trainee")
-	check(actor._rig.get_current_clip() == "talk", "standing turn does not replace talking with walking")
+	check(actor._rig.get_current_clip().begins_with("talk"), "standing turn does not replace talking with walking")
 	var skeleton: Skeleton3D = actor.get_node("Model").find_children("*", "Skeleton3D", true, false)[0]
 	await tree.process_frame
 	var rotations: Array[Quaternion] = []

@@ -3,8 +3,8 @@ extends NaretBystanderDirector
 
 func advance(delta: float) -> void:
 	_t += delta
-	if scenario and scenario.state == NaretScenario.State.INTRO and _t - _state_t > URGE_AFTER_S:
-		_say_once("anna_urge")
+	# Anna's "Please, do something!" plea removed on headset review 2026-11-03: it
+	# interrupted trainees who were already acting. Her arrival line stays.
 
 func _on_state_changed(state: int) -> void:
 	_state_t = _t

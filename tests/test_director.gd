@@ -63,8 +63,8 @@ func run() -> Array[String]:
 	check(said.has("anna_touch"), "1.13 Anna steps in during the analysis")
 	director.on_intent("keep_clear")
 	check(said.has("anna_sorry") and scenario.aed_stage == NaretScenario.AEDStage.READY_TO_ANALYZE, "1.14 a spoken 'Abstand' sends Anna back and keeps the clearance")
-	check(NaretLanguage.infer_action("Abstand! Nicht berühren!") == "keep_clear", "'Abstand, nicht berühren' is understood")
-	check(NaretLanguage.infer_action("Proszę się odsunąć!") == "keep_clear", "the Polish call to stand back is understood")
+	check(preload("res://scripts/scenario/spoken_observation.gd").infer_action("Abstand! Nicht berühren!") == "keep_clear", "'Abstand, nicht berühren' is understood")
+	check(preload("res://scripts/scenario/spoken_observation.gd").infer_action("Proszę się odsunąć!") == "keep_clear", "the Polish call to stand back is understood")
 
 	scenario.submit_action("analyze_rhythm")
 	scenario.submit_action("clear_patient")

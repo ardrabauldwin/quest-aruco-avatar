@@ -6,7 +6,9 @@ signal status_changed(message: String)
 signal request_finished(service: String, success: bool, latency_ms: int)
 
 const DEFAULT_URL := "https://apphubai.wolke.uni-greifswald.de/v1"
-const DEFAULT_LLM := "unsloth/Qwen3.8-27B-GGUF:Q4_K_M"
+## Gemma: 24/24 and about 0.5 s on the interpreter prompt; Qwen 23/24, about 2 s, and 2 in 10
+## clear reports refused at random (2026-11-04). Its JSON comes in a code block: see unfence().
+const DEFAULT_LLM := "unsloth/gemma-4-31B-it-qat-GGUF:UD-Q4_K_XL"
 var base_url := DEFAULT_URL
 var api_key := ""
 var asr_model := "large-v3"
@@ -14,7 +16,20 @@ var tts_model := "omnivoice"
 var llm_model := DEFAULT_LLM
 var tts_voice := "" # ApphubAI omnivoice rejects the OpenAI example voice 'alloy'.
 var timeout_s := 2.0
-var asr_timeout_s := 0.0 # Zero disables the cloud speech deadline; Restart still cancels.
+## Understanding a spoken report gets longer than the voice deadline: on the headset
+## (2026-11-03) the cloud answered in 0.4-1.9 s, and 2 of 12 reports were dropped as "not
+## understood" at exactly 2 s. Waiting no longer freezes the app (no socket threads), so the
+## cloud gets a generous 15 s; only a server that is down ends in "please repeat".
+var llm_timeout_s := 15.0
+## How long one upload of a spoken sentence may wait for its text. Until 14 Nov 2026
+## there was no limit at all (the old 2 s limit had cut slow answers off). Headset log
+## of that day: a request whose connection had died was waited for during 1,920 s, and
+## the exercise stood at "transcribing" the whole time; the service answered a PC in
+## 2.5 to 6.5 s in the same hour, but 14 s through a phone hotspot. After 40 s the
+## sentence is sent once more on a new connection (_transcribe_cloud), and if that
+## fails too the trainee is told to say it again.
+const CLOUD_ASR_DEADLINE_S := 40.0
+var asr_timeout_s := CLOUD_ASR_DEADLINE_S
 var offline := false
 # Optional PC recogniser reached through adb reverse. Never send cloud credentials.
 var local_asr_url := ""
@@ -32,15 +47,7 @@ var _local_tts_requests: Array[HTTPRequest] = []
 func _ready() -> void:
 	configure()
 	for service in ["models", "asr", "tts", "llm"]:
-		var request := HTTPRequest.new()
-		request.name = "HTTP_" + service
-		# Keep unlimited speech requests cancellable without joining a socket worker.
-		request.use_threads = service != "asr"
-		request.timeout = service_timeout(service)
-		request.body_size_limit = 8 * 1024 * 1024
-		request.max_redirects = 0 # Never forward authorization to a redirected host.
-		add_child(request)
-		_requests[service] = request
+		_requests[service] = _new_request(service)
 		_busy[service] = false
 	probe_models.call_deferred()
 
@@ -71,8 +78,10 @@ func configure() -> void:
 	tts_voice = str(settings.get("tts_voice", ""))
 	# Dialogue/voice fallback stays short; speech has its own deadline.
 	timeout_s = clampf(float(settings.get("timeout_s", 2.0)), 0.1, 2.0)
-	asr_timeout_s = maxf(float(settings.get("asr_timeout_s", 0.0)), 0.0)
-	if not is_finite(asr_timeout_s): asr_timeout_s = 0.0
+	llm_timeout_s = clampf(float(settings.get("llm_timeout_s", 15.0)), 1.0, 30.0)
+	asr_timeout_s = float(settings.get("asr_timeout_s", CLOUD_ASR_DEADLINE_S))
+	# A saved 0 meant "no limit" in older configuration files: that is the hang.
+	if not is_finite(asr_timeout_s) or asr_timeout_s <= 0.0: asr_timeout_s = CLOUD_ASR_DEADLINE_S
 	api_key = OS.get_environment("UNI_API_KEY")
 	if api_key.is_empty():
 		api_key = OS.get_environment("API_SECRET")
@@ -89,8 +98,39 @@ static func recognition_routes(asr: String, ai: String, on_quest: bool) -> Dicti
 	return {"asr": "" if on_quest else asr, "ai": "" if on_quest else ai}
 
 func service_timeout(service: String) -> float:
-	return asr_timeout_s if service == "asr" else timeout_s
+	if service == "asr":
+		return asr_timeout_s
+	return llm_timeout_s if service == "llm" else timeout_s
 
+
+func _new_request(service: String) -> HTTPRequest:
+	var request := HTTPRequest.new()
+	request.name = "HTTP_" + service
+	# No socket worker for any service: a threaded HTTPRequest reads in blocking mode, and
+	# its timeout or cancel joins that worker, freezing the render loop until the socket
+	# gives up. Headset 2026-11-03: a 2 s LLM timeout froze the app for 53 s after every
+	# slow reply ("NARET_MAIN_STALLED ... step=safety", then "NARET_INTERPRET ok=false").
+	request.use_threads = false
+	request.timeout = service_timeout(service)
+	request.body_size_limit = 8 * 1024 * 1024
+	request.max_redirects = 0 # Never forward authorization to a redirected host.
+	add_child(request)
+	return request
+
+func _renew_request(service: String) -> void:
+	## A fresh connection for this service. Headset 14 Nov 2026: after the headset had
+	## been taken off for four minutes, every voice request failed with "HTTP Invalid
+	## chunk hex len" for the rest of the session (the same requests had worked nine
+	## times before the pause, and the service answered a PC in 0.4 s at that hour). The
+	## request object kept a connection whose streamed reply had been cut by the pause.
+	## A request that fails in transport now gets a new object, so the next one starts clean.
+	if not _requests.has(service): return
+	var old: HTTPRequest = _requests[service]
+	_requests[service] = _new_request(service)
+	if is_instance_valid(old):
+		old.cancel_request()
+		old.queue_free()
+	print("NARET_HTTP renewed service=", service)
 
 func is_available(model: String = "") -> bool:
 	if not local_ai_url.is_empty() and model in [llm_model, tts_model]: return true
@@ -141,13 +181,16 @@ func request_bytes(service: String, endpoint: String, body: PackedByteArray, con
 	var status: int = response[1]
 	var data: PackedByteArray = response[3]
 	var success := int(response[0]) == HTTPRequest.RESULT_SUCCESS and status >= 200 and status < 300
-	var result := {"ok": success, "status": status, "body": data, "headers": response[2], "latency_ms": elapsed}
+	var result := {"ok": success, "status": status, "http_status": status, "transport": int(response[0]), "body": data, "headers": response[2], "latency_ms": elapsed}
 	if success and (service != "tts" or data.size() > 0 and data[0] == 123):
 		var decoded: Variant = JSON.parse_string(data.get_string_from_utf8())
 		if decoded is Dictionary:
 			result["json"] = decoded
 	if not success:
 		result["error"] = "timeout" if int(response[0]) == HTTPRequest.RESULT_TIMEOUT else "request_failed"
+		# Not an answer from the server but a broken exchange: do not reuse the connection.
+		if int(response[0]) != HTTPRequest.RESULT_SUCCESS and _requests.get(service) == request:
+			_renew_request(service)
 	request_finished.emit(service, success, elapsed)
 	return result
 
@@ -169,11 +212,31 @@ func synthesize(text: String, language: String = "en", speaker: String = "bystan
 		return await _request_local_ai("/audio/speech", {"input": text.left(1000), "language": language, "speaker": speaker})
 	if not is_available(tts_model):
 		return {"ok": false, "error": "tts_unavailable"}
-	return await request_json("tts", "/audio/speech", cloud_speech_payload(text, language, speaker, tts_model, tts_voice))
+	var payload := cloud_speech_payload(text, language, speaker, tts_model, tts_voice)
+	var result: Dictionary = await request_json("tts", "/audio/speech", payload)
+	# 14 Nov 2026: the service's model list names the English voices' model "kokoro:82m"
+	# and no longer lists "tts-1", the name requested here. If that name is refused, the
+	# same voice is asked for once more under the listed name, instead of the line
+	# falling silent ("audio clip missing").
+	# A broken exchange (see _renew_request) is tried once more on the new connection,
+	# so the line is spoken after all instead of "audio clip missing".
+	if not result.get("ok", false) and int(result.get("transport", 0)) != HTTPRequest.RESULT_SUCCESS and result.get("error", "") != "busy":
+		print("NARET_TTS retry after transport=", result.get("transport", -1), " error=", result.get("error", ""))
+		result = await request_json("tts", "/audio/speech", payload)
+	if not result.get("ok", false) and str(payload.get("model", "")) == CLOUD_ENGLISH_MODEL and payload.has("voice"):
+		payload["model"] = CLOUD_ENGLISH_MODEL_LISTED
+		print("NARET_TTS retry model=", CLOUD_ENGLISH_MODEL_LISTED, " after error=", result.get("error", ""))
+		result = await request_json("tts", "/audio/speech", payload)
+	return result
 
 ## The named cloud voices speak English only; German and Polish through them are unintelligible.
 const CLOUD_ENGLISH_MODEL := "tts-1"
-const CLOUD_ENGLISH_VOICES := {"instructor": "am_adam", "bystander": "af_sky"}
+const CLOUD_ENGLISH_MODEL_LISTED := "kokoro:82m"
+## Marek has his own voice (13 Nov 2026): with the instructor's am_adam his "I will get
+## the defibrillator" was heard as the instructor saying it. bm_george checked against
+## the service the same day. The AED speaks with a woman's voice (af_bella, checked too),
+## so it is told apart from the instructor at once.
+const CLOUD_ENGLISH_VOICES := {"instructor": "am_adam", "bystander": "af_sky", "marek": "bm_george", "aed": "af_bella"}
 
 static func cloud_speech_payload(text: String, language: String, speaker: String, model: String, voice: String) -> Dictionary:
 	## English keeps one voice per person, matching the saved clips. A configured voice wins.
@@ -216,12 +279,13 @@ func _request_local_ai(path: String, payload: Dictionary) -> Dictionary:
 ## Vocabulary only, balanced between opposite findings; never suggest the next
 ## scenario answer. A prompt is a decoding hint, not evidence of an action.
 const ASR_VOCABULARY := {
-	"en": "CPR, resuscitation, scene safety, surroundings, safe, unsafe, response, responding, unresponsive, consciousness, breathing, normal breathing, abnormal breathing, gasping, airway, head tilt, chin lift, emergency services, ambulance, 112, one one two, Anna, Jan, chest compressions, sternum, compression depth, compression rate, recoil, rescue breath, rescue breaths, first breath, second breath, two breaths, handover",
-	"de": "Reanimation, Wiederbelebung, Umgebung, Sicherheit, sicher, unsicher, Bewusstsein, Reaktion, reagiert, nicht, ansprechbar, bewusstlos, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, Rettungsdienst, Krankenwagen, 112, eins eins zwei, Anna, Jan, Herzdruckmassage, Brustkorb, Brustbein, Kompressionstiefe, Kompressionsfrequenz, Entlastung, Beatmung, Atemspende, erste Beatmung, zweite Beatmung, zwei Beatmungen, Übergabe",
-	"pl": "resuscytacja, bezpieczeństwo, otoczenie, bezpieczne, niebezpieczne, przytomność, reakcja, reaguje, nie, nieprzytomny, oddychanie, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, drogi oddechowe, odchylenie głowy, uniesienie bródki, pogotowie, karetka, 112, sto dwanaście, Anna, Jan, uciski klatki piersiowej, mostek, głębokość ucisków, tempo ucisków, oddech ratowniczy, pierwszy oddech, drugi oddech, dwa oddechy, przekazanie pacjenta"
+	"en": "CPR, cardiac arrest, collapsed, scene, safe, unsafe, unconscious, responsive, unresponsive, breathing, normal, not normal, gasping, agonal breathing, airway, head tilt, chin lift, ambulance, call 112, one one two, Anna, Jan, chest compressions, sternum, recoil, rescue breath, rescue breaths, ventilation, one, two, handover, medical history, medication, Marek, AED, defibrillator, pads, electrodes, shock, no shock, clear",
+	"de": "Reanimation, Herz-Kreislauf-Stillstand, Umgebung, sicher, unsicher, bewusstlos, ansprechbar, reagiert, keine Reaktion, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, 112, eins eins zwei, Anna, Jan, Herzdruckmassage, Brustbein, entlasten, Beatmung, Atemspende, Atemzug, eine, zwei, Übergabe, Vorerkrankungen, Marek, AED, Defibrillator, Elektroden, Schock, kein Schock, zurücktreten",
+	"pl": "RKO, resuscytacja, zatrzymanie krążenia, otoczenie, bezpieczne, niebezpieczne, nieprzytomny, reaguje, nie reaguje, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, łapie powietrze, drogi oddechowe, odchylenie głowy, uniesienie bródki, karetka, 112, sto dwanaście, Anna, Jan, uciski klatki piersiowej, mostek, oddech ratowniczy, wdech, jeden, dwa, przekazanie, choroby, Marek, AED, defibrylator, elektrody, wyładowanie, bez wyładowania, odsunąć się"
 }
 
 func transcribe(wav: PackedByteArray, language: String) -> Dictionary:
+	print("NARET_ASR_REQUEST language=", language, " model=", asr_model, " route=", "cloud" if local_asr_url.is_empty() else "local", " bytes=", wav.size())
 	if local_asr_url.is_empty() and not is_available(asr_model):
 		return {"ok": false, "error": "asr_unavailable"}
 	var boundary := "NaretAudio" + str(Time.get_ticks_usec())
@@ -241,10 +305,30 @@ func transcribe(wav: PackedByteArray, language: String) -> Dictionary:
 	body.append_array(("\r\n--%s--\r\n" % boundary).to_utf8_buffer())
 	if not local_asr_url.is_empty():
 		return await _transcribe_local(body, "multipart/form-data; boundary=" + boundary)
-	var result := await request_bytes("asr", "/audio/transcriptions", body, "multipart/form-data; boundary=" + boundary)
-	if not result.get("ok", false):
-		# Distinguish service failures from a microphone that heard no words.
-		result["error"] = "cloud_asr_timeout" if result.get("error") == "timeout" else "cloud_asr_failed"
+	return await _transcribe_cloud(body, "multipart/form-data; boundary=" + boundary)
+
+
+func _transcribe_cloud(body: PackedByteArray, content_type: String) -> Dictionary:
+	# A Quest connection drop must not discard the only recording of the report.
+	# Retry transport failures once using the identical audio, never HTTP errors
+	# such as 401 or 429. Restart cancels this attempt and any pending retry.
+	var generation := _speech_request_generation
+	var result := {}
+	for attempt in 2:
+		result = await request_bytes("asr", "/audio/transcriptions", body, content_type)
+		if generation != _speech_request_generation:
+			return {"ok": false, "error": "cancelled"}
+		if result.get("ok", false): return result
+		var transport := int(result.get("transport", -1))
+		var http_status := int(result.get("http_status", result.get("status", 0)))
+		print("NARET_CLOUD_ASR_FAILURE attempt=", attempt + 1, " transport=", transport, " http=", http_status, " latency_ms=", result.get("latency_ms", 0))
+		var retryable: bool = http_status == 0 and (result.get("error") == "connection_failed" or transport in [HTTPRequest.RESULT_CANT_RESOLVE, HTTPRequest.RESULT_CANT_CONNECT, HTTPRequest.RESULT_CONNECTION_ERROR, HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR, HTTPRequest.RESULT_TIMEOUT])
+		if attempt == 1 or not retryable: break
+		if is_inside_tree(): await get_tree().create_timer(0.5).timeout
+		if generation != _speech_request_generation:
+			return {"ok": false, "error": "cancelled"}
+		print("NARET_ASR_RETRY route=cloud attempt=2")
+	result["error"] = "cloud_asr_timeout" if result.get("error") == "timeout" else "cloud_asr_failed"
 	return result
 
 
@@ -298,6 +382,41 @@ func _post_local_asr(body: PackedByteArray, content_type: String) -> Array:
 	return response
 
 
+## What speech recognition gets: 16 kHz, one channel (14 Nov 2026). The microphone
+## records 44.1 kHz stereo, 175 KB per second, and that went up as it was. Through a
+## phone hotspot a 3 s sentence (500 KB) never arrived: the headset waited for ever,
+## and the same upload from a PC on that hotspot was cut off after 46 s, while 16 kHz
+## mono (90 KB) came back in 14 s. Whisper turns every upload into 16 kHz mono
+## before it listens, so nothing it would hear is lost; the upload is 5.5 times smaller.
+const SPEECH_RATE := 16000
+
+static func speech_wav(recording: AudioStreamWAV) -> PackedByteArray:
+	var data := recording.data
+	var channels := 2 if recording.stereo else 1
+	var frames := data.size() / (2 * channels)
+	if recording.format != AudioStreamWAV.FORMAT_16_BITS or recording.mix_rate <= SPEECH_RATE or frames == 0:
+		return encode_wav(recording)
+	var ratio := float(recording.mix_rate) / SPEECH_RATE
+	var count := int(frames / ratio)
+	var out := PackedByteArray()
+	out.resize(count * 2)
+	for i in count:
+		# Each new sample is the mean of the input samples it stands for (both
+		# channels): a box low-pass, so nothing above 8 kHz folds back as noise.
+		var first := int(i * ratio)
+		var last := mini(int((i + 1) * ratio), frames)
+		var total := 0
+		for frame in range(first, last):
+			for channel in channels:
+				total += data.decode_s16((frame * channels + channel) * 2)
+		out.encode_s16(i * 2, clampi(total / maxi((last - first) * channels, 1), -32768, 32767))
+	var small := AudioStreamWAV.new()
+	small.format = AudioStreamWAV.FORMAT_16_BITS
+	small.mix_rate = SPEECH_RATE
+	small.stereo = false
+	small.data = out
+	return encode_wav(small)
+
 static func encode_wav(recording: AudioStreamWAV) -> PackedByteArray:
 	# PCM16 from AudioEffectRecord, built in memory: no speech file is ever stored.
 	var data := recording.data
@@ -320,10 +439,45 @@ static func encode_wav(recording: AudioStreamWAV) -> PackedByteArray:
 
 
 static func decode_audio(bytes: PackedByteArray) -> AudioStream:
-	# The TTS request asks for WAV; anything else is rejected.
+	# Never pass untrusted HTTP audio to the native WAV chunk walker. A streaming
+	# WAV with an unfinalised length made it repeatedly seek beyond EOF on Quest,
+	# blocking the render thread and preventing the recorded fallback from playing.
 	if bytes.size() < 12 or bytes.slice(0, 4).get_string_from_ascii() != "RIFF" or bytes.slice(8, 12).get_string_from_ascii() != "WAVE":
 		return null
-	return AudioStreamWAV.load_from_buffer(bytes)
+	var cursor := 12
+	var channels := 0
+	var rate := 0
+	var bits := 0
+	var alignment := 0
+	var pcm := PackedByteArray()
+	while cursor + 8 <= bytes.size():
+		var chunk := bytes.slice(cursor, cursor + 4).get_string_from_ascii()
+		var length := int(bytes.decode_u32(cursor + 4))
+		cursor += 8
+		var remaining := bytes.size() - cursor
+		# Some streaming writers use UINT32_MAX for a final data chunk. Its actual
+		# payload is the remaining HTTP body. Other truncated chunks are invalid.
+		if chunk == "data" and length == 0xffffffff:
+			length = remaining
+		if length > remaining: return null
+		if chunk == "fmt ":
+			if length < 16 or bytes.decode_u16(cursor) != 1: return null
+			channels = bytes.decode_u16(cursor + 2)
+			rate = bytes.decode_u32(cursor + 4)
+			alignment = bytes.decode_u16(cursor + 12)
+			bits = bytes.decode_u16(cursor + 14)
+			if channels not in [1, 2] or bits not in [8, 16] or rate <= 0: return null
+			if alignment != channels * (bits / 8): return null
+		elif chunk == "data":
+			pcm = bytes.slice(cursor, cursor + length)
+		cursor += length + (length % 2)
+	if channels == 0 or pcm.is_empty() or pcm.size() % alignment != 0: return null
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS if bits == 16 else AudioStreamWAV.FORMAT_8_BITS
+	stream.mix_rate = rate
+	stream.stereo = channels == 2
+	stream.data = pcm
+	return stream
 
 func cancel_speech_requests() -> void:
 	_speech_request_generation += 1

@@ -47,7 +47,8 @@ func run() -> Array[String]:
 		var interaction := NaretXRInteraction.new()
 		interaction._mannequin = patient
 		for point in [Vector3(0, 0.2, 0), Vector3(0.33, 0.43, 1.0), Vector3(0.4, 0.2, 0), Vector3(0, -0.1, 0)]:
-			var before: bool = absf(point.x) < 0.34 and point.y > -0.04 and point.y < 0.44 and point.z > -0.95 and point.z < 1.10
+			var before: bool = absf(point.x) < interaction.CONTACT_HALF_WIDTH_M and point.y > -interaction.CONTACT_BELOW_BACK_M \
+				and point.y < interaction.CONTACT_ABOVE_BACK_M and point.z > -interaction.CONTACT_TOWARD_FEET_M and point.z < interaction.CONTACT_TOWARD_HEAD_M
 			check(interaction._point_near_patient(expected_body * point) == before, fit + ": whole-body contact envelope preserved")
 		interaction.free()
 		anchor.free()

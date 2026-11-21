@@ -11,8 +11,7 @@ import shlex
 import subprocess
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-ACTIONS = {'begin_check', 'check_responsiveness', 'call_emergency',
-           'check_breathing', 'compression', 'compression_only', 'ventilation', 'handover'}
+ACTIONS = set(json.loads((Path(__file__).parent / 'observation_codes.json').read_text())['actions'])
 
 
 def parse_posterior(output, expected_steps):
@@ -39,6 +38,8 @@ def parse_posterior(output, expected_steps):
         action = tokens[0] if tokens else 'UNKNOWN'
         if action in {'ventilation_first', 'ventilation_second'}:
             action = 'ventilation'
+        if action in {'clear_for_analysis', 'clear_for_shock'}:
+            action = 'clear_patient'
         masses[action] = masses.get(action, 0.0) + value
     total = sum(masses.values())
     if total <= 0 or abs(total - 1) > 0.01:
@@ -53,7 +54,7 @@ def infer(observations, executable, states):
         raise ValueError('Expected 1..256 observation codes')
     if any(not isinstance(item, str) or item not in ACTIONS for item in observations):
         raise ValueError('Unknown observation code')
-    result = subprocess.run([str(executable), '-l', str(states)],
+    result = subprocess.run([str(executable), '-v', '1', '-l', str(states)],
                             input='\n'.join(observations) + '\n', text=True,
                             capture_output=True, timeout=8, check=True)
     return parse_posterior(result.stdout, len(observations))

@@ -6,7 +6,7 @@
       "path": "res://assets/audio/coaching/en/setup.wav"
     },
     {
-      "text": "First check that it is safe to approach. Tell me what you find.",
+      "text": "Before you go to the patient, look around for dangers to you and to him, such as traffic, fire, electricity, gas or water. Then tell me: \"The scene is safe\" or \"The scene is not safe\".",
       "language": "en",
       "path": "res://assets/audio/coaching/en/safety.wav"
     },
@@ -16,17 +16,17 @@
       "path": "res://assets/audio/coaching/en/response.wav"
     },
     {
-      "text": "Ask Anna to call 112 and put the phone on speaker.",
+      "text": "He does not respond. Ask Anna to call 112.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/call.wav"
     },
     {
-      "text": "Open his airway with head tilt and chin lift. Check for normal breathing for no more than ten seconds, then tell me what you find. Gasping is not normal breathing.",
+      "text": "Open his airway with head tilt and chin lift. Check for normal breathing for no more than ten seconds. Remember: gasping is not normal breathing. Then tell me what you find: is he breathing normally or not?",
       "language": "en",
       "path": "res://assets/audio/coaching/en/breathing.wav"
     },
     {
-      "text": "Give 30 compressions in the centre of the chest, on the lower half of the breastbone. Aim for 100 to 120 a minute and 5 to 6 centimetres depth. Allow full recoil and minimise pauses.",
+      "text": "Both hands, one on top of the other, on the centre of his chest, on the green box. Arms straight. Press hard and fast, 30 times.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/compressions.wav"
     },
@@ -36,7 +36,7 @@
       "path": "res://assets/audio/coaching/en/breath_one.wav"
     },
     {
-      "text": "Give the second breath, watching for chest rise, then report that completed breath. Keep the interruption for both breaths under ten seconds. Resume compressions promptly.",
+      "text": "Give the second breath: squeeze the bag again slowly, watching the chest rise.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/breath_two.wav"
     },
@@ -66,7 +66,7 @@
       "path": "res://assets/audio/coaching/de/setup.wav"
     },
     {
-      "text": "Prüfen Sie zuerst, ob Sie sich gefahrlos nähern können. Sagen Sie, was Sie feststellen.",
+      "text": "Bevor Sie zum Patienten gehen, prüfen Sie die Umgebung auf Gefahren für sich und für ihn, zum Beispiel Verkehr, Feuer, Strom, Gas oder Wasser. Sagen Sie mir dann: „Die Umgebung ist sicher“ oder „Die Umgebung ist nicht sicher“.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/safety.wav"
     },
@@ -76,17 +76,17 @@
       "path": "res://assets/audio/coaching/de/response.wav"
     },
     {
-      "text": "Bitten Sie Anna, 112 anzurufen und den Lautsprecher einzuschalten.",
+      "text": "Er reagiert nicht. Bitten Sie Anna, die 112 anzurufen.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/call.wav"
     },
     {
-      "text": "Öffnen Sie die Atemwege durch Überstrecken des Kopfes und Anheben des Kinns. Prüfen Sie die normale Atmung höchstens zehn Sekunden und berichten Sie das Ergebnis. Schnappatmung ist nicht normal.",
+      "text": "Machen Sie die Atemwege frei, indem Sie den Kopf überstrecken und das Kinn anheben. Prüfen Sie höchstens zehn Sekunden lang, ob er normal atmet. Denken Sie daran: Schnappatmung ist keine normale Atmung. Sagen Sie mir dann, was Sie feststellen: Atmet er normal oder nicht?",
       "language": "de",
       "path": "res://assets/audio/coaching/de/breathing.wav"
     },
     {
-      "text": "Geben Sie 30 Kompressionen in der Brustmitte auf der unteren Hälfte des Brustbeins: 100 bis 120 pro Minute und 5 bis 6 Zentimeter tief. Vollständig entlasten und Pausen minimieren.",
+      "text": "Beide Hände übereinander auf die Mitte des Brustkorbs, auf das grüne Feld. Arme gestreckt. Drücken Sie fest und schnell, 30-mal.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/compressions.wav"
     },
@@ -96,7 +96,7 @@
       "path": "res://assets/audio/coaching/de/breath_one.wav"
     },
     {
-      "text": "Geben Sie die zweite Beatmung und beobachten Sie die Brusthebung. Berichten Sie danach. Beide Beatmungen sollen die Kompressionen weniger als zehn Sekunden unterbrechen. Sofort weiterdrücken.",
+      "text": "Geben Sie die zweite Atemspende: Drücken Sie den Beutel noch einmal langsam zusammen und achten Sie auf den Brustkorb.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/breath_two.wav"
     },
@@ -126,7 +126,7 @@
       "path": "res://assets/audio/coaching/pl/setup.wav"
     },
     {
-      "text": "Najpierw sprawdź, czy możesz bezpiecznie podejść. Powiedz, co stwierdzasz.",
+      "text": "Zanim podejdziesz do poszkodowanego, rozejrzyj się, czy nie ma zagrożeń dla ciebie i dla niego, na przykład ruchu ulicznego, ognia, prądu, gazu lub wody. Potem powiedz mi: „Miejsce jest bezpieczne” albo „Miejsce nie jest bezpieczne”.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/safety.wav"
     },
@@ -136,17 +136,17 @@
       "path": "res://assets/audio/coaching/pl/response.wav"
     },
     {
-      "text": "Poproś Annę, żeby zadzwoniła pod 112 i włączyła głośnik.",
+      "text": "On nie reaguje. Poproś Annę, żeby zadzwoniła pod 112.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/call.wav"
     },
     {
-      "text": "Udrożnij drogi oddechowe, odchylając głowę i unosząc brodę. Sprawdzaj prawidłowy oddech przez najwyżej dziesięć sekund, potem zgłoś wynik. Pojedyncze westchnienia nie są prawidłowym oddechem.",
+      "text": "Udrożnij drogi oddechowe, odchylając głowę do tyłu i unosząc żuchwę. Przez nie dłużej niż dziesięć sekund sprawdź, czy oddycha prawidłowo. Pamiętaj: oddech agonalny nie jest prawidłowym oddechem. Potem powiedz mi, czy oddycha prawidłowo, czy nie.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/breathing.wav"
     },
     {
-      "text": "Wykonaj 30 uciśnięć pośrodku klatki piersiowej, na dolnej połowie mostka. Tempo 100 do 120 na minutę, głębokość 5 do 6 centymetrów. Pozwól klatce całkowicie się rozprężyć i ogranicz przerwy.",
+      "text": "Obie dłonie, jedna na drugiej, na środku klatki piersiowej, na zielonym polu. Ręce proste. Uciskaj mocno i szybko, 30 razy.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/compressions.wav"
     },
@@ -156,7 +156,7 @@
       "path": "res://assets/audio/coaching/pl/breath_one.wav"
     },
     {
-      "text": "Wykonaj drugi oddech, obserwuj uniesienie klatki i zgłoś wykonanie. Przerwa na oba oddechy powinna trwać mniej niż dziesięć sekund. Szybko wróć do uciskania.",
+      "text": "Podaj drugi oddech: jeszcze raz powoli ściśnij worek, patrząc na klatkę piersiową.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/breath_two.wav"
     },
@@ -181,17 +181,17 @@
       "path": "res://assets/audio/coaching/pl/handover.wav"
     },
     {
-      "text": "Give two rescue breaths, each over about one second, enough for chest rise. Keep the pause under ten seconds and resume compressions promptly. Afterwards, tell me: I have given two rescue breaths. Do not wait for my reply between breaths.",
+      "text": "Now two breaths. Take the bag and mask from the stool, seal the mask over his mouth and nose, and squeeze the bag slowly, twice.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/breaths.wav"
     },
     {
-      "text": "Geben Sie zwei Beatmungen, jeweils etwa eine Sekunde bis sich der Brustkorb hebt. Halten Sie die Pause unter zehn Sekunden und setzen Sie die Kompressionen sofort fort. Berichten Sie danach: Ich habe zwei Beatmungen gegeben. Warten Sie zwischen den Beatmungen nicht auf meine Antwort.",
+      "text": "Jetzt zwei Beatmungen. Nehmen Sie Beutel und Maske vom Hocker, drücken Sie die Maske dicht über Mund und Nase und drücken Sie den Beutel zweimal langsam zusammen.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/breaths.wav"
     },
     {
-      "text": "Wykonaj dwa oddechy ratownicze, każdy przez około sekundę, do uniesienia klatki piersiowej. Przerwa powinna trwać krócej niż dziesięć sekund. Od razu wróć do ucisków. Potem zgłoś: Wykonałem dwa oddechy ratownicze. Nie czekaj na moją odpowiedź między oddechami.",
+      "text": "Teraz dwa oddechy. Weź worek z maską ze stołka, przyłóż maskę szczelnie do ust i nosa i dwa razy powoli ściśnij worek.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/breaths.wav"
     },
@@ -201,14 +201,124 @@
       "path": "res://assets/audio/coaching/en/resume_compressions.wav"
     },
     {
-      "text": "Setzen Sie jetzt die Herzdruckmassage fort. Geben Sie die n?chsten 30 Kompressionen.",
+      "text": "Setzen Sie jetzt die Herzdruckmassage fort. Geben Sie die nächsten 30 Kompressionen.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/resume_compressions.wav"
     },
     {
-      "text": "Teraz wzn?w uciskanie klatki piersiowej. Wykonaj kolejne 30 uci?ni??.",
+      "text": "Teraz wznów uciskanie klatki piersiowej. Wykonaj kolejne 30 uciśnięć.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/resume_compressions.wav"
+    },
+    {
+      "text": "The AED is here. Switch it on now: touch its green power button.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_arrived.wav"
+    },
+    {
+      "text": "Touch a pad and bring it to the golden outline on his chest. Then the second pad.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pads_how.wav"
+    },
+    {
+      "text": "Resume chest compressions now. The count starts again from zero: thirty compressions, then two breaths.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_resume.wav"
+    },
+    {
+      "text": "Resume chest compressions now in compression-only mode, without pauses. The count starts again from zero.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_resume_only.wav"
+    },
+    {
+      "text": "Marek is fetching the AED. Keep doing CPR; do not wait for him.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_wait.wav"
+    },
+    {
+      "text": "Shake him firmly, not just a touch.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_shake_firmly.wav"
+    },
+    {
+      "text": "Remember to open the airway first: one hand on the forehead, tilt the head back, lift the chin with the other hand.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_open_airway_hint.wav"
+    },
+    {
+      "text": "Do not check longer than 10 seconds.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_check_time.wav"
+    },
+    {
+      "text": "Place your hands correctly: the heel of your hand in the centre of the chest, on the yellow box.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_hands_on_box.wav"
+    },
+    {
+      "text": "Take the bag from the stool and place the mask over his mouth and nose.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_bvm_place_mask.wav"
+    },
+    {
+      "text": "Hold the mask sealed with one hand and squeeze the bag slowly with the other. Watch the chest rise.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_bvm_squeeze.wav"
+    },
+    {
+      "text": "Hold the mask with your other hand while you squeeze.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_bvm_hold_mask.wav"
+    },
+    {
+      "text": "I did not see you at his shoulders. Shake the shoulders and shout at him, then tell me.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/error_shoulders_not_seen.wav"
+    },
+    {
+      "text": "I did not see you open his airway. Tilt his head back, lift his chin, then tell me.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/error_breathing_not_seen.wav"
+    },
+    {
+      "text": "I did not see you give the breaths. Take the bag, place the mask over his mouth and nose, hold it sealed, and squeeze the bag slowly, one second per breath.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/error_breaths_not_seen.wav"
+    },
+    {
+      "text": "I think the scene is safe. Please check again.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_scene_unsafe.wav"
+    },
+    {
+      "text": "I have checked too: no traffic, fire, electricity, gas or water here. The scene is safe.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_scene_unsafe_again.wav"
+    },
+    {
+      "text": "Ich habe auch nachgesehen: kein Verkehr, kein Feuer, kein Strom, kein Gas, kein Wasser. Die Umgebung ist sicher.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/coach_scene_unsafe_again.wav"
+    },
+    {
+      "text": "Też sprawdziłem: nie ma tu ruchu ulicznego, ognia, prądu, gazu ani wody. Miejsce jest bezpieczne.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/coach_scene_unsafe_again.wav"
+    },
+    {
+      "text": "Marek, bitte holen Sie den Defibrillator.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/coach_send_marek_aed.wav"
+    },
+    {
+      "text": "Marku, proszę, przynieś defibrylator.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/coach_send_marek_aed.wav"
+    },
+    {
+      "text": "Marek, please bring the defibrillator.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_send_marek_aed.wav"
     }
   ]
 }

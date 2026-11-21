@@ -3,7 +3,30 @@ extends Node
 ## Plays imported skin animations and facial morphs without moving/scaling the model root.
 ## Imported clips may be named idle, Armature|idle, or AnimationLibrary/idle.
 
-const LOOPING_CLIPS := ["idle", "anxious", "talk", "phone", "walk", "reach", "cpr"]
+const LOOPING_CLIPS := ["idle", "anxious", "talk", "phone", "walk", "reach", "cpr", "listen"]
+## Talk takes: "talk" plus any "talk_2".."talk_n" clip. A speaker chains them, never the
+## same one twice in a row, so a long instruction does not loop one gesture (2026-11-06).
+const TAKE_BLEND_S := 0.4
+## Optional face morphs beyond mouth_open (generator from 2026-11-07): blink_l, blink_r,
+## brow_up, jaw_open, lips_round, lips_wide. A model without them just skips those.
+const BLINK_CLOSE_S := 0.08
+const BLINK_HOLD_S := 0.04
+const BLINK_OPEN_S := 0.12
+## Head nod on a speech onset, degrees about the head bone's side axis, decaying.
+const BEAT_NOD_DEG := 3.5
+const BEAT_DECAY_S := 0.25
+var _talk_takes: Array[String] = []
+var _take_left := 0.0
+var _last_take := ""
+var _blink_in := 2.5
+var _blink_at := -1.0         # seconds into the current blink, -1 = eyes open
+var _brow := 0.0
+var _bands := Vector3.ZERO    # smoothed low/mid/high speech energy (0..1 each)
+var _bands_raw := Vector3.ZERO
+var _bands_until_ms := 0
+var _level_slow := 0.0
+var _beat := 0.0
+var _head_bone := -1
 var _model: Node3D
 var _clips: Dictionary = {}
 var _morphs: Dictionary = {}
@@ -15,6 +38,8 @@ var _emotion := "anxious"
 var _speaking := false
 var _action_active := false
 var _clock := 0.0
+## Per-character art setting, separate from the measured audio level.
+var speech_jaw_scale := 1.0
 var _external_mouth_until_ms := 0
 var _morph_tween: Tween
 var _gaze_target: Node3D
@@ -61,7 +86,7 @@ func configure(model: Node3D) -> void:
 			var animation := player.get_animation(imported_name)
 			if animation.get_track_count() == 0:
 				continue
-			animation.loop_mode = Animation.LOOP_LINEAR if canonical in LOOPING_CLIPS else Animation.LOOP_NONE
+			animation.loop_mode = Animation.LOOP_LINEAR if (canonical in LOOPING_CLIPS or _is_take(canonical)) else Animation.LOOP_NONE
 			for track in animation.get_track_count():
 				if animation.track_get_type(track) != Animation.TYPE_BLEND_SHAPE:
 					continue
@@ -74,6 +99,12 @@ func configure(model: Node3D) -> void:
 				_clips[canonical] = {"player": player, "name": imported_name}
 		player.animation_finished.connect(_on_animation_finished.bind(player))
 	process_priority = 100 # Apply live mouth amplitude after ordinary actor updates.
+	_talk_takes.clear()
+	for key: String in _clips:
+		if _is_take(key):
+			_talk_takes.append(key)
+	_talk_takes.sort()
+	_head_bone = _skeleton.find_bone("head") if has_skeleton() else -1
 	_setup_gaze(model)
 	_apply_mouth(0.0)
 	_play_baseline()
@@ -232,9 +263,17 @@ func set_speaking(active: bool) -> void:
 	if active == _speaking:
 		return
 	_speaking = active
-	if not active:
+	if active:
+		_brow = 1.0           # an eyebrow lift opens an utterance
+		_level_slow = 0.0
+	else:
 		_external_mouth_until_ms = 0
+		_bands_until_ms = 0
+		_bands = Vector3.ZERO
+		_beat = 0.0
 		_apply_mouth(0.0)
+		_set_shape("lips_round", 0.0)
+		_set_shape("lips_wide", 0.0)
 	# Speech can interrupt an emotional transition, not CPR/ventilation animation.
 	if _action_active and _current_clip in ["breathing", "compression"]:
 		return
@@ -244,6 +283,37 @@ func set_speaking(active: bool) -> void:
 func set_mouth_open(amount: float) -> void:
 	_external_mouth_until_ms = Time.get_ticks_msec() + 150
 	_apply_mouth(amount)
+
+## Live speech energy in three bands (low 90-400 Hz, mid 400-1500 Hz, high 1500-4000 Hz),
+## each 0..1: jaw from low+mid, rounded lips from mid, wide lips from high.
+func set_mouth_bands(bands: Vector3) -> void:
+	_bands_raw = bands.clamp(Vector3.ZERO, Vector3.ONE)
+	_bands_until_ms = Time.get_ticks_msec() + 150
+
+func drop_takes(takes: Array) -> void:
+	## Talking takes this character should not use (never the last one left).
+	for take in takes:
+		if _talk_takes.size() > 1: _talk_takes.erase(take)
+
+func talk_takes() -> Array[String]:
+	return _talk_takes.duplicate()
+
+static func _is_take(key: String) -> bool:
+	if key == "talk":
+		return true
+	return key.begins_with("talk_") and key.substr(5).is_valid_int()
+
+func _pick_take() -> String:
+	if _talk_takes.is_empty():
+		return "talk"
+	var choices := _talk_takes.filter(func(take: String) -> bool: return take != _last_take)
+	if choices.is_empty():
+		choices = _talk_takes
+	var take: String = choices[randi() % choices.size()]
+	_last_take = take
+	var clip: Animation = _clips[take].player.get_animation(_clips[take].name)
+	_take_left = maxf(clip.length, 0.5)
+	return take
 
 func set_compression_amount(weight: float) -> void:
 	if _morph_tween and is_instance_valid(_morph_tween) and _morph_tween.is_running():
@@ -302,10 +372,12 @@ func _play_baseline() -> void:
 	var preferred := "idle"
 	if not _posture.is_empty() and has_clip(_posture):
 		preferred = _posture
-	elif _speaking and has_clip("talk"):
-		preferred = "talk"
+	elif _speaking and not _talk_takes.is_empty():
+		preferred = _current_clip if _current_clip in _talk_takes else _pick_take()
 	elif _emotion in ["anxious", "afraid", "fear", "sad"] and has_clip("anxious"):
 		preferred = "anxious"
+	elif has_clip("listen"):
+		preferred = "listen"
 	if not _play_clip(preferred, 0.25, false, _posture_speed if preferred == _posture else 1.0) and preferred != "idle":
 		_play_clip("idle", 0.18)
 
@@ -341,14 +413,87 @@ func _on_animation_finished(_name: StringName, player: AnimationPlayer) -> void:
 
 func _process(delta: float) -> void:
 	_clock += delta
-	if Time.get_ticks_msec() < _external_mouth_until_ms:
+	_chain_take(delta)
+	_update_blink(delta)
+	_update_brow(delta)
+	var now := Time.get_ticks_msec()
+	var level := 0.0
+	if now < _bands_until_ms:
+		# Smooth the analyser (about 80 ms) so the lips do not flicker per frame.
+		_bands = _bands.lerp(_bands_raw, 1.0 - exp(-delta / 0.08))
+		level = clampf(0.9 * _bands.x + 0.7 * _bands.y + 0.5 * _bands.z, 0.0, 1.0)
+		_apply_mouth(level)
+		_set_shape("lips_round", clampf((_bands.y - _bands.z) * 0.7, 0.0, 1.0))
+		_set_shape("lips_wide", clampf(_bands.z * 1.2, 0.0, 0.8))
+	elif now >= _external_mouth_until_ms:
+		# Initial speech approximation. Real audio amplitude can override via set_mouth_open().
+		level = (0.18 + absf(sin(_clock * 17.0)) * 0.62) if _speaking else 0.0
+		_apply_mouth(level)
+	_update_beat(delta, level)
+
+func _chain_take(delta: float) -> void:
+	if not _speaking or _action_active or _talk_takes.size() < 2 or _current_clip not in _talk_takes:
 		return
-	# Initial speech approximation. Real audio amplitude can override via set_mouth_open().
-	var amount := (0.18 + absf(sin(_clock * 17.0)) * 0.62) if _speaking else 0.0
-	_apply_mouth(amount)
+	_take_left -= delta
+	if _take_left <= 0.0:
+		_play_clip(_pick_take(), TAKE_BLEND_S)
+
+func _update_blink(delta: float) -> void:
+	if not _morphs.has("blink_l") and not _morphs.has("blink_r"):
+		return
+	if _blink_at < 0.0:
+		_blink_in -= delta
+		if _blink_in > 0.0:
+			return
+		_blink_at = 0.0
+		_blink_in = randf_range(2.0, 6.0)
+	_blink_at += delta
+	var weight := 0.0
+	if _blink_at < BLINK_CLOSE_S:
+		weight = _blink_at / BLINK_CLOSE_S
+	elif _blink_at < BLINK_CLOSE_S + BLINK_HOLD_S:
+		weight = 1.0
+	elif _blink_at < BLINK_CLOSE_S + BLINK_HOLD_S + BLINK_OPEN_S:
+		weight = 1.0 - (_blink_at - BLINK_CLOSE_S - BLINK_HOLD_S) / BLINK_OPEN_S
+	else:
+		_blink_at = -1.0
+	_set_shape("blink_l", weight)
+	_set_shape("blink_r", weight)
+
+func _update_brow(delta: float) -> void:
+	if not _morphs.has("brow_up"):
+		return
+	_brow = move_toward(_brow, 0.0, delta / 0.7)
+	_set_shape("brow_up", 0.6 * _brow + 0.25 * _beat)
+
+## A rising speech level is a syllable onset: nod the head a little, decaying. Kimodo
+## clips key every bone each frame, so the AnimationPlayer resets the pose before this
+## adds to it; the gaze modifiers run afterwards and still aim the head.
+func _update_beat(delta: float, level: float) -> void:
+	if not _speaking or _head_bone < 0 or not has_skeleton():
+		_beat = 0.0
+		return
+	if level > _level_slow + 0.18 and _beat < 0.2:
+		_beat = 1.0
+	_level_slow = lerpf(_level_slow, level, 1.0 - exp(-delta / 0.25))
+	_beat *= exp(-delta / BEAT_DECAY_S)
+	if _beat < 0.01:
+		_beat = 0.0
+		return
+	var nod := Quaternion(Vector3.RIGHT, deg_to_rad(-BEAT_NOD_DEG * _beat))
+	_skeleton.set_bone_pose_rotation(_head_bone, _skeleton.get_bone_pose_rotation(_head_bone) * nod)
 
 func _apply_mouth(amount: float) -> void:
-	_set_shape("mouth_open", clampf(amount, 0.0, 1.0) if is_finite(amount) else 0.0)
+	var weight := clampf(amount, 0.0, 1.0) if is_finite(amount) else 0.0
+	weight *= clampf(speech_jaw_scale, 0.0, 1.0)
+	# The speakers' generated legacy mouth_open visibly tears the face when
+	# combined with the authored jawOpen unit. Prefer the native jaw unit;
+	# patient/older models without it retain their existing mouth fallback.
+	if has_morph("jaw_open"):
+		_set_shape("mouth_open", 0.0)
+		_set_shape("jaw_open", weight)
+	else:
+		_set_shape("mouth_open", weight)
 
 func _set_shape(key: String, value: float) -> void:
 	for target: Dictionary in _morphs.get(key, []):

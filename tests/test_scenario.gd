@@ -24,7 +24,6 @@ func enter_cpr(scenario: Node) -> void:
 func _test_complete_flow(lang: String) -> void:
 	var scenario := Scenario.new()
 	scenario.language = lang
-	scenario.shock_success_chance = 0.0 # this flow keeps the VF past its one shock
 	scenario.start()
 	check(scenario.state == Scenario.State.INTRO, lang + ": starts at INTRO")
 	check(not scenario.submit_action("shock"), "Cannot shock before AED")
@@ -72,7 +71,7 @@ func _test_complete_flow(lang: String) -> void:
 	check(scenario.analysis_due, "AED requests analysis after 120s of simulated CPR")
 	check(scenario.submit_action("reassess"), "Reassessment after AED prompt")
 	check(scenario.reassessments == 1 and scenario.state == Scenario.State.AED, "Reassessment re-enters safe analysis")
-	scenario.shock_advised = false
+	scenario.aed_training_pattern = [false]
 	scenario.submit_action("clear_patient")
 	scenario.submit_action("analyze_rhythm")
 	check(scenario.submit_action("resume_cpr"), "No shock advised resumes CPR")
@@ -89,7 +88,7 @@ func _test_complete_flow(lang: String) -> void:
 
 func _test_nonshockable() -> void:
 	var scenario := Scenario.new()
-	scenario.shock_advised = false
+	scenario.aed_training_pattern = [false]
 	enter_cpr(scenario)
 	check(scenario.submit_action("attach_aed"), "Available AED is used without waiting for full CPR cycle")
 	scenario.submit_action("clear_patient")
@@ -114,27 +113,18 @@ func _shock_cycle(scenario: Node) -> void:
 	check(scenario.submit_action("reassess"), "Device reanalyses after two minutes")
 
 func _test_shock_outcome() -> void:
-	## Whether a shock worked shows only at the next analysis; the third always converts.
+	# Three delivered shocks are no longer an implicit recovery condition.
 	var scenario := Scenario.new()
-	scenario.shock_success_chance = 0.0
+	scenario.aed_training_pattern = [true]
 	enter_cpr(scenario)
 	scenario.submit_action("attach_aed")
-	for i in 3:
+	for i in 4:
 		_shock_cycle(scenario)
-		check(scenario.state == Scenario.State.AED, "Still VF after shock %d" % (i + 1) if i < 2 else "Third shock converts")
-	scenario.submit_action("clear_patient")
-	scenario.submit_action("analyze_rhythm")
-	check(scenario.state == Scenario.State.RECOVERY and scenario.outcome == "rosc" and scenario.shock_count == 3, "Analysis after the converting shock finds a pulse")
+		check(scenario.state == Scenario.State.AED and scenario.outcome == "ongoing", "no forced recovery after shock %d" % (i + 1))
+	check(scenario.shock_count == 4, "third shock is not a shock limit")
+	scenario.submit_action("handover")
+	check(scenario.state == Scenario.State.RECOVERY and scenario.outcome == "simulated_handover", "explicit handover still ends the exercise")
 	scenario.free()
-	var lucky := Scenario.new()
-	lucky.shock_success_chance = 1.0
-	enter_cpr(lucky)
-	lucky.submit_action("attach_aed")
-	_shock_cycle(lucky)
-	lucky.submit_action("clear_patient")
-	lucky.submit_action("analyze_rhythm")
-	check(lucky.outcome == "rosc" and lucky.shock_count == 1, "A successful first shock ends in ROSC at the next analysis")
-	lucky.free()
 
 func _test_helper_compressions() -> void:
 	## ERC 2025: a second rescuer compresses while the pads go on; that is CPR,

@@ -61,3 +61,13 @@ CCBM's upstream license is CC BY-NC-SA 4.0, included as UPSTREAM_LICENSE.txt in
 the addon and APK runtime assets. This port is not commercial-use permission.
 Upstream source: https://github.com/vac-mmis/CCBMpublic
 Adapter source/build recipe are adjacent; no proprietary substitute is hidden.
+
+## AED model update — 9 November 2026
+
+The runtime now packages protocol schema 2 with AED request, attachment, clearance,
+analysis/results, shock completion, CPR restart, reassessment, contact and recovery.
+See `docs/CCBM_AED_INTEGRATION_20261109.md` for the event contract and verification.
+Host and Android use neutral state revisiting (`-v 1`) because CPR is cyclic.
+The manifest lists observation codes and likelihood provenance. Old witness-only
+artifacts are refused. The rebuilt ARM64 artifact has not been executed on Quest
+in this session; earlier headset timings above do not validate this new build.

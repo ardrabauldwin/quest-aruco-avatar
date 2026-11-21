@@ -20,7 +20,7 @@ Each language stays within the GPU handler's 512-character bound. These are
 draft language choices and still need native-speaker and recorded-audio review;
 a larger hint list has not been shown to outperform the earlier short list.
 
-`concept_reports.gd` adds a deterministic whole-report slot grammar to the
+`spoken_observation.gd` (grammar_action, merged from concept_reports.gd on 11 Nov 2026) adds a deterministic whole-report slot grammar to the
 existing exact-phrase fast path. It covers completed safety, responsiveness,
 breathing and single-breath reports in all three languages. It permits specified
 fillers, subjects and verb forms rather than arbitrary substrings or arbitrary

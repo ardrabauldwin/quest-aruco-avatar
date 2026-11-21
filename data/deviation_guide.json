@@ -1,0 +1,34 @@
+{
+  "_source": "How the instructor responds when a trainee reports something other than the scenario expects, or asks about it. ERC 2025 adult BLS plus general first aid (moving a casualty). The instructor stays inside the scenario: never say 'in this exercise' or reveal the expected finding; guide the trainee to check again so they find it themselves. Review by qualified BLS instructors before curricular use.",
+  "safety": [
+    "The trainee says the scene is not safe or names a danger: praise them for checking. If the danger can be removed (switch off the power, stop or warn traffic, open windows and leave a gas-filled room), remove it. If not, move him to the nearest safe place, but only if that is safe for you: from behind, hold him under the armpits and drag him along the length of his body, keeping his head in line. Then ask them to tell you: the scene is now safe.",
+    "The trainee says there is no safe place or moving him is too dangerous: do not approach. Stay at a safe distance, keep others back, call 112 and say what the danger is, and wait for the emergency services to make the scene safe. Then tell them the fire brigade has now made the scene safe, and ask them to tell you when the scene is safe.",
+    "The trainee asks which dangers to look for: traffic, fire or smoke, electricity, gas, water, falling objects, aggressive people."
+  ],
+  "response": [
+    "The trainee says he responds, moves or talks: Jan never responds in this scenario, so gently disagree, for example: Check again, I don't think he is responding. Ask them to gently tap or shake his shoulders and ask loudly: Are you all right? and to tell you what they find. A brief twitch or jerk is not a response.",
+    "The trainee is unsure whether he reacted: no clear reaction counts as no response.",
+    "The trainee asks whether to tap or shake the shoulders: both are fine, gently, while asking loudly: Are you all right?"
+  ],
+  "call": [
+    "The trainee wants to call 112 themself: they may, but Anna is here, so it is faster to ask her while they stay with him. When alone: call 112 yourself with the phone on speaker and stay with the person.",
+    "The trainee asks what to tell the dispatcher: where you are, what happened, that he does not respond and is not breathing normally. Keep the phone on speaker and follow the dispatcher's instructions.",
+    "The trainee asks for an AED: no AED is nearby, so Anna should call 112 now and the dispatcher will help. When an AED is close, send a second person to fetch it."
+  ],
+  "breathing": [
+    "The trainee says he breathes normally: Jan never breathes normally in this scenario, so gently disagree, for example: Look again, I don't think that is normal breathing. Ask them to check once more for no more than ten seconds, airway open, looking at the chest and listening at his mouth. Gasping or occasional breaths are not normal breathing.",
+    "The trainee is unsure: if in doubt, act as if breathing is not normal and start CPR.",
+    "The trainee asks how to check: open the airway with head tilt and chin lift, look for chest movement, listen and feel for breath at his mouth and nose, for no more than ten seconds."
+  ],
+  "compressions": [
+    "The trainee asks about hand position: heel of one hand in the centre of the chest, on the lower half of the breastbone, the other hand on top, arms straight, shoulders above the hands.",
+    "The trainee is tired: keep going; if another helper is there, swap about every two minutes with as short a pause as possible.",
+    "The trainee fears hurting him or feels a crack: keep going; broken ribs can happen and are far less serious than stopping CPR.",
+    "The trainee asks when to stop: when the emergency services take over, when he clearly wakes up and breathes normally, or when they are exhausted."
+  ],
+  "breaths": [
+    "The trainee cannot or does not want to give rescue breaths: continuous compressions without breaths are fine.",
+    "The trainee asks how: head tilt and chin lift, pinch the nose, seal your mouth over his, blow steadily for about one second until the chest rises, let it fall, give the second breath, then return to compressions quickly.",
+    "The chest does not rise: re-open the airway and try the next breath, but do not make more than two attempts before returning to compressions."
+  ]
+}

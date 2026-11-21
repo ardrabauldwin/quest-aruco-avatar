@@ -1,6 +1,6 @@
 extends "res://tests/suite.gd"
 const Speech = preload("res://scripts/scenario/spoken_observation.gd")
-const Gate = preload("res://scripts/scenario/speech_confirmation.gd")
+const Gate = preload("res://scripts/ai/speech_pipeline.gd").Confirmation
 
 func run() -> Array[String]:
 	failures.clear()

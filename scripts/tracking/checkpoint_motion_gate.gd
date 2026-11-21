@@ -2,6 +2,8 @@ extends "res://scripts/tracking/viewer_motion_gate.gd"
 ## Experimental post-startup confirmation. No bias subtraction or large-move bypass.
 ## A stable pose can still be systematically wrong; this is not depth correction.
 const MAX_HISTORY := 100
+## Foot-end acquisition has its own finite XZ region; normal experiments keep 1.8 m.
+var max_range_m := JUDGE_MOVE_MAX_RANGE_M
 var candidate := NaretStartupPlacement.new()
 var candidate_readings := 0
 var stable_comparisons := 0
@@ -36,7 +38,7 @@ func evaluate(raw_pose: Transform3D, display: Transform3D, detection_ms: int, fu
 	if detection_ms <= _last_detection:
 		return {}
 	_last_detection = detection_ms
-	if not full_evidence or moving or head.global_position.distance_to(display.origin) > JUDGE_MOVE_MAX_RANGE_M:
+	if not full_evidence or moving or head.global_position.distance_to(display.origin) > max_range_m:
 		_clear_candidate()
 		gate_state = "hold_partial" if not full_evidence else ("hold_moving" if moving else "hold_far")
 		return {}

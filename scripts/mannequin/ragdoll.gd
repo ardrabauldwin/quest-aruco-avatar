@@ -23,6 +23,8 @@ const GRAB_PARTS := {
 }
 const SPINE_WEIGHTS := {"spine_01": 0.45, "spine_02": 0.35, "spine_03": 0.20}
 
+## Parts a hand can take hold of (keys of GRAB_PARTS); the headset allows the head only.
+var enabled_parts: Array = ["torso", "arm_l", "arm_r", "head"]
 var _skeleton: Skeleton3D
 var _bones: Dictionary = {}
 var _home: Dictionary = {}
@@ -128,6 +130,7 @@ func grab(id: String, world_point: Vector3) -> bool:
 	var chosen_part := ""
 	var anchor_name := ""
 	for part: String in GRAB_PARTS:
+		if not part in enabled_parts: continue
 		for name: String in GRAB_PARTS[part]:
 			var dist := limb_point(name).distance_to(world_point)
 			if dist < best_dist:
@@ -353,7 +356,7 @@ func _apply_to_skeleton() -> void:
 	# 2. Head Tilt
 	if _home.has("neck_01"):
 		var neck_rad := deg_to_rad(_head_tilt)
-		_skeleton.set_bone_pose_rotation(_home["neck_01"], _rest_quats["neck_01"] * Quaternion(Vector3.RIGHT, neck_rad))
+		_skeleton.set_bone_pose_rotation(_home["neck_01"], _rest_quats["neck_01"] * Quaternion(Vector3.RIGHT, -neck_rad)) # -X extends, see NaretMannequin.HeadTilt
 
 	# 3. Arms
 	for part: String in _arms:

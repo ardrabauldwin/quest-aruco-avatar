@@ -18,6 +18,11 @@ int main(int argc, char **argv) {
     std::cin.rdbuf(input.rdbuf());
     char name[] = "naret-ccbm";
     char load[] = "-l";
-    char *filter_args[] = {name, load, argv[2], nullptr};
-    return naret_ccbm_original_main(3, filter_args);
+    char revisiting[] = "-v";
+    char neutral[] = "1";
+    // CPR/AED deliberately returns to earlier symbolic states. The upstream
+    // default forbids revisiting them, which otherwise kills a second cycle.
+    // Factor 1 is neutral: it permits loops without rewarding their repetition.
+    char *filter_args[] = {name, revisiting, neutral, load, argv[2], nullptr};
+    return naret_ccbm_original_main(5, filter_args);
 }

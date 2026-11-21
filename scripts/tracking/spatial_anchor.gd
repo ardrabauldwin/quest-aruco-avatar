@@ -45,7 +45,8 @@ var _floor_offset_y := 0.0
 ##
 ## The marker stays on the chest during CPR: hands cover it and it sinks with
 ## every compression. Startup uses the settled marker pose. With viewer_head
-## configured, subsequent updates pass through the migrated viewer-motion gate.
+## configured, the main app holds small changes; settled >15cm changes can
+## confirm a new destination. Reposition explicitly requests a fresh startup.
 ## Desktop preview uses the same robust startup, then holds until explicit reposition.
 ## Save offsets, never world anchors.
 # MODEL ALIGNMENT: position/rotation (and any existing scale) relative to the
@@ -75,20 +76,41 @@ var _floor_offset_y := 0.0
 var last_marker_pose := Transform3D.IDENTITY
 var has_marker_pose := false
 var calibrated := false # Saved model alignment exists; does not prove accuracy.
-var locked := false # Initial placement accepted; later gate-approved updates can occur.
+var locked := false # Initial placement accepted; manual mode holds until unlock().
 var locked_pose := Transform3D.IDENTITY
 var viewer_head: Node3D
+## Optional strict manual mode. Main scene disables it to retain >15cm following.
+@export var manual_reposition_only := true
 var full_marker_evidence := true
 var viewer_gate := NaretViewerMotionGate.new()
 ## Move the patient only on confirmed stable checkpoints (on in main.tscn), or launch
 ## with -- --placement-checkpoints.
 @export var checkpoint_updates := false
+## Optional foot-end checkpoint reacquisition with the common filter. Width/depth are provisional
+## interaction settings, not calibrated accuracy guarantees. Standalone scenes opt in.
+@export var foot_end_reacquisition := false
+@export var foot_end_half_width_m := 0.5
+@export var foot_end_depth_m := 0.40
+var _foot_end = preload("res://scripts/tracking/foot_end_reacquisition.gd").new()
+var _foot_end_following := false
+var _foot_end_target := Transform3D.IDENTITY
+
 ## A confirmed checkpoint closer than this to the current placement is marker noise, not a
 ## moved mannequin, and is ignored (docs: a new resting pose > 1.5 cm / 5 deg re-places).
 const CHECKPOINT_MOVE_M := 0.015
 const CHECKPOINT_MOVE_DEG := 5.0
 var _checkpoint_target := Transform3D.IDENTITY
 var _checkpoint_transition := false
+## A moved checkpoint must be confirmed from a second viewpoint before the patient moves
+## (2026-11-06). A viewing error is steady from one place but changes with the angle; a moved
+## mannequin gives the same new pose from anywhere. The second viewpoint is this far from the
+## first, and both checkpoints agree within the AGREE limits (viewing errors were 2-3.5 cm).
+const VIEWPOINT_MOVE_M := 0.25
+const VIEWPOINT_TURN_DEG := 15.0
+const CHECKPOINT_AGREE_M := 0.025
+const CHECKPOINT_AGREE_DEG := 4.0
+const CHECKPOINT_PENDING_S := 30.0
+var _pending_checkpoint := {}   # {"pose", "head", "head_yaw", "ms"} of an unconfirmed move
 var _viewer_filter: RefCounted
 var _viewer_rest_pose := Transform3D.IDENTITY
 var _viewer_last_ms := -1
@@ -110,8 +132,19 @@ func _process(delta: float) -> void:
 		var patient := get_node_or_null("Mannequin") as Node3D
 		if patient != null:
 			patient.visible = locked
+		if manual_reposition_only:
+			return
 		viewer_gate.head = viewer_head
 		viewer_gate.tick(delta)
+		if foot_end_reacquisition and not checkpoint_updates and locked:
+			var was_inside: bool = _foot_end.in_region
+			_foot_end.tick(delta, viewer_head, patient, full_marker_evidence, foot_end_half_width_m, foot_end_depth_m)
+			if was_inside != _foot_end.in_region:
+				# Clear candidate evidence when crossing the foot-end region boundary.
+				viewer_gate.reset_pose_evidence()
+				_foot_end_following = false
+			if not _foot_end.eligible:
+				_foot_end_following = false
 		if checkpoint_updates and _checkpoint_transition and locked:
 			if viewer_gate.moving or not full_marker_evidence or viewer_head.global_position.distance_to(locked_pose.origin) > viewer_gate.JUDGE_MOVE_MAX_RANGE_M:
 				_checkpoint_transition = false
@@ -121,7 +154,11 @@ func _process(delta: float) -> void:
 				_apply(locked_pose)
 
 func _ready() -> void:
-	checkpoint_updates = checkpoint_updates or "--placement-checkpoints" in OS.get_cmdline_user_args()
+	if manual_reposition_only:
+		checkpoint_updates = false
+		foot_end_reacquisition = false
+	else:
+		checkpoint_updates = checkpoint_updates or "--placement-checkpoints" in OS.get_cmdline_user_args()
 	if checkpoint_updates:
 		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
 	if sternum_at_marker_height:
@@ -177,6 +214,7 @@ func update_pose(pose: Transform3D, now_ms := -1) -> void:
 		if initial.is_empty():
 			return
 		locked_pose = initial.pose
+		_viewer_rest_pose = locked_pose # initial completed placement
 		# Store the room-space anchor separately from the model alignment offset.
 		locked = true
 		_apply(locked_pose)
@@ -186,12 +224,16 @@ func update_pose(pose: Transform3D, now_ms := -1) -> void:
 		print("NARET_STERNUM height_from_markers=%s sternum_y=%.3f fused_y=%.3f floor_y=%.3f" % [sternum_at_marker_height, (placed_sternum as Node3D).global_position.y if placed_sternum else NAN, locked_pose.origin.y, floor_y])
 		print("Startup placement: %d readings, fallback=%s anchor_origin=%s anchor_yaw_deg=%.1f" % [initial.samples, initial.fallback, locked_pose.origin, rad_to_deg(atan2(-locked_pose.basis.z.x, -locked_pose.basis.z.z))])
 		return
+	if manual_reposition_only:
+		return
 	if viewer_head != null and locked:
 		_update_headset_pose(pose, now)
 		return
 	# Without a tracked viewer, hold the accepted anchor until unlock() is requested.
 
 func _update_headset_pose(pose: Transform3D, now: int) -> void:
+	if manual_reposition_only:
+		return
 	# Once placed: ignore repeated results, ask the gate, then smooth accepted targets.
 	if now <= _viewer_last_ms:
 		return
@@ -200,7 +242,35 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 	# uses 0.1 s because there is no previous detection time to subtract.
 	_viewer_last_ms = now
 	viewer_gate.head = viewer_head
-	var result := viewer_gate.evaluate(pose, locked_pose, now, full_marker_evidence)
+	var foot_mode: bool = foot_end_reacquisition and not checkpoint_updates
+	var use_foot: bool = foot_mode and _foot_end.in_region
+	var result := {}
+	if use_foot:
+		# Preserve the old large-change override before ordinary foot acquisition.
+		result = viewer_gate.evaluate_large_change(pose, locked_pose, now, full_marker_evidence)
+		if not full_marker_evidence or viewer_gate.gate_state in ["big_collecting", "follow_big"]:
+			_foot_end_following = false
+			_foot_end.checkpoint._clear_candidate()
+		else:
+			var foot_result: Dictionary = _foot_end.evaluate(pose, locked_pose, now, full_marker_evidence)
+			if not foot_result.is_empty():
+				result = foot_result
+			elif not _foot_end.eligible:
+				result = {}
+			viewer_gate.gate_state = "foot_" + _foot_end.state
+			if not foot_result.is_empty():
+				_foot_end_target = foot_result.pose
+				_foot_end_target.origin.y = locked_pose.origin.y
+				_foot_end_following = true
+				viewer_gate.reset_pose_evidence()
+			elif _foot_end_following and _foot_end.eligible:
+				# Keep feeding the accepted target to the common smoother
+				# between checkpoints; do not substitute unconfirmed raw poses.
+				result = {"pose": _foot_end_target}
+	else:
+		# Outside: hold changes up to 15 cm; confirm larger displacement.
+		# Passing targets continue through the common filter.
+		result = viewer_gate.evaluate(pose, locked_pose, now, full_marker_evidence)
 	var audit := now - _tracking_audit_last_ms >= 1000
 	if audit:
 		_tracking_audit_last_ms = now
@@ -220,34 +290,61 @@ func _update_headset_pose(pose: Transform3D, now: int) -> void:
 		var step_m := corrected.origin.distance_to(locked_pose.origin)
 		var step_deg := rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(locked_pose.basis.get_rotation_quaternion()))
 		if step_m <= CHECKPOINT_MOVE_M and step_deg <= CHECKPOINT_MOVE_DEG:
-			# Marker noise around a resting mannequin: hold, so the patient does not wobble.
+			# Marker noise around a resting mannequin: hold, so the patient does not wobble. A
+			# pending move that this viewpoint does not see was a viewing error: drop it.
 			print("Checkpoint placement: held, %.1f cm / %.1f deg is below the move threshold." % [step_m * 100.0, step_deg])
+			_pending_checkpoint = {}
 			return
-		_viewer_rest_pose = corrected
-		_checkpoint_target = corrected
+		var head_pos := viewer_head.global_position
+		var head_yaw := atan2(-viewer_head.global_basis.z.x, -viewer_head.global_basis.z.z)
+		if not _pending_checkpoint.is_empty() and now - int(_pending_checkpoint.ms) > CHECKPOINT_PENDING_S * 1000.0:
+			_pending_checkpoint = {}
+		if _pending_checkpoint.is_empty():
+			_pending_checkpoint = {"pose": corrected, "head": head_pos, "head_yaw": head_yaw, "ms": now}
+			print("Checkpoint placement: %.1f cm / %.1f deg away, waiting for a second viewpoint." % [step_m * 100.0, step_deg])
+			return
+		var first: Transform3D = _pending_checkpoint.pose
+		var moved_m := head_pos.distance_to(_pending_checkpoint.head)
+		var turned_deg := rad_to_deg(absf(wrapf(head_yaw - float(_pending_checkpoint.head_yaw), -PI, PI)))
+		if moved_m < VIEWPOINT_MOVE_M and turned_deg < VIEWPOINT_TURN_DEG:
+			_pending_checkpoint.pose = corrected  # same viewpoint again: not a second opinion
+			return
+		var agree_m := corrected.origin.distance_to(first.origin)
+		var agree_deg := rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(first.basis.get_rotation_quaternion()))
+		if agree_m > CHECKPOINT_AGREE_M or agree_deg > CHECKPOINT_AGREE_DEG:
+			# The two viewpoints disagree: a viewing error. This one becomes the new candidate.
+			print("Checkpoint placement: viewpoints disagree by %.1f cm / %.1f deg - holding." % [agree_m * 100.0, agree_deg])
+			_pending_checkpoint = {"pose": corrected, "head": head_pos, "head_yaw": head_yaw, "ms": now}
+			return
+		var target := first.interpolate_with(corrected, 0.5)
+		_pending_checkpoint = {}
+		_viewer_rest_pose = target
+		_checkpoint_target = target
 		_checkpoint_transition = true
-		print("Checkpoint placement: confirmed after ", result.samples, " readings.")
+		print("Checkpoint placement: moved %.1f cm / %.1f deg, confirmed from two viewpoints %.0f cm / %.0f deg apart." % [step_m * 100.0, step_deg, moved_m * 100.0, turned_deg])
 		return
 	if _viewer_filter == null:
 		# Start smoothing from the current accepted placement, preventing a reset jump.
 		_viewer_filter = load("res://addons/naret_upstream/avatar/simple_pose_stabilizer.gd").new()
-		# Restore avatar_rig_navel.gd's tuned settings instead of generic defaults.
-		_viewer_filter.call("configure", 5, 0.020, 0.3, 1.2, 2.0, 0.0015, 1.0, 3, 0.080, 8.0)
+		# Use the confirmed destination directly, without another multi-pose medoid.
+		# Rest changes only through placement confirmation.
+		_viewer_filter.call("configure", 1, 0.020, 0.3, 1.2, 2.0)
+		_viewer_filter.automatic_reanchor = false
 		_viewer_rest_pose = locked_pose
 		_viewer_filter.call("anchor_at", locked_pose)
+	if result.get("confirmed", false):
+		# Confirmation supplies both the fixed destination and remembered rest.
+		# Smoothing and rest pull therefore aim at the same destination.
+		_viewer_rest_pose = corrected
 	corrected = _viewer_filter.call("update", corrected, elapsed, now, _viewer_rest_pose, true)
-	# Adopt stable endpoints independently, matching navel_provider.gd.
-	var target: Transform3D = _viewer_filter.call("measurement_target")
-	if _viewer_filter.call("position_reanchor_ready"):
-		_viewer_rest_pose.origin = target.origin
-	if _viewer_filter.call("rotation_reanchor_ready"):
-		_viewer_rest_pose.basis = target.basis
 	if audit:
 		print("NARET_POSE_UPDATE position_step_m=", corrected.origin.distance_to(locked_pose.origin),
 			" rotation_step_deg=", rad_to_deg(corrected.basis.get_rotation_quaternion().angle_to(locked_pose.basis.get_rotation_quaternion())))
 	locked_pose = corrected
 	_apply(corrected)
 	return
+
+
 
 func marker_pose() -> Transform3D:
 	# Despite the historical method name, this returns the reconstructed chest
@@ -260,17 +357,22 @@ func refresh() -> void:
 		_apply(marker_pose())
 
 func unlock() -> void:
-	# Explicit reposition: collect a fresh startup pose and discard old gate bias
+	_foot_end.reset()
+	_foot_end_following = false
+	# Explicit reposition: collect a fresh startup pose and discard gate evidence
 	# and smoothing history. Keep the model-specific calibration offset unchanged.
 	startup = NaretStartupPlacement.new()
 	viewer_gate = NaretViewerMotionGate.new()
 	if checkpoint_updates:
 		viewer_gate = load("res://scripts/tracking/checkpoint_motion_gate.gd").new()
 	_checkpoint_transition = false
+	_pending_checkpoint = {}
 	_viewer_filter = null
 	_viewer_last_ms = -1
 	locked = false
-	refresh()
+	# An explicit request clears acceptance; do not apply an unconfirmed raw pose.
+	var patient := get_node_or_null("Mannequin") as Node3D
+	if patient: patient.visible = false
 
 func calibrate(mannequin_world_pose: Transform3D) -> Error:
 	# Convert the desired model placement into an offset relative to the anchor.

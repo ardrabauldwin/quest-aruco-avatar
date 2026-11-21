@@ -221,7 +221,7 @@ func _test_bystander(path: String) -> void:
 	var other := _load_actor(path)
 	var other_rig := _configure(other)
 	rig.set_speaking(true)
-	check(rig.get_current_clip() == "talk", "Speaking activates skeletal talk animation")
+	check(rig.get_current_clip().begins_with("talk"), "Speaking activates a skeletal talk take")
 	check(other_rig.get_current_clip() == "anxious", "Other actor keeps independent emotional animation")
 	var skeleton := _skeleton(model)
 	var player := _player(model)
@@ -242,14 +242,18 @@ func _test_bystander(path: String) -> void:
 		rig.set_mouth_open(0.75)
 		await _tree().process_frame
 		await _tree().process_frame
-		check(is_equal_approx(mouth.get_blend_shape_value(mouth.find_blend_shape_by_name("mouth_open")), 0.75), "Audio amplitude drives actual mouth morph")
+		if rig.has_morph("jaw_open"):
+			check(is_equal_approx(mouth.get_blend_shape_value(mouth.find_blend_shape_by_name("jaw_open")), 0.75), "Speech amplitude drives authored jaw morph")
+			check(mouth.get_blend_shape_value(mouth.find_blend_shape_by_name("mouth_open")) == 0.0, "Speaker speech never enables the legacy face-tearing mouth shape")
+		else:
+			check(is_equal_approx(mouth.get_blend_shape_value(mouth.find_blend_shape_by_name("mouth_open")), 0.75), "Older models retain the mouth fallback")
 		rig.set_speaking(false)
 		check(mouth.get_blend_shape_value(mouth.find_blend_shape_by_name("mouth_open")) == 0.0, "Speech completion closes mouth")
 	rig.set_emotion("calm")
 	check(rig.get_current_clip() == "relief", "Calming plays the relief transition")
 	if player != null:
 		player.advance(player.get_animation("relief").length + 0.1)
-		check(rig.get_current_clip() == "idle", "Relief blends back to idle")
+		check(rig.get_current_clip() == ("listen" if rig.has_clip("listen") else "idle"), "Relief returns to the configured calm baseline")
 	model.queue_free()
 	other.queue_free()
 	await _tree().process_frame

@@ -36,8 +36,11 @@ var _tilt_modifier: HeadTilt
 var _eyes: Array[Node3D] = []
 var _neutral_forehead := Vector3.ZERO
 var _neutral_chin := Vector3.ZERO
-## Physical mannequin fit. Length means crown to waist, not full adult height.
-## Zero disables fitting for another mannequin. Thickness is kept unchanged.
+## Physical mannequin fit (see _fit_patient): head-and-torso length from the crown to
+## the hips, and its widest point, of the torso manikin the avatar lies on. Zero
+## disables fitting, as the patient scene does: the Little Anne fit (Laerdal: 65 cm
+## long, 34 cm wide, 21 cm high) is baked into assets/models/human_patient.glb by
+## tools/fit_patient_glb.py. This runtime fit is kept for trying another manikin's size.
 @export var fit_head_to_waist_m := 0.0
 @export var fit_shoulder_width_m := 0.0
 ## Which point of the full-body model belongs on the compression point (the
@@ -93,41 +96,80 @@ func _refresh_overlay() -> void:
 		_overlay_materials[i].set_shader_parameter("patient_inverse", global_basis.orthonormalized().inverse())
 
 func _fit_patient(model: Node3D) -> void:
+	## Sizes the full-body model so its head and torso make the same box as the physical
+	## torso manikin (15 Nov 2026: "the Little Anne is only a torso; make the avatar
+	## overlay the Anne with more body parts, but whatever parts both have should
+	## overlap"). Measured the way Laerdal gives a torso manikin's size: head and trunk
+	## only (arms and legs left out), from the crown down to the hips (the pelvis joint),
+	## and the widest point across. Length (Z) and width (X) are fitted; the height
+	## lying down is the chest fit's (set_thickness). The model is moved afterwards so
+	## that its sternum lands on the compression point (_ready), so the hand position
+	## stays where the marker puts it and head and hips move onto the manikin's.
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
 	if skeletons.is_empty() or fit_head_to_waist_m <= 0.0 or fit_shoulder_width_m <= 0.0:
 		return
 	var skeleton := skeletons[0] as Skeleton3D
-	# The lowest spine joint defines the waist; shoulder joints define the
-	# cross-section where we measure the OUTSIDE of the skin, excluding hands.
-	var waist_id := skeleton.find_bone("spine_01")
-	var shoulder_id := skeleton.find_bone("upperarm_l")
-	if waist_id < 0 or shoulder_id < 0:
+	var waist_id := skeleton.find_bone(FIT_WAIST_BONE)
+	if waist_id < 0:
 		return
 	var to_model := model.global_transform.affine_inverse() * skeleton.global_transform
 	var waist_z := (to_model * skeleton.get_bone_global_pose(waist_id)).origin.z
-	var shoulder_z := (to_model * skeleton.get_bone_global_pose(shoulder_id)).origin.z
 	var crown_z := INF
-	var shoulder_min := INF
-	var shoulder_max := -INF
+	var low_x := INF
+	var high_x := -INF
 	for mesh: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-		if not String(mesh.name).ends_with("Body"):
+		if not String(mesh.name).ends_with("Body") or mesh.skin == null:
 			continue
 		var to_local_model := model.global_transform.affine_inverse() * mesh.global_transform
 		for surface in mesh.mesh.get_surface_count():
-			for vertex in NaretSpatialAnchor.posed_vertices(mesh, surface):
-				var point: Vector3 = to_local_model * vertex
+			var limbs := _limb_vertices(mesh, surface, skeleton)
+			var vertices := NaretSpatialAnchor.posed_vertices(mesh, surface)
+			for i in vertices.size():
+				if limbs[i]: continue
+				var point: Vector3 = to_local_model * vertices[i]
 				crown_z = minf(crown_z, point.z)
-				if absf(point.z - shoulder_z) <= 0.01:
-					shoulder_min = minf(shoulder_min, point.x)
-					shoulder_max = maxf(shoulder_max, point.x)
+				if point.z <= waist_z:
+					low_x = minf(low_x, point.x)
+					high_x = maxf(high_x, point.x)
 	var length := waist_z - crown_z
-	var width := shoulder_max - shoulder_min
+	var width := high_x - low_x
 	if not is_finite(length) or not is_finite(width) or length <= 0.0 or width <= 0.0:
 		push_warning("Patient fit: missing usable body landmarks; keeping original scale.")
 		return
 	model.scale.x = fit_shoulder_width_m / width
 	model.scale.z = fit_head_to_waist_m / length
-	print("NARET_MODEL_FIT head_to_waist=%.3f shoulders=%.3f scale=%s waist=spine_01 shoulder_band=20mm" % [fit_head_to_waist_m, fit_shoulder_width_m, model.scale])
+	print("NARET_MODEL_FIT crown_to_hips=%.3f width=%.3f (model %.3f x %.3f) scale=%s" % [fit_head_to_waist_m, fit_shoulder_width_m, length, width, model.scale])
+
+## The bottom of the fitted torso: the pelvis joint, where a torso manikin ends.
+const FIT_WAIST_BONE := "pelvis"
+
+static func _limb_vertices(mesh: MeshInstance3D, surface: int, skeleton: Skeleton3D) -> PackedByteArray:
+	## 1 for each vertex moved mostly by an arm or leg bone.
+	var arrays := mesh.mesh.surface_get_arrays(surface)
+	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var result := PackedByteArray()
+	result.resize(vertices.size())
+	if arrays[Mesh.ARRAY_BONES] == null: return result
+	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
+	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
+	var per := bones.size() / maxi(vertices.size(), 1)
+	for i in vertices.size():
+		var best := -1.0
+		var bind := -1
+		for j in per:
+			if weights[i * per + j] > best:
+				best = weights[i * per + j]
+				bind = bones[i * per + j]
+		if bind < 0 or bind >= mesh.skin.get_bind_count(): continue
+		var bone := mesh.skin.get_bind_bone(bind)
+		if bone < 0: bone = skeleton.find_bone(mesh.skin.get_bind_name(bind))
+		while bone >= 0:
+			var name := String(skeleton.get_bone_name(bone)).to_lower()
+			if "upperarm" in name or "lowerarm" in name or "hand" in name or "thigh" in name or "calf" in name or "foot" in name:
+				result[i] = 1
+				break
+			bone = skeleton.get_bone_parent(bone)
+	return result
 
 ## Left arm moved away from the body for the lateral AED pad (degrees, about the
 ## upper arm's own Z axis on this rig).
@@ -155,9 +197,11 @@ class HeadTilt extends SkeletonModifier3D:
 			if bone < 0:
 				continue
 			var pose := skeleton.get_bone_pose_rotation(bone)
-			# -X extends the neck on this rig (+X flexes, as for the spine).
-			# Sign flipped on headset review 2026-10-29: the head tilted the wrong way (flexion).
-			skeleton.set_bone_pose_rotation(bone, pose * Quaternion(Vector3.RIGHT, deg_to_rad(TILT[bone_name] * amount)))
+			# -X extends the neck on this rig (+X flexes, as for the spine). Measured
+			# 13 Nov 2026 (build/tmp/probe_tilt.gd): with +X the mouth moved 4 cm toward the
+			# chest and the forehead rose, the chin-to-chest nod seen in the headset; with -X
+			# the forehead goes back and the chin comes up, which is head tilt, chin lift.
+			skeleton.set_bone_pose_rotation(bone, pose * Quaternion(Vector3.RIGHT, -deg_to_rad(TILT[bone_name] * amount)))
 
 func _ready() -> void:
 	var model := $Model as Node3D

@@ -1,0 +1,47 @@
+{
+  "schema": 2,
+  "actions": [
+    "begin_check",
+    "check_responsiveness",
+    "call_emergency",
+    "check_breathing",
+    "compression",
+    "compression_only",
+    "ventilation",
+    "handover",
+    "request_aed",
+    "attach_aed",
+    "clear_patient",
+    "analyze_rhythm",
+    "shock_advised",
+    "no_shock_advised",
+    "shock",
+    "resume_cpr",
+    "reassess",
+    "patient_contact",
+    "recovery"
+  ],
+  "spoken_requests_or_reports": [
+    "begin_check",
+    "check_responsiveness",
+    "call_emergency",
+    "check_breathing",
+    "compression_only",
+    "ventilation",
+    "handover",
+    "request_aed",
+    "clear_patient"
+  ],
+  "accepted_software_events": [
+    "compression",
+    "attach_aed",
+    "analyze_rhythm",
+    "shock_advised",
+    "no_shock_advised",
+    "shock",
+    "resume_cpr",
+    "reassess",
+    "patient_contact",
+    "recovery"
+  ]
+}

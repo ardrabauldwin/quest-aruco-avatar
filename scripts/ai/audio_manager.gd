@@ -242,7 +242,25 @@ func input_level() -> float:
 	return _level
 
 
+## 20 Nov 2026 (user: "never interrupt while I'm speaking; wait until I finish and allow a
+## very short pause before replying"): no voice line starts while the trainee is speaking or
+## their words are being recognised, nor within REPLY_PAUSE_MS after that. A line that was
+## already waiting before they finished (a timed hint) waits STALE_LINE_MS instead, so the
+## answer to what they said can take its place; an instructor line is replaced by a newer one.
+## Never longer than HOLD_MAX_MS, so a microphone stuck open cannot silence the app.
+const REPLY_PAUSE_MS := 450
+const STALE_LINE_MS := 2500
+const HOLD_MAX_MS := 12000
+var _floor_end_ms := -100000
+var _held_since_ms := 0
+
+func _trainee_has_floor(queued_ms: int, now: int) -> bool:
+	if recording or _transcribing: return true
+	return now - _floor_end_ms < (STALE_LINE_MS if queued_ms < _floor_end_ms else REPLY_PAUSE_MS)
+
 func _process(_delta: float) -> void:
+	if recording or _transcribing: _floor_end_ms = Time.get_ticks_msec()
+	if _held_since_ms > 0 and not _playing: _play_next()
 	_reconcile_playback()
 	if recording and MAX_RECORDING_SECONDS > 0.0 and (Time.get_ticks_msec() - _recording_start) >= int(MAX_RECORDING_SECONDS * 1000):
 		end_recording()
@@ -268,7 +286,10 @@ func update_voice_activity(level: float, now: int) -> void:
 	# Preparing a response must also suppress automatic microphone activation.
 	# Otherwise ambient sound can call begin_recording(), which cancels the
 	# in-flight TTS before its first sample is played.
-	if _playing or _preparing or _transcribing:
+	# 20 Nov 2026: a line being prepared while the trainee is already speaking no longer
+	# stops the listening. It used to reset here, the recording never saw its trailing
+	# silence, and the app talked over the sentence (see _trainee_has_floor).
+	if _playing or _transcribing or (_preparing and not recording):
 		_reset_vad()
 		return
 	if not recording:
@@ -281,6 +302,7 @@ func update_voice_activity(level: float, now: int) -> void:
 		_speech_seen = true
 		_silence_start = 0
 		_spec_for = -1 # more words: an early answer no longer covers the utterance
+		if _spec_running and is_instance_valid(_api): _api.abandon_speech_request()
 		return
 	# Trailing silence already takes 1.2 s; a separate 0.5 s recording-age
 	# guard could not shorten/extend an automatically triggered recording.
@@ -447,7 +469,35 @@ func _handle_transcription(result: Dictionary) -> void:
 		_: status_changed.emit("asr_offline_use_text")
 
 
+## A direct answer to what the trainee just said ("I'll get the AED"): it goes before
+## everything that is still waiting (20 Nov 2026).
+var _next_urgent := false
+
+func speak_urgent(text: String, lang: String, clip_key: String, speaker: String) -> void:
+	_next_urgent = true
+	_answer_asked_ms = Time.get_ticks_msec()
+	speak(text, lang, clip_key, speaker)
+	_next_urgent = false
+
+## Is a direct answer still waiting to be said? (Marek does not walk off before his.)
+const ANSWER_WAIT_MAX_MS := 20000
+var _answer_asked_ms := 0
+
+func urgent_waiting() -> bool:
+	return _answer_asked_ms > 0 and Time.get_ticks_msec() - _answer_asked_ms < ANSWER_WAIT_MAX_MS
+
+## One voice at a time (user, 20 Nov 2026: "I didn't need someone to talk over or interrupt
+## either"). A direct answer (Marek: "I'll get the defibrillator") neither cuts the line
+## being said nor is spoken over it: it is the NEXT line, before everything else that waits.
+## (Two earlier versions of the same day cut the running line, then spoke over it quietly.)
+func answer_playing() -> bool:
+	return _playing and _current_urgent
+
+var _current_urgent := false
+
 func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander", keep: bool = false) -> void:
+	var urgent := _next_urgent
+	_next_urgent = false
 	## keep: an instructor line that a newer instruction must not replace (feedback such as
 	## "Richtig. Erst Sicherheit prüfen", which comes right before the next step's line).
 	## `speaker` says who is talking. Language no longer distinguishes them: in the
@@ -457,16 +507,25 @@ func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker
 	if _pending.size() >= 6:
 		_pending.pop_front()
 	var item := {"text": text.left(1000), "language": target_language, "clip_key": clip_key, "speaker": speaker,
-		"queued_ms": Time.get_ticks_msec(), "keep": keep}
+		"queued_ms": Time.get_ticks_msec(), "keep": keep, "urgent": urgent}
 	if speaker == "instructor":
 		_instruction_revision += 1
 		item["instruction_revision"] = _instruction_revision
 		# Only the newest instruction matters; one still waiting is out of date.
 		_pending.assign(_pending.filter(func(other): return other.get("speaker") != "instructor" or other.get("keep", false)))
 		_ready_audio.assign(_ready_audio.filter(func(other): return other.get("speaker") != "instructor" or other.get("keep", false)))
-	_pending.insert(_queue_slot(_pending, speaker), item)
+	_pending.insert(0 if urgent else _queue_slot(_pending, speaker), item)
 	if not _preparing:
 		_prepare_next()
+
+## Is this sentence being said now or waiting to be said?
+func has_line(text: String) -> bool:
+	if text.is_empty(): return false
+	if current_text == text: return true
+	for queue: Array in [_pending, _ready_audio]:
+		for item: Dictionary in queue:
+			if str(item.get("text", "")) == text: return true
+	return false
 
 
 const STALE_INSTRUCTION_MS := 30000 # Allow the witness to finish before guidance.
@@ -493,6 +552,8 @@ func stop_speech() -> void:
 	for player: AudioStreamPlayer in _players:
 		player.stop()
 		player.stream = null
+	_answer_asked_ms = 0
+	_current_urgent = false
 	if _playing:
 		_playing = false
 		playback_changed.emit(false)
@@ -547,7 +608,7 @@ func _prepare_next() -> void:
 		if stream != null:
 			item["stream"] = stream
 			item["source"] = source
-			_ready_audio.insert(_queue_slot(_ready_audio, item.get("speaker", "bystander")), item)
+			_ready_audio.insert(0 if item.get("urgent", false) else _queue_slot(_ready_audio, item.get("speaker", "bystander")), item)
 			if not _playing:
 				_play_next()
 		else:
@@ -558,6 +619,13 @@ func _prepare_next() -> void:
 func _play_next() -> void:
 	if _ready_audio.is_empty() or _players.is_empty():
 		return
+	var now := Time.get_ticks_msec()
+	if not _playing and _trainee_has_floor(int(_ready_audio[0].get("queued_ms", now)), now) and (_held_since_ms == 0 or now - _held_since_ms < HOLD_MAX_MS):
+		if _held_since_ms == 0:
+			_held_since_ms = now
+			print("NARET_VOICE_HOLD the trainee is speaking: the next line waits")
+		return
+	_held_since_ms = 0
 	var item: Dictionary = _ready_audio.pop_front()
 	# An instruction that waited behind the people for too long is out of date.
 	while item.get("speaker") == "instructor" and Time.get_ticks_msec() - int(item.get("queued_ms", 0)) > STALE_INSTRUCTION_MS:
@@ -572,6 +640,8 @@ func _play_next() -> void:
 	player.stream = item["stream"]
 	player.play()
 	current_text = str(item["text"])
+	_current_urgent = bool(item.get("urgent", false))
+	if _current_urgent: _answer_asked_ms = 0
 	print("NARET_VOICE_START speaker=", item.get("speaker", "bystander"), " source=", item["source"])
 	if not _playing:
 		_playing = true

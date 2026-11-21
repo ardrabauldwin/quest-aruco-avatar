@@ -16,7 +16,7 @@
       "path": "res://assets/audio/coaching/en/response.wav"
     },
     {
-      "text": "Speak to the people directly and give them their tasks.",
+      "text": "Speak to someone directly and ask them to call 112.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/call.wav"
     },
@@ -76,7 +76,7 @@
       "path": "res://assets/audio/coaching/de/response.wav"
     },
     {
-      "text": "Sprich die Leute direkt an und verteile die Aufgaben.",
+      "text": "Sprich jemanden direkt an und bitte darum, die 112 anzurufen.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/call.wav"
     },
@@ -136,7 +136,7 @@
       "path": "res://assets/audio/coaching/pl/response.wav"
     },
     {
-      "text": "Zwróć się bezpośrednio do ludzi i rozdziel zadania.",
+      "text": "Zwróć się do kogoś bezpośrednio i poproś o telefon pod 112.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/call.wav"
     },
@@ -261,7 +261,7 @@
       "path": "res://assets/audio/coaching/en/coach_bvm_hold_mask.wav"
     },
     {
-      "text": "I haven't detected you touching the person's shoulders yet. Please tap their shoulders clearly.",
+      "text": "I didn't see you tap his shoulders. Please tap them and check whether he responds.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/error_shoulders_not_seen.wav"
     },
@@ -1141,12 +1141,12 @@
       "path": "res://assets/audio/coaching/en/coach_bvm_put_back.wav"
     },
     {
-      "text": "Ich habe noch nicht erkannt, dass du die Person an den Schultern berührt hast. Bitte tippe ihr deutlich auf die Schultern.",
+      "text": "Ich habe nicht gesehen, dass du ihm auf die Schultern getippt hast. Bitte tipp darauf und prüfe, ob er reagiert.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/error_shoulders_not_seen.wav"
     },
     {
-      "text": "Nie wykryłem jeszcze dotknięcia ramion tej osoby. Stuknij ją wyraźnie w ramiona.",
+      "text": "Nie widziałem stuknięcia w jego ramiona. Stuknij w nie i sprawdź, czy reaguje.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/error_shoulders_not_seen.wav"
     },
@@ -1196,34 +1196,19 @@
       "path": "res://assets/audio/coaching/en/welcome_menu.wav"
     },
     {
-      "text": "Bitte berichte mir: Reagiert die Person oder reagiert sie nicht?",
+      "text": "Reagiert er?",
       "language": "de",
       "path": "res://assets/audio/coaching/de/coach_report_response.wav"
     },
     {
-      "text": "Zgłoś mi: czy osoba reaguje, czy nie reaguje?",
+      "text": "Czy ta osoba reaguje?",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/coach_report_response.wav"
     },
     {
-      "text": "Please report to me: does the person respond or not?",
+      "text": "Does he respond?",
       "language": "en",
       "path": "res://assets/audio/coaching/en/coach_report_response.wav"
-    },
-    {
-      "text": "Die Person reagiert in diesem Szenario nicht. Bitte prüfe ihre Reaktion noch einmal.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_patient_unresponsive.wav"
-    },
-    {
-      "text": "Ta osoba w tym scenariuszu nie reaguje. Sprawdź jej reakcję jeszcze raz.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_patient_unresponsive.wav"
-    },
-    {
-      "text": "The person does not respond in this scenario. Please check their response again.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_patient_unresponsive.wav"
     },
     {
       "text": "Tippe auf die grüne 112 am Handy in deiner linken Hand.",
@@ -1269,6 +1254,159 @@
       "text": "Put the phone on the ground next to the person.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/coach_phone_put_down.wav"
+    },
+    {
+      "text": "Ich habe dich nicht verstanden. Was ist passiert, und wo bist du?",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_again.wav"
+    },
+    {
+      "text": "Nie zrozumiałam. Co się stało i gdzie jesteś?",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_again.wav"
+    },
+    {
+      "text": "I did not catch that. What has happened, and where are you?",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_again.wav"
+    },
+    {
+      "text": "Sprich die Leute direkt an: Bitte eine Person, die 112 anzurufen, und eine andere, den Defibrillator zu holen.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/call_aed.wav"
+    },
+    {
+      "text": "Zwróć się bezpośrednio do ludzi: poproś jedną osobę o telefon pod 112, a drugą o przyniesienie defibrylatora.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/call_aed.wav"
+    },
+    {
+      "text": "Speak to the people directly: ask one person to call 112 and another to bring the defibrillator.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/call_aed.wav"
+    },
+    {
+      "text": "Eine Elektrode fehlt noch. Klebe sie rechts oben auf die Brust, unter das Schlüsselbein, auf den goldenen Umriss.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_pad_padright.wav"
+    },
+    {
+      "text": "Eine Elektrode fehlt noch. Klebe sie auf seine linke Seite, unter die Achsel, auf den goldenen Umriss.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_pad_padleft.wav"
+    },
+    {
+      "text": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört rechts oben auf die Brust, unter das Schlüsselbein.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_pad_missed_padright.wav"
+    },
+    {
+      "text": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört auf seine linke Seite, unter die Achsel.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "Diese Elektrode liegt noch nicht auf einem Umriss. Führe sie zu einem der goldenen Umrisse auf der Brust.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_pad_missed.wav"
+    },
+    {
+      "text": "Brakuje jeszcze jednej elektrody. Przyklej ją po prawej stronie klatki piersiowej, pod obojczykiem, na złoty kontur.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_pad_padright.wav"
+    },
+    {
+      "text": "Brakuje jeszcze jednej elektrody. Przyklej ją na lewym boku, pod pachą, na złoty kontur.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_pad_padleft.wav"
+    },
+    {
+      "text": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest po prawej stronie klatki piersiowej, pod obojczykiem.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_pad_missed_padright.wav"
+    },
+    {
+      "text": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest na lewym boku, pod pachą.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "Ta elektroda nie leży jeszcze na konturze. Przenieś ją na jeden ze złotych konturów na klatce piersiowej.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_pad_missed.wav"
+    },
+    {
+      "text": "One pad is still missing. Put it on the right side of his chest, below the collarbone, on the golden outline.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pad_padright.wav"
+    },
+    {
+      "text": "One pad is still missing. Put it on his left side, below the armpit, on the golden outline.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pad_padleft.wav"
+    },
+    {
+      "text": "That pad is not on the outline yet. It belongs on the right side of his chest, below the collarbone.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pad_missed_padright.wav"
+    },
+    {
+      "text": "That pad is not on the outline yet. It belongs on his left side, below the armpit.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "That pad is not on an outline yet. Bring it to one of the golden outlines on his chest.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_pad_missed.wav"
+    },
+    {
+      "text": "Ich habe gesehen, dass du auf die Schultern getippt hast. Reagiert die Person? Bitte sag ja oder nein.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "Ich habe gesehen, dass du auf die Schultern getippt hast.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/coach_tap_seen.wav"
+    },
+    {
+      "text": "Widziałem, jak stukasz w ramiona. Czy ta osoba reaguje? Powiedz tak lub nie.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "Widziałem, jak stukasz w ramiona.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/coach_tap_seen.wav"
+    },
+    {
+      "text": "I saw you tap their shoulders. Are they responding? Please say yes or no.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "I saw you tap their shoulders.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_tap_seen.wav"
+    },
+    {
+      "text": "Ich habe ihn mir auch angesehen und glaube, er reagiert nicht. Schau bitte noch einmal hin.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/coach_patient_unresponsive.wav"
+    },
+    {
+      "text": "Też go sprawdziłem i myślę, że on nie reaguje. Sprawdź jeszcze raz.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/coach_patient_unresponsive.wav"
+    },
+    {
+      "text": "I checked him too, and I think he is not responding. Please look again.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/coach_patient_unresponsive.wav"
     }
   ]
 }

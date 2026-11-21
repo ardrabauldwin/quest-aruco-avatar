@@ -89,6 +89,13 @@ func run() -> Array[String]:
 	interaction._click_hit(hit, true, "test")
 	interaction._click_hit({}, false, "test")
 	check(mic_requests == [true] and menu._mic_key.fill.a > 0.0, "cuff microphone key switches listening on and turns green")
+	# 20 Nov 2026: a notice is a notification plate in the screen's header, in place of the
+	# brand while it shows; an empty notice brings the brand back.
+	menu.show_notice("Boden kalibriert")
+	check(menu._notice_plate.visible and menu.notice_text() == "Boden kalibriert" and menu._brand_parts.all(func(part): return not part.visible), "a notice shows on its plate in the header, over the brand")
+	check(menu._controls.is_ancestor_of(menu._notice), "the notice is part of the screen on the hand")
+	menu.show_notice("")
+	check(not menu._notice_plate.visible and menu._brand_parts.all(func(part): return part.visible), "an empty notice takes the plate away and shows NaReT again")
 	# Testing aids live in the Debug pop-up, which shares the Languages row behaviour.
 	check(not menu._debug_choices.visible, "debug toggles start folded away")
 	menu._language_menu.pressed.emit()
@@ -98,6 +105,9 @@ func run() -> Array[String]:
 	interaction._click_hit(hit, true, "test")
 	interaction._click_hit({}, false, "test")
 	check(menu._debug_choices.visible and not menu._language_choices.visible, "Debug opens its toggles and folds the languages away")
+	# 20 Nov 2026: the toggles are a page of the screen beside the hand, not a row past the cuff.
+	check(menu._rig.is_ancestor_of(menu._debug_choices) and not menu._cuff.is_ancestor_of(menu._debug_choices) and not menu._controls.visible, "the Debug page takes the grid's place on the screen")
+	check(menu._popup_root.global_transform.is_equal_approx(menu._controls.global_transform), "the Debug page opens where the grid is")
 	var gizmo_toggles: Array = []
 	menu.marker_gizmos_toggled.connect(func(shown: bool): gizmo_toggles.append(shown))
 	hit = interaction._poke_panel(menu._gizmos_key.global_position + Vector3(0, 0, 0.003))
@@ -131,7 +141,7 @@ func run() -> Array[String]:
 		interaction._click_hit({}, false, "test")
 	check(occlusion_requests == ["all", "off", "room"], "depth key cycles room → all → off → room, got %s" % [occlusion_requests])
 	menu._debug_menu.pressed.emit()
-	check(not menu._debug_choices.visible, "a second press on Debug closes its toggles")
+	check(not menu._debug_choices.visible and menu._controls.visible, "a second press on Debug closes its toggles and brings the grid back")
 	scenario.start()
 	scenario.compressions = 17
 	menu.update_session(scenario)
@@ -141,7 +151,38 @@ func run() -> Array[String]:
 	check(actions.size() == before and menu._large_start.label.text != "Restart training", "a first press during training only arms Restart (19 Nov 2026: accidental restarts)")
 	menu.update_session(scenario)
 	check(menu._large_start.label.text != "Restart training", "the confirm label stays while armed")
-	check(not menu._setup_keys["situation"].visible and not menu._language_menu.visible and not menu._reposition_key.visible, "during training the grid shows only Restart")
+	# 20 Nov 2026 (user: "every option should remain clickable and editable"): nothing is
+	# hidden while training, and a key still opens its pop-up and takes a choice.
+	# Later that day (user: "use the palm for all dialogue; show my dialogue too"): while a
+	# training runs the screen is the dialogue, and the cuff's page key turns it to the keys.
+	check(menu._dialogue_root.visible and not menu._setup_keys["situation"].visible and not menu._language_menu.visible and menu._large_start.visible, "during training the screen shows the dialogue and Restart")
+	check(menu._page_key.visible and menu._page_key.get_parent() == menu._cuff and menu._page_key.label.text == "Menu", "the cuff's page key offers the menu, got " + menu._page_key.label.text)
+	menu.add_dialogue("Instructor", "You see a person who needs help. What do you do first?", false)
+	menu.add_dialogue("You", "First I check the surroundings.", true)
+	var lines := menu.dialogue()
+	check(lines.size() == 2 and not lines[0].own and lines[1].own and lines[1].who == "You", "the dialogue lists the instructor's line and the trainee's own, marked as such")
+	var plates: Array = menu._dialogue_root.get_children().filter(func(node): return node is MeshInstance3D and (node.mesh as BoxMesh).size.x > 0.05)
+	check(plates.size() == 2 and (plates[0].mesh as BoxMesh).size.x > (plates[1].mesh as BoxMesh).size.x + 0.01 and plates[1].position.x > plates[0].position.x, "the trainee's plate is narrower and set in from the left")
+	check(plates[0].material_override.albedo_color != plates[1].material_override.albedo_color, "and has another colour than the instructor's")
+	check(plates[0].position.y > plates[1].position.y, "older lines stand above newer ones")
+	menu.add_dialogue("You", "First I check the surroundings.", true)
+	check(menu.dialogue().size() == 2, "the same line twice in a row is listed once")
+	for i in 4: menu.add_dialogue("Instructor", "Line %d" % i, false)
+	check(menu.dialogue().size() == NaretHandMenu.DIALOGUE_KEEP and menu.dialogue().back().text == "Line 3", "only the last lines are kept")
+	menu.show_notice("Line 9")
+	menu.add_dialogue("Instructor", "Line 9", false)
+	check(menu.notice_text() == "", "a line in the dialogue is not shown in the notice as well")
+	menu._page_key.pressed.emit()
+	check(not menu._dialogue_root.visible and menu._page_key.label.text == "Dialogue", "the page key turns the screen to the settings")
+	check(menu._setup_keys["situation"].visible and menu._setup_keys["breaths"].visible and menu._setup_keys["gender"].visible and menu._language_menu.visible and menu._large_align.visible and menu._reposition_key.visible, "there every key of the grid is available during training")
+	var mid_training: Array = []
+	menu.setup_requested.connect(func(step: String, value: String): mid_training.append(step + "=" + value))
+	menu._setup_keys["situation"].pressed.emit()
+	check(menu._setup_choices["situation"].visible, "Situation opens its pop-up during training")
+	menu.update_session(scenario)
+	check(menu._setup_choices["situation"].visible, "and the pop-up stays open while the training runs")
+	menu._setup_option_keys["situation"]["A"].pressed.emit()
+	check(mid_training == ["situation=A"] and not menu.popup_open() and menu._controls.visible, "a choice made during training is taken and the pop-up closes, got %s" % [mid_training])
 	menu._large_start.pressed.emit()
 	check(actions.back() == "restart", "the second press restarts")
 	scenario.start()

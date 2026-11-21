@@ -39,6 +39,12 @@ var return_after_compressions := 10
 ## If nobody presses at all he still comes, this long after HELPER_FETCH_S.
 const RETURN_ANYWAY_S := 90.0
 const ANNOUNCE_S := 1.8
+const ANNOUNCE_MAX_S := 25.0
+const AFTER_WORDS_S := 0.3
+const VOICE_START_MAX_S := 0.5
+var _announce_start := 0.0
+var _announce_heard := false
+var _announce_limit := 0.0
 ## Steps he is seen walking before and after the errand; main keeps them in the room.
 const EXIT_M := 1.0
 ## Hand-over: he stops this far from the trainee's head, toward the patient's head end.
@@ -132,7 +138,10 @@ func _on_event(event: Dictionary) -> void:
 			_spot_home = marek.global_transform
 			_has_spot_home = true
 			marek.attention = "trainee"
-		_enter("announce", ANNOUNCE_S)
+		_enter("announce", ANNOUNCE_S if not answer_waiting.is_valid() else AFTER_WORDS_S)
+		_announce_start = _t
+		_announce_heard = false
+		_announce_limit = _t + ANNOUNCE_MAX_S
 
 func _enter(next: String, seconds: float) -> void:
 	phase = next
@@ -275,14 +284,36 @@ func _take_over_or_home() -> void:
 	if scenario.state == NaretScenario.State.CPR and not scenario.aed_attached:
 		marek.set_posture("")
 		marek.attention = "patient"
-		_walk(_helper_spot(), "to_chest")
+		_walk(_helper_approach(), "to_chest")
 	else:
 		_go_home()
 
 ## Beside the chest, across the body from the trainee (always to the side, never at the
 ## head or the feet, wherever the trainee stands), 0.40 m out: his hands land on the sternum.
+## Where he walks to before he kneels: the same side, but outside the ring nobody walks
+## into around the patient. (20 Nov 2026: his kneeling spot is 0.40 m from the sternum,
+## inside that ring, so the walk could never reach it. He stopped wherever the ring held
+## him and pressed in the air there, "away from the patient".) From here he is set onto the
+## kneeling spot itself, squared to the chest.
+const HELPER_APPROACH_M := 0.80
+
+func _helper_approach() -> Vector3:
+	var chest := _chest_point()
+	var spot := _helper_spot()
+	var out := spot - chest
+	out.y = 0.0
+	if out.length() < 0.01: return spot
+	return chest + out.normalized() * HELPER_APPROACH_M
+
+## The centre of the green zone on the chest, where the hands press (the sternum landmark
+## if the model has no zone).
+func _chest_point() -> Vector3:
+	var zone: Variant = patient.get("zone")
+	if zone is Node3D: return (zone as Node3D).global_position
+	return _sternum_point()
+
 func _helper_spot() -> Vector3:
-	var sternum := _sternum_point()
+	var sternum := _chest_point()
 	var body: Transform3D = patient.call("get_body_transform") if patient.has_method("get_body_transform") else patient.global_transform
 	var side := body.basis.x
 	side.y = 0.0
@@ -323,9 +354,32 @@ func _go_home() -> void:
 
 func advance(delta: float) -> void:
 	super.advance(delta)
+	# The AED is there and he is back at his place: as soon as the trainee switches it on
+	# to put the pads on, he comes to the OTHER side of the patient and presses (user, 20
+	# Nov 2026). Before, he only did so if CPR was already running the moment he delivered.
+	if phase.is_empty() and marek != null and aed != null and delivered and not marek_compressing \
+			and scenario.state == NaretScenario.State.CPR and not scenario.aed_attached and aed.powered and not _hands_busy():
+		if not _has_spot_home:
+			_spot_home = marek.global_transform
+			_has_spot_home = true
+		print("NARET_HELPER the pads go on: he comes to the other side to press")
+		marek.set_posture("")
+		marek.attention = "patient"
+		_walk(_helper_approach(), "to_chest")
 	if phase.is_empty() or marek == null or aed == null: return
 	match phase:
 		"announce":
+			# He says it first and goes then (headset 20 Nov 2026: he walked off and the
+			# sentence came later). While his line still waits for another voice to end,
+			# the time to say it starts over; never longer than ANNOUNCE_MAX_S.
+			# With a voice (answer_waiting set) there is no fixed time: he turns to go
+			# right after the last word (user, 20 Nov 2026: "why 1.8 s? remove that").
+			if answer_waiting.is_valid():
+				if answer_waiting.call() and _t < _announce_limit:
+					_announce_heard = true
+					_phase_until = _t + AFTER_WORDS_S
+				elif not _announce_heard and _t < _announce_start + VOICE_START_MAX_S:
+					return # his voice has not been asked for yet (this very frame)
 			if _t < _phase_until: return
 			marek.attention = "auto"
 			_walk(_leave_point(), "walk_out")
@@ -336,7 +390,11 @@ func advance(delta: float) -> void:
 			_enter("away", 0.0)
 		"away":
 			if _t < _return_at: return
-			if scenario.state not in [NaretScenario.State.CALL_HELP, NaretScenario.State.CPR]: return
+			# 21 Nov 2026 (user): "introduce the AED step only after the breathing check, even
+			# if the person bringing the AED arrives earlier". He stays out of sight with it
+			# until the breathing has been checked (CPR has begun); before, he could come back
+			# during the call and the breathing check.
+			if scenario.state != NaretScenario.State.CPR: return
 			var pressed_enough: bool = scenario.cycles > 0 or scenario.cycle_compressions >= return_after_compressions or scenario.compressions >= return_after_compressions
 			if not pressed_enough and _t < _return_at + RETURN_ANYWAY_S: return
 			# Main allocates the device's fallback place against current geometry.
@@ -398,9 +456,14 @@ func advance(delta: float) -> void:
 			if _helper_cpr_over():
 				_go_home()
 				return
-			# Square to the sternum, so his hands (cpr clip: 0.40 m ahead) land on it.
-			_face(_sternum_point())
-			print("NARET_HELPER at chest: sternum=", _sternum_point(), " marek=", marek.global_position, " chest_h=%.2f" % _chest_height())
+			# Onto the kneeling spot itself, across from where the trainee is NOW, and square
+			# to the green zone, so his hands (cpr clip: 0.40 m ahead) land on it. Wherever
+			# the walk ended, he never presses anywhere else.
+			var spot := _helper_spot()
+			print("NARET_HELPER at chest: walk ended %.2f m from his spot" % Vector2(marek.global_position.x - spot.x, marek.global_position.z - spot.z).length())
+			marek.halt(spot)
+			_face(_chest_point())
+			print("NARET_HELPER at chest: zone=", _chest_point(), " marek=", marek.global_position, " chest_h=%.2f" % _chest_height())
 			marek.facing_locked = true
 			# Patient on the floor: he kneels. Higher (table, bed): he stands and bends over
 			# the chest, his hands at its height (18 Nov 2026).

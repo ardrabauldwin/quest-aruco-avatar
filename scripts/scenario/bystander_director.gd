@@ -34,6 +34,8 @@ var patient: Node3D
 var aed: NaretAED
 ## (key, text, language, speaker) -> void; main routes it to the audio manager.
 var speak: Callable
+## () -> bool: a direct answer of a helper ("I'll get the AED") is still waiting to be said.
+var answer_waiting: Callable
 ## () -> String: the language the bystanders speak in the current mode.
 var language: Callable = func(): return "de"
 ## () -> void: one compression by Marek (main animates the chest and counts it).

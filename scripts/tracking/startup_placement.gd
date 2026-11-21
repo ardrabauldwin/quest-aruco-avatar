@@ -19,8 +19,13 @@ const STABLE_ROTATION_RAD := deg_to_rad(1.0)
 ## collected is taken. It is reported as a fallback: good enough to start, not as exact
 ## as a settled estimate. A clear, close view still finishes at 42 readings in about a
 ## second and a half, as before.
-const TIMED_FALLBACK_MS := 6000
-const TIMED_MIN_SAMPLES := 10
+##
+## 20 Nov 2026 (headset, late evening, dim room): the marker was read only about once a
+## second, for 7 s, and then the trainee looked at the hand menu. Fewer than 10 readings had
+## come in, so the patient was never placed ("why no avatar placement"). Five readings over
+## three seconds are now enough; the later tracking still refines the place.
+const TIMED_FALLBACK_MS := 3000
+const TIMED_MIN_SAMPLES := 5
 
 # Keep all startup samples, not just the last five. Each checkpoint re-estimates
 # the position and rotation from everything collected during this setup.

@@ -101,8 +101,8 @@
   },
   "marek_go_aed": {
     "speaker": "marek",
-    "de": "Ich hole den AED.",
-    "pl": "Przyniosę AED.",
+    "de": "Ich hole den Defibrillator!",
+    "pl": "Idę po defibrylator!",
     "style": "[urgent]",
     "en": "I will get the defibrillator."
   },

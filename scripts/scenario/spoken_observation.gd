@@ -352,6 +352,38 @@ const QUESTION_STARTS := ["is ", "is it", "is the", "are ", "can ", "should ", "
 const CONDITIONALS := ["if ", "when ", "whether", "wenn ", "falls ", "ob ", "jeśli", "jeżeli", "gdy ", "czy "]
 
 
+## 20 Nov 2026 (user: "accept similar wording, such as 'first, I'll check the surroundings',
+## rather than requiring an exact phrase"): the trainee says that they check the surroundings
+## or the safety, in whatever words. Understood by meaning: a word for looking or checking
+## together with a word for the surroundings, safety or danger; or one of the expressions
+## that say both ("look around", "sich umschauen", "rozglądać się"). All three languages
+## are tried whatever the menu says: the neighbour's language is what is being practised.
+## A question ("should I check the surroundings?") is not a statement.
+const SAFETY_CHECK_VERBS := ["check", "look", "see ", "make sure", "ensure", "assess", "scan", "watch", "verify", "secure",
+	"prüf", "pruef", "schau", "guck", "seh", "sicherstell", "stelle sicher", "acht", "kontrollier", "sichere", "absicher",
+	"sprawdz", "sprawdź", "patrz", "spojrz", "spójrz", "upewni", "oceni", "oceń", "zabezpiecz"]
+const SAFETY_CHECK_OBJECTS := ["surrounding", "around", "area", "scene", "environment", "safe", "danger", "hazard", "traffic", "risk",
+	"umgebung", "umfeld", "sicher", "gefahr", "gefähr", "eigenschutz", "selbstschutz", "verkehr", "unfallstelle", "herum", "mich um",
+	"otoczeni", "bezpiecz", "zagroż", "zagroz", "dookoła", "dookola", "wokół", "wokol", "miejsce"]
+const SAFETY_CHECK_WHOLE := ["look around", "looking around", "umschau", "umseh", "umguck", "schaue mich um", "sehe mich um",
+	"rozgląd", "rozglad", "rozejrz", "eigenschutz", "selbstschutz", "safety first", "sicherheit zuerst", "zuerst sicherheit", "erst sicherheit"]
+
+static func states_safety_check(text: String) -> bool:
+	if text.contains("?"): return false
+	var clean := " " + _safety_normalise(text) + " "
+	if clean.strip_edges().is_empty(): return false
+	for start: String in QUESTION_STARTS:
+		if clean.strip_edges().begins_with(start.strip_edges() + " "): return false
+	for phrase: String in SAFETY_CHECK_WHOLE:
+		if phrase in clean: return true
+	var verb := false
+	for word: String in SAFETY_CHECK_VERBS:
+		if (" " + word) in clean: verb = true
+	if not verb: return false
+	for word: String in SAFETY_CHECK_OBJECTS:
+		if word in clean: return true
+	return false
+
 static func classify_safety(text: String, language: String) -> String:
 	var clean := " " + _safety_normalise(text) + " "
 	if clean.strip_edges().is_empty() or text.contains("?"):
@@ -409,8 +441,22 @@ static func _by_length(phrases: Array) -> Array:
 ## "Anna, call 112, and Marek, bring the AED" (13 Nov 2026: both are asked for at the
 ## call step). The device and a fetching verb in the sentence, no negation: Marek is
 ## sent. The name is not required: the recogniser writes Marek as Mark or Merck.
-const AED_WORDS := ["aed", "a.e.d", "defibrillator", "defibrilator", "defi ", "defibrylator"]
-const FETCH_WORDS := ["bring", "get ", "fetch", "grab", "hol", "besorg", "przynie", "przynieś", "idź po", "idz po"]
+const AED_WORDS := ["aed", "a.e.d", "a e d", "defib", "defi ", "fibrillator", "the fib"]
+const FETCH_WORDS := ["bring", "get ", "fetch", "grab", "hol", "besorg", "przynie", "przynieś", "idź po", "idz po",
+	# also as speech recognition writes them ("ring the defibrillator" for "bring ...")
+	"ring ", "find", "look for", "go for", "run for", "need", "take", "organi", "such", "brauch", "lauf", "potrzeb", "znajd", "szuk", "biegnij", "leć po"]
+## Words that make a sentence a request to somebody, whatever its verb.
+const REQUEST_WORDS := ["please", "could you", "can you", "would you", "will you", "you ", "bitte", "kannst du", "könntest du", "können sie", "könnten sie", " du ", " sie ",
+	"proszę", "prosze", "możesz", "mozesz", "może pan", "może pani", " pan ", " pani "]
+## A question about one's own next step ("Should I call 112?") is not a request.
+const SELF_QUESTIONS := ["should i", "shall i", "do i ", "must i", "may i", "can i ", "am i ", "soll ich", "muss ich", "kann ich", "darf ich", "czy mam", "mam ", "powinienem", "powinnam"]
+
+static func asks_about_self(text: String) -> bool:
+	var words := " " + text.to_lower() + " "
+	if not "?" in words: return false
+	for start: String in SELF_QUESTIONS:
+		if (" " + start) in words: return true
+	return false
 const CALL_WORDS := ["112", "one one two", "one-one-two", "call", "ruf", "notruf", "zadzwo", "dzwoń", "dzwon"]
 const FETCH_NEGATIONS := [" not ", "don't", "do not", " nicht ", " kein", " nie "]
 
@@ -422,7 +468,52 @@ static func mentions_aed_fetch(text: String) -> bool:
 	for word: String in AED_WORDS: device = device or word in words
 	var fetch := false
 	for word: String in FETCH_WORDS: fetch = fetch or word in words
+	# The device named in a sentence that asks somebody for something is the request, whatever
+	# verb the recognition wrote (headset 20 Nov 2026: "could you please ring the defibrillator?").
+	for word: String in REQUEST_WORDS: fetch = fetch or word in words
 	return device and fetch
+
+## Does some part of what was said send somebody for the AED? Read part by part, like
+## requests_emergency_call: "He is not responding. Get the defibrillator" counts, "Do not
+## get the AED" and "Should I get the AED?" do not.
+static func requests_aed_fetch(text: String) -> bool:
+	var marked := text
+	for mark: String in [".", "!", ";"]:
+		marked = marked.replace(mark, mark + "|")
+	for mark: String in [",", " and ", " und ", " oraz ", " then ", " dann "]:
+		marked = marked.replace(mark, "|")
+	for part: String in marked.split("|", false):
+		if not asks_about_self(part) and mentions_aed_fetch(part): return true
+	return not asks_about_self(text) and mentions_aed_fetch(text)
+
+## What was said without the parts that give a task to a helper (call 112, fetch the AED):
+## "He is not responding. Call 112 and get the defibrillator!" -> "He is not responding."
+## The tasks are kept elsewhere; the rest is the report of the step itself.
+static func without_task_requests(text: String) -> String:
+	var marked := text
+	for mark: String in [".", "!", ";"]:
+		marked = marked.replace(mark, mark + "|")
+	for mark: String in [",", " and ", " und ", " oraz ", " i ", " a ", " then ", " dann "]:
+		marked = marked.replace(mark, "|")
+	var kept: Array[String] = []
+	for part: String in marked.split("|", false):
+		var piece := part.strip_edges()
+		if piece.is_empty(): continue
+		if not asks_about_self(piece) and (infer_action(piece) == "call_emergency" or mentions_aed_fetch(piece)): continue
+		kept.append(piece)
+	return " ".join(kept)
+
+## In a sentence that gives both tasks: is the call asked for before the device?
+## ("Anna, call 112, and Marek, get the AED" -> true; the other way round -> false.)
+static func call_comes_first(text: String) -> bool:
+	var words := text.to_lower()
+	var call_at := words.length()
+	var device_at := words.length()
+	for word: String in CALL_WORDS:
+		if words.find(word) >= 0: call_at = mini(call_at, words.find(word))
+	for word: String in AED_WORDS:
+		if words.find(word) >= 0: device_at = mini(device_at, words.find(word))
+	return call_at < device_at
 
 static func mentions_emergency_call(text: String) -> bool:
 	var words := text.to_lower()
@@ -552,10 +643,25 @@ static func normalize(transcript: String) -> String:
 		normalized = normalized.replace("  ", " ")
 	return " " + normalized.strip_edges() + " "
 
+## Does some part of what was said ask somebody to call 112? Read part by part, so "He is
+## not responding. Please call 112" counts (its first part's "not" is not about the call)
+## and "Do not call 112" or "Should I call 112?" do not.
+static func requests_emergency_call(text: String) -> bool:
+	var marked := text
+	for mark: String in [".", "!", ",", ";", " and ", " und ", " oraz ", " then ", " dann "]:
+		marked = marked.replace(mark, mark.strip_edges() + "|") if mark.strip_edges().length() == 1 else marked.replace(mark, "|")
+	for part: String in marked.split("|", false):
+		# "1.1.2." and the like fall apart above; the whole sentence is tried below.
+		if not asks_about_self(part) and infer_action(part) == "call_emergency": return true
+	return not asks_about_self(text) and infer_action(text) == "call_emergency"
+
 static func infer_action(transcript: String) -> String:
 	var line := normalize(transcript)
 	if line.strip_edges().is_empty():
 		return ""
+	# The number as speech recognition writes it when it is said digit by digit.
+	for spelled: String in [" 1 1 2 ", " one one two ", " eins eins zwei ", " eins eins zwo ", " jeden jeden dwa ", " one hundred twelve ", " one twelve ", " hundertzwolf ", " sto dwanascie "]:
+		line = line.replace(spelled, " 112 ")
 	# Keep this deliberately narrow: no free-text command administers a shock,
 	# records a compression, proves a breathing check, or changes patient vitals.
 	# "Abstand! Nicht berühren!" is checked before the negation guard below.
@@ -567,7 +673,7 @@ static func infer_action(transcript: String) -> String:
 			return "reassure"
 		return ""
 	if [" 112 ", " notruf ", " rettungsdienst ", " pogotowie ", " pogotowia ", " emergency services ", " ambulance "].any(func(w): return w in line):
-		if [" ruf ", " rufen ", " anrufen ", " alarmier", " wezw", " zadzwon", " dzwon", " call ", " phone "].any(func(w): return w in line):
+		if [" ruf ", " rufe ", " rufst ", " rufen ", " anrufen ", " anruf", " wahl", " alarmier", " wezw", " zadzwon", " dzwon", " call ", " calls ", " calling ", " phone ", " dial ", " ring "].any(func(w): return w in line):
 			return "call_emergency"
 	if [" aed ", " defibrillator ", " defibrylator "].any(func(w): return w in line):
 		if [" hol ", " holen ", " hole ", " bring ", " bringen ", " przynies", " przyniose", " szuk", " fetch "].any(func(w): return w in line):

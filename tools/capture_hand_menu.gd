@@ -77,7 +77,7 @@ func _initialize() -> void:
 			if _scenario.state == NaretScenario.State[state.to_upper()]:
 				break
 	_menu.set_listening("--mic" in args)
-	_menu._debug_choices.visible = "--debug" in args
+	if "--debug" in args: _popup = "debug"
 	var ekg := NaretEKG.new()
 	ekg.set_rhythm(NaretEKG.Rhythm.VF if state == "cpr" else NaretEKG.Rhythm.SINUS)
 	ekg.advance(3.0)
@@ -86,14 +86,14 @@ func _initialize() -> void:
 	_menu.update_session(_scenario)
 	print("CAPTURE_MENU state=", state, " actions=", _scenario.get_available_actions())
 	# Look at the hand from the wearer's eye. --wide: the whole grid beside the palm.
-	# --popup <language|mode|situation|breaths|gender>: that key's pop-up, opened at frame 40,
-	# seen from the eye looking ahead and a little down, as the wearer sees it (19 Nov 2026).
+	# --popup <language|mode|situation|breaths|gender>, --debug: that key's pop-up, opened at
+	# frame 40 on the screen beside the palm (20 Nov 2026), in the same view as --wide.
 	eye.look_at_from_position(eye.position, palm_position + Vector3(0, 0.02, 0), Vector3.UP)
-	camera.fov = 70.0 if ("--wide" in args or "--popup" in args) else 40.0
+	camera.fov = 70.0 if ("--wide" in args or "--popup" in args or "--debug" in args) else 40.0
 	for index in args.size():
 		if args[index] == "--popup" and index + 1 < args.size():
 			_popup = args[index + 1]
-	if "--wide" in args:
+	if "--wide" in args or not _popup.is_empty():
 		eye.look_at_from_position(eye.position, palm_position + Vector3(0.12, 0.06, 0), Vector3.UP)
 	camera.transform = eye.transform
 	_eye = eye
@@ -125,12 +125,17 @@ func _process(_delta: float) -> bool:
 		_menu._action_keys[0].pointer_hover(-0.003)
 	if _frames == 40 and not _popup.is_empty():
 		if _popup == "language": _menu._toggle_popup(_menu._language_choices)
+		elif _popup == "debug": _menu._toggle_popup(_menu._debug_choices)
 		else: _menu._toggle_setup_menu(_popup)
-		var ahead := Vector3(0, -0.10, -0.42)
-		_eye.look_at_from_position(_eye.position, _eye.position + ahead, Vector3.UP)
-		_camera.transform = _eye.transform
 	if _frames == 45:
 		_menu.update_session(_scenario)
+		if "--dialogue" in OS.get_cmdline_user_args():
+			_menu.add_dialogue("Instruktor", "Du siehst eine Person, die Hilfe braucht. Was tust du zuerst?", false)
+			_menu.add_dialogue("Du", "Zuerst schaue ich, ob die Umgebung sicher ist.", true)
+			_menu.add_dialogue("Instruktor", "Ist die Umgebung sicher? Bitte antworte mit ja oder nein.", false)
+		# --notice: a long instruction as the notification in the screen's header.
+		if "--notice" in OS.get_cmdline_user_args():
+			_menu.show_notice("Ruf die 112 an. In deiner linken Hand ist ein Handy: tippe auf 112 und dann auf Lautsprecher.")
 	if _frames == 60:
 		_capture.call_deferred()
 	return false

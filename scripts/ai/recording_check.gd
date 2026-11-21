@@ -61,7 +61,15 @@ static func level_stats(data: PackedByteArray, stereo: bool, mix_rate: int) -> D
 
 
 static func near_silent(stats: Dictionary) -> bool:
-	return float(stats.get("peak_rms", 0.0)) < SILENT_PEAK_RMS
+	# Quiet but spoken: a fifth of the recording above the voice threshold is somebody talking
+	# softly, not silence (headset 21 Nov 2026: peak 0.029, voiced 0.21 was thrown away and
+	# the trainee had to say "please call 112" again). Silent recordings of that evening had
+	# a voiced share of 0.00 to 0.03.
+	# (Steady hiss is above the threshold nearly all the time, speech a tenth to two thirds.)
+	var peak := float(stats.get("peak_rms", 0.0))
+	var voiced := float(stats.get("voiced_fraction", 0.0))
+	if peak >= SILENT_PEAK_RMS: return false
+	return not (peak >= SILENT_PEAK_RMS * 0.9 and voiced >= 0.10 and voiced <= 0.70)
 
 
 ## "" when the transcript may be real speech; otherwise why it is invented:

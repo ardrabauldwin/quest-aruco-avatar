@@ -1,6 +1,7 @@
 extends "res://tests/suite.gd"
 ## The whole start, as the trainee does it (19 Nov 2026, user review of the 18 Nov build):
-## every wrist key opens a pop-up in front of the eyes, each choice is kept while the others
+## every wrist key opens a pop-up on the screen beside the hand, where the key was touched
+## (20 Nov 2026: not in front of the eyes any more), each choice is kept while the others
 ## are made (and for the next start of the app), and "Start training" on a fresh install
 ## starts the exercise: the instructor asks the safety question and the steps respond.
 
@@ -109,17 +110,29 @@ func run() -> Array[String]:
 	host._set_language("de")
 	menu.set_setup(host.setup.answers)
 
-	# 1. Sprache: a pop-up with English, German and Polish, in the room, not on the hand.
+	# 1. Sprache: a pop-up with English, German and Polish, on the grid's place beside the hand.
 	check(await _poke(menu._language_menu), "the Sprache key is reachable")
 	check(menu._language_choices.visible and not menu._controls.visible, "Sprache opens its pop-up and the grid steps aside")
-	check(menu._language_choices.get_parent() == menu._popup_root and not menu._rig.is_ancestor_of(menu._language_choices), "the pop-up hangs in the room: it does not move with the hand")
+	check(menu._rig.is_ancestor_of(menu._language_choices), "the pop-up belongs to the hand menu: it moves and hides with it")
+	check(menu._popup_root.global_transform.is_equal_approx(menu._controls.global_transform), "the pop-up opens where the grid is, not somewhere else")
+	# The screen hangs from its top edge (the grid's origin) and is as large as a hand.
+	check(NaretHandMenu.SCREEN_W <= 0.12 and NaretHandMenu.SCREEN_H <= 0.20, "the screen is hand-sized: %.3f x %.3f m" % [NaretHandMenu.SCREEN_W, NaretHandMenu.SCREEN_H])
+	for code in ["en", "de", "pl"]:
+		var offset: Vector3 = menu._controls.global_transform.affine_inverse() * menu._language_keys[code].global_position
+		check(absf(offset.x) < NaretHandMenu.SCREEN_W * 0.5 and offset.y < 0.0 and offset.y > -NaretHandMenu.SCREEN_H - 0.02 and absf(offset.z) < 0.01, "option %s lies within the screen on the hand, at %s" % [code, offset])
+	# The palm turns away and back: the open page and the choices so far are still there.
+	menu._set_shown(true)
+	menu._set_shown(false)
+	check(not menu._language_choices.is_visible_in_tree(), "the pop-up hides with the menu")
+	menu._set_shown(true)
+	check(menu._language_choices.is_visible_in_tree() and not menu._controls.visible, "and is back with it, still open")
 	var names: Array = []
 	for code in ["en", "de", "pl"]: names.append(menu._language_keys[code].label.text)
 	check(names == ["English", "Deutsch", "Polski"], "the pop-up offers English, Deutsch and Polski, got %s" % [names])
 	check(menu._language_keys["de"].fill.a > 0.0, "the current language is green in the pop-up")
 	check(await _poke(menu._language_keys["pl"]), "Polski is reachable")
 	check(host._language == "pl" and not menu.popup_open() and menu._controls.visible, "Polski is chosen and the pop-up closes")
-	check(menu._language_menu.label.text == "Język\nPolski", "the key shows the chosen language, got " + menu._language_menu.label.text)
+	check(menu._language_menu.label.text == "Język", "the key shows only its name (18 Nov 2026), got " + menu._language_menu.label.text)
 
 	# 2. The other choices one after the other, at once: none is lost, each stays.
 	await _choose(menu, "mode", "neighbour")
@@ -129,7 +142,7 @@ func run() -> Array[String]:
 	await _choose(menu, "gender", "female")
 	var expected := {"language": "pl", "mode": "neighbour", "situation": "A", "breaths": "no", "gender": "female"}
 	check(host.setup.answers == expected, "every choice is kept while the others are made, got %s" % [host.setup.answers])
-	check(menu._setup_keys["situation"].label.text.contains("A –") and menu._setup_keys["breaths"].label.text.contains("Bez oddechów"), "the keys show what is chosen: " + menu._setup_keys["situation"].label.text + " / " + menu._setup_keys["breaths"].label.text)
+	check(menu._setup_keys["situation"].label.text == "Sytuacja" and menu._setup_keys["breaths"].label.text == "Oddechy" and menu._setup_keys["mode"].label.text == "Tryb", "the keys show only their names, not the choice: " + menu._setup_keys["situation"].label.text + " / " + menu._setup_keys["breaths"].label.text)
 	check(await _poke(menu._setup_keys["situation"]), "Situation opens again")
 	check(menu._setup_option_keys["situation"]["A"].fill.a > 0.0 and menu._setup_option_keys["situation"]["B"].fill.a == 0.0, "reopened, the pop-up still marks A green")
 	check(await _poke(menu._setup_choices["situation"].get_meta("close")), "the pop-up's close key is reachable")
@@ -138,7 +151,7 @@ func run() -> Array[String]:
 	await tree.create_timer(1.3).timeout
 	check(await _poke(menu._language_menu) and await _poke(menu._language_keys["de"]), "German again")
 	check(host.setup.answers.situation == "A" and host.setup.answers.breaths == "no" and host.setup.answers.gender == "female", "a language switch keeps situation, ventilation and gender")
-	check(menu._setup_keys["situation"].label.text.contains("allein"), "the keys follow the language: " + menu._setup_keys["situation"].label.text)
+	check(menu._setup_keys["situation"].label.text == "Situation" and menu._setup_option_keys["situation"]["A"].label.text.contains("allein"), "keys and options follow the language: " + menu._setup_option_keys["situation"]["A"].label.text)
 	# And they are there at the next start of the app.
 	host.setup.answers = {"language": "de", "mode": "own", "situation": "B", "breaths": "yes"}
 	host._load_setup_choices()
@@ -161,7 +174,7 @@ func run() -> Array[String]:
 	_interaction._update_poke(1, inward.call(reposition, 0.003), "slide")
 	_interaction._update_poke(1, inward.call(reposition, 0.02), "slide")
 	check(fired == ["reposition"], "a clean poke on Reposition still fires it, got %s" % [fired])
-	check(menu._language_menu.global_position.distance_to(menu._setup_keys["situation"].global_position) > 0.05, "grid rows are well apart")
+	check(menu._language_menu.global_position.distance_to(menu._setup_keys["situation"].global_position) >= NaretHandMenu.GRID_KEY.y + 0.007, "grid rows keep a gap between the keys")
 
 	# 3. Start training on a fresh install: the exercise starts, no hidden "save calibration" step.
 	menu.update_session(host.scenario)

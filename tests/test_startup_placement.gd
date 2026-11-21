@@ -28,13 +28,16 @@ func run() -> Array[String]:
 		at_ms = i * 700
 		if not slow.is_empty(): break
 	check(not slow.is_empty() and slow.fallback, "a slow, unsettled view is placed by time, labelled as a fallback")
-	check(at_ms >= NaretStartupPlacement.TIMED_FALLBACK_MS and at_ms < 9000 and slow.samples >= NaretStartupPlacement.TIMED_MIN_SAMPLES, "after about six seconds and at least ten readings (%d ms, %d readings)" % [at_ms, int(slow.get("samples", 0))])
+	check(at_ms >= NaretStartupPlacement.TIMED_FALLBACK_MS and at_ms < 9000 and slow.samples >= NaretStartupPlacement.TIMED_MIN_SAMPLES, "after the set time and number of readings (%d ms, %d readings)" % [at_ms, int(slow.get("samples", 0))])
 	check(absf(slow.pose.origin.x - 1.0) < 0.03, "at the median of what was read")
 	# Two quick glimpses are not enough, however long ago the first one was.
 	startup = NaretStartupPlacement.new()
 	var few: Dictionary = {}
-	for i in range(5): few = startup.observe(pose, i * 3000)
-	check(few.is_empty(), "five readings never place the patient, even over twelve seconds")
+	for i in range(4): few = startup.observe(pose, i * 3000)
+	check(few.is_empty(), "four readings never place the patient, even over nine seconds")
+	# 20 Nov 2026: a dim room gave about one reading a second; five over three seconds place him.
+	few = startup.observe(pose, 12000)
+	check(not few.is_empty() and few.fallback, "the fifth reading places the patient, labelled as a fallback")
 	# Exercise the actual XR anchor, not only the estimator in isolation.
 	var tree := Engine.get_main_loop() as SceneTree
 	var head := Node3D.new()

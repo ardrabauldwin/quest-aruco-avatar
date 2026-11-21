@@ -11,6 +11,10 @@ extends Node
 signal observation_ready(action: String)
 signal clarification(text: String)
 signal conversation(text: String)
+## The trainee says what they are doing or about to do for the safety step ("first I check
+## the surroundings"), without a finding yet (20 Nov 2026). main counts it as the step's
+## statement; the look to both sides and the answer "safe" are still needed.
+signal safety_statement
 const ACTIONS := ["begin_check", "check_responsiveness", "call_emergency", "check_breathing", "ventilation", "compression_only", "handover", "request_aed", "clear_patient"]
 const KINDS := ["report", "request", "question", "intention", "uncertain", "conversation"]
 var _api: NaretUniAPIClient
@@ -71,6 +75,9 @@ func interpret(text: String, language: String, _context := "") -> void:
 		conversation.emit(text)
 	elif not accepted_action(parsed, text).is_empty():
 		observation_ready.emit(accepted_action(parsed, text))
+	elif parsed.action == "begin_check" and parsed.kind in ["intention", "report", "request"] and not "?" in text:
+		last_doubtful = false
+		safety_statement.emit()
 	else:
 		clarification.emit(clarification_text(language))
 

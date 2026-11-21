@@ -32,10 +32,12 @@ func _init() -> void:
 	add_child(_view)
 	_panel = PanelContainer.new()
 	var card := StyleBoxFlat.new()
-	card.bg_color = Color(0.07, 0.09, 0.11, 0.88)
-	card.border_color = Color(1, 1, 1, 0.35)
-	card.set_border_width_all(3)
-	card.set_corner_radius_all(26)
+	# 20 Nov 2026: navy with a red bar down the left edge, as the welcome card; it was a
+	# dark grey panel with a white outline.
+	card.bg_color = Color(NaretFont.NAVY, 0.94)
+	card.border_color = NaretFont.RED
+	card.border_width_left = 14
+	card.set_corner_radius_all(20)
 	card.content_margin_left = MARGIN_X
 	card.content_margin_right = MARGIN_X
 	card.content_margin_top = MARGIN_Y
@@ -53,10 +55,15 @@ func _init() -> void:
 
 static func _line(px: int, color: Color, weight: int) -> Label:
 	var label := Label.new()
-	var face := SystemFont.new()
-	face.font_names = PackedStringArray(["Roboto", "Noto Sans", "Segoe UI", "Arial", "sans-serif"])
-	face.font_weight = weight
-	label.add_theme_font_override("font", face)
+	# The app's typeface (Inter, 20 Nov 2026); a system font only if its file is missing.
+	var inter := NaretFont.weight(weight)
+	if inter != null:
+		label.add_theme_font_override("font", inter)
+	else:
+		var face := SystemFont.new()
+		face.font_names = PackedStringArray(["Roboto", "Noto Sans", "Segoe UI", "Arial", "sans-serif"])
+		face.font_weight = weight
+		label.add_theme_font_override("font", face)
 	label.add_theme_font_size_override("font_size", px)
 	label.add_theme_color_override("font_color", color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

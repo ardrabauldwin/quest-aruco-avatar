@@ -67,7 +67,7 @@
       "notice.waiting_placement": "Waiting for marker placement. Look at the mannequin markers; training will start automatically when placement finishes.",
       "coach.keep_going_until_crew": "Keep going, help is on the way. The ambulance crew will take over when they arrive.",
       "anna.calling_112": "I'm calling 112. I'm putting the phone on speaker.",
-      "error.shoulders_not_seen": "I haven't detected you touching the person's shoulders yet. Please tap their shoulders clearly.",
+      "error.shoulders_not_seen": "I didn't see you tap his shoulders. Please tap them and check whether he responds.",
       "error.breathing_not_seen": "I did not see you check his breathing. Tilt the head back, lift the chin, put your ear to his mouth and look at his chest, then tell me.",
       "coach.open_airway_hint": "Remember to open the airway first: one hand on the forehead, tilt the head back, lift the chin with the other hand.",
       "coach.check_time": "Do not check longer than 10 seconds.",
@@ -101,8 +101,10 @@
       "coach.confirm_aed": "Did the AED deliver a shock? Say yes or no.",
       "coach.handover_what": "Tell the ambulance crew briefly: whether the person responds, whether they are breathing normally, and what you did.",
       "coach.handover_what_aed": "Tell the ambulance crew briefly: whether the person responds, whether they are breathing normally, what you did, and that the AED delivered a shock.",
-      "coach.report_response": "Please report to me: does the person respond or not?",
-      "coach.patient_unresponsive": "The person does not respond in this scenario. Please check their response again."
+      "coach.report_response": "Does he respond?",
+      "coach.tap_seen_ask": "I saw you tap their shoulders. Are they responding? Please say yes or no.",
+      "coach.tap_seen": "I saw you tap their shoulders.",
+      "coach.patient_unresponsive": "I checked him too, and I think he is not responding. Please look again."
     },
     "de": {
       "state.idle": "Bereit",
@@ -165,7 +167,7 @@
       "notice.waiting_placement": "Warte auf die Markerplatzierung. Schau auf die Marker der Puppe; danach startet das Training automatisch.",
       "coach.keep_going_until_crew": "Mach weiter, Hilfe ist unterwegs. Der Rettungsdienst übernimmt, sobald er da ist.",
       "anna.calling_112": "Ich rufe 112 an. Ich stelle das Telefon auf Lautsprecher.",
-      "error.shoulders_not_seen": "Ich habe noch nicht erkannt, dass du die Person an den Schultern berührt hast. Bitte tippe ihr deutlich auf die Schultern.",
+      "error.shoulders_not_seen": "Ich habe nicht gesehen, dass du ihm auf die Schultern getippt hast. Bitte tipp darauf und prüfe, ob er reagiert.",
       "error.breathing_not_seen": "Ich habe nicht gesehen, dass du die Atmung geprüft hast. Kopf überstrecken, Kinn anheben, Ohr an den Mund und Blick auf den Brustkorb, dann sag es mir.",
       "coach.open_airway_hint": "Denk daran, zuerst die Atemwege freizumachen: eine Hand an die Stirn, Kopf nach hinten, mit der anderen Hand das Kinn anheben.",
       "coach.check_time": "Prüfe nicht länger als 10 Sekunden.",
@@ -199,8 +201,10 @@
       "coach.confirm_aed": "Hat der AED einen Schock abgegeben? Antworte mit ja oder nein.",
       "coach.handover_what": "Sag dem Rettungsdienst kurz: ob die Person reagiert, ob sie normal atmet und was du gemacht hast.",
       "coach.handover_what_aed": "Sag dem Rettungsdienst kurz: ob die Person reagiert, ob sie normal atmet, was du gemacht hast und dass der AED einen Schock abgegeben hat.",
-      "coach.report_response": "Bitte berichte mir: Reagiert die Person oder reagiert sie nicht?",
-      "coach.patient_unresponsive": "Die Person reagiert in diesem Szenario nicht. Bitte prüfe ihre Reaktion noch einmal."
+      "coach.report_response": "Reagiert er?",
+      "coach.tap_seen_ask": "Ich habe gesehen, dass du auf die Schultern getippt hast. Reagiert die Person? Bitte sag ja oder nein.",
+      "coach.tap_seen": "Ich habe gesehen, dass du auf die Schultern getippt hast.",
+      "coach.patient_unresponsive": "Ich habe ihn mir auch angesehen und glaube, er reagiert nicht. Schau bitte noch einmal hin."
     },
     "pl": {
       "state.idle": "Gotowość",
@@ -263,7 +267,7 @@
       "notice.waiting_placement": "Oczekiwanie na umieszczenie markerów. Spójrz na markery manekina; trening rozpocznie się automatycznie po ustawieniu.",
       "coach.keep_going_until_crew": "Kontynuuj, pomoc jest w drodze. Zespół ratownictwa medycznego przejmie, gdy przyjedzie.",
       "anna.calling_112": "Dzwonię pod 112. Włączam tryb głośnomówiący.",
-      "error.shoulders_not_seen": "Nie wykryłem jeszcze dotknięcia ramion tej osoby. Stuknij ją wyraźnie w ramiona.",
+      "error.shoulders_not_seen": "Nie widziałem stuknięcia w jego ramiona. Stuknij w nie i sprawdź, czy reaguje.",
       "error.breathing_not_seen": "Nie widziałem, żebyś sprawdził oddech. Odchyl głowę, unieś podbródek, przyłóż ucho do ust i patrz na klatkę piersiową, potem mi powiedz.",
       "coach.open_airway_hint": "Pamiętaj, aby najpierw udrożnić drogi oddechowe: jedna ręka na czole, głowa do tyłu, drugą ręką unieś brodę.",
       "coach.check_time": "Nie sprawdzaj dłużej niż 10 sekund.",
@@ -297,8 +301,10 @@
       "coach.confirm_aed": "Czy AED wykonał wyładowanie? Odpowiedz tak lub nie.",
       "coach.handover_what": "Powiedz krótko zespołowi ratownictwa: czy osoba reaguje, czy oddycha normalnie i co zostało zrobione.",
       "coach.handover_what_aed": "Powiedz krótko zespołowi ratownictwa: czy osoba reaguje, czy oddycha normalnie, co zostało zrobione i że AED wykonał wyładowanie.",
-      "coach.report_response": "Zgłoś mi: czy osoba reaguje, czy nie reaguje?",
-      "coach.patient_unresponsive": "Ta osoba w tym scenariuszu nie reaguje. Sprawdź jej reakcję jeszcze raz."
+      "coach.report_response": "Czy ta osoba reaguje?",
+      "coach.tap_seen_ask": "Widziałem, jak stukasz w ramiona. Czy ta osoba reaguje? Powiedz tak lub nie.",
+      "coach.tap_seen": "Widziałem, jak stukasz w ramiona.",
+      "coach.patient_unresponsive": "Też go sprawdziłem i myślę, że on nie reaguje. Sprawdź jeszcze raz."
     }
   },
   "ui_en": {

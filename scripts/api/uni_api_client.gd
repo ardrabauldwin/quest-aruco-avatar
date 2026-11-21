@@ -480,6 +480,21 @@ static func decode_audio(bytes: PackedByteArray) -> AudioStream:
 	stream.data = pcm
 	return stream
 
+## Gives up the cloud recognition request that is on its way (the early one for a sentence
+## that then went on), so the whole sentence can be sent at once. Before, the full
+## recording waited for that useless answer first: with a slow service two waits in a row
+## (headset 21 Nov 2026: 27 s for one sentence).
+func abandon_speech_request() -> void:
+	if not local_asr_url.is_empty() or not _busy.get("asr", false) or not _requests.has("asr"): return
+	_speech_request_generation += 1
+	var old: HTTPRequest = _requests["asr"]
+	_requests["asr"] = _new_request("asr")
+	old.cancel_request()
+	# The waiting caller is released as "failed"; the new generation keeps it from retrying.
+	old.request_completed.emit(HTTPRequest.RESULT_REQUEST_FAILED, 0, PackedStringArray(), PackedByteArray())
+	old.queue_free()
+	print("NARET_ASR_EARLY abandoned: the sentence went on")
+
 func cancel_speech_requests() -> void:
 	_speech_request_generation += 1
 	# cancel_request() alone does not complete await request_completed. Resolve the

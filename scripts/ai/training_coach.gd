@@ -93,6 +93,10 @@ static func current_key(scenario: NaretScenario) -> String:
 	# Situation A, alone (issue #1, 4. Hilfe rufen): the trainee calls 112 personally.
 	if key == "call" and str(scenario.get_meta("situation", "B")) == "A":
 		key = "call_alone"
+	# Situation B with an AED (issue #1, 4.): both tasks are given out, 112 and the AED.
+	# Once somebody has been sent for the AED, only the call is left to ask for.
+	elif key == "call" and not scenario.alone and not scenario.cpr_witness_only and not scenario.aed_requested:
+		key = "call_aed"
 	if key == "handover" and str(scenario.get_meta("situation", "B")) == "A":
 		key = "handover_alone"
 	if not scenario.cpr_witness_only and scenario.state == NaretScenario.State.CPR and scenario._aed_used and scenario._cpr_after_aed == 0:
@@ -136,11 +140,18 @@ static func context(scenario: NaretScenario, language: String) -> Dictionary:
 		"scope": ("one witness, a passer-by in a red jacket; no AED interaction in this exercise" if scenario.cpr_witness_only else "the passer-by in the red jacket calls 112 and remains the witness; the man with the blue backpack is a separate helper who brings the AED; instructor guides; trainee powers AED and places pads with hands, then follows fully automatic simulated analysis/shock prompts; the continuous training pattern repeats shock, shock, no shock, with CPR after each and no automatic recovery") + "; breaths and findings are reported, not sensor verified",
 		"patient_facts": "A man has collapsed in a park. Nobody present knows him or anyone else here: his name, age, medical history, medication and allergies are unknown, and so are the cause and the exact time of the collapse; do not invent them. Never use names for anyone; call him the person (die Person, osoba)."}
 
-static func feedback(scenario: NaretScenario, report: String, status: String, language: String) -> String:
+static func feedback(scenario: NaretScenario, report: String, status: String, language: String, dispatcher: bool = false) -> String:
 	var key := step(scenario)
+	# While the dispatcher leads she says her own instruction again, in her words, and
+	# nothing about "reports" (20 Nov 2026: the instructor said his breathing instruction
+	# in the middle of the emergency call).
+	if dispatcher:
+		var hers := instruction("dispatcher_" + current_key(scenario), language)
+		var english := instruction("dispatcher_" + current_key(scenario), "en")
+		if not hers.is_empty() and hers != "Ask the instructor for the next step." and english != "Ask the instructor for the next step.": return hers
 	var repeated_safety := status == "ccbm_out_of_order" and key == "response" and preload("res://scripts/scenario/spoken_observation.gd").action_for(report) == "begin_check"
 	var introductions := {
 		"en": "You already reported that the scene is safe. We are now checking whether he responds. " if repeated_safety else "That report does not confirm the current check. ",
 		"de": "Sie haben bereits gemeldet, dass die Umgebung sicher ist. Jetzt prüfen wir seine Reaktion. " if repeated_safety else "Diese Meldung bestätigt die aktuelle Prüfung nicht. ",
 		"pl": "Już zgłoszono, że miejsce jest bezpieczne. Teraz sprawdzamy, czy reaguje. " if repeated_safety else "To zgłoszenie nie potwierdza bieżącej oceny. "}
-	return str(introductions.get(language, introductions.en)) + instruction(key, language)
+	return str(introductions.get(language, introductions.en)) + instruction(current_key(scenario), language)

@@ -972,6 +972,13 @@ func reset() -> void:
 	if _voice: _voice.stop()
 	if is_instance_valid(_pad_guides): _pad_guides.reset_guides()
 
+## The places (PAD_POSES names) that have no pad on them yet.
+func missing_pads() -> Array[String]:
+	var missing: Array[String] = []
+	for pose: String in PAD_POSES:
+		if not _placed.has(pose): missing.append(pose)
+	return missing
+
 func pads_ready() -> bool:
 	return powered and _placed.size() == PAD_POSES.size()
 

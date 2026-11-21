@@ -12,7 +12,12 @@
       "aed_resume": "Resume chest compressions now. The count starts again from zero: thirty compressions, then two breaths.",
       "aed_resume_only": "Resume chest compressions now in compression-only mode, without pauses. The count starts again from zero.",
       "aed_arrived": "The AED is here. Switch it on now: touch its green power button.",
-      "aed_pads_how": "Touch a pad and bring it to the golden outline on his chest. Then the second pad."
+      "aed_pads_how": "Touch a pad and bring it to the golden outline on his chest. Then the second pad.",
+      "aed_pad_PadRight": "One pad is still missing. Put it on the right side of his chest, below the collarbone, on the golden outline.",
+      "aed_pad_PadLeft": "One pad is still missing. Put it on his left side, below the armpit, on the golden outline.",
+      "aed_pad_missed_PadRight": "That pad is not on the outline yet. It belongs on the right side of his chest, below the collarbone.",
+      "aed_pad_missed_PadLeft": "That pad is not on the outline yet. It belongs on his left side, below the armpit.",
+      "aed_pad_missed": "That pad is not on an outline yet. Bring it to one of the golden outlines on his chest."
     },
     "de": {
       "aed_request": "Bitte den Mann mit dem blauen Rucksack, den AED zu holen.",
@@ -25,7 +30,12 @@
       "aed_resume": "Drück jetzt sofort weiter. Der Zähler beginnt wieder bei null: dreißig Kompressionen, dann zweimal beatmen.",
       "aed_resume_only": "Drück jetzt sofort weiter, ohne Pausen. Der Zähler beginnt wieder bei null.",
       "aed_arrived": "Der AED ist da. Schalte ihn jetzt ein: Berühre den grünen Einschaltknopf.",
-      "aed_pads_how": "Berühre eine Elektrode und führe sie zum goldenen Umriss auf der Brust. Dann die zweite Elektrode."
+      "aed_pads_how": "Berühre eine Elektrode und führe sie zum goldenen Umriss auf der Brust. Dann die zweite Elektrode.",
+      "aed_pad_PadRight": "Eine Elektrode fehlt noch. Klebe sie rechts oben auf die Brust, unter das Schlüsselbein, auf den goldenen Umriss.",
+      "aed_pad_PadLeft": "Eine Elektrode fehlt noch. Klebe sie auf seine linke Seite, unter die Achsel, auf den goldenen Umriss.",
+      "aed_pad_missed_PadRight": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört rechts oben auf die Brust, unter das Schlüsselbein.",
+      "aed_pad_missed_PadLeft": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört auf seine linke Seite, unter die Achsel.",
+      "aed_pad_missed": "Diese Elektrode liegt noch nicht auf einem Umriss. Führe sie zu einem der goldenen Umrisse auf der Brust."
     },
     "pl": {
       "aed_request": "Poproś mężczyznę z niebieskim plecakiem, żeby przyniósł AED.",
@@ -38,7 +48,12 @@
       "aed_resume": "Teraz wznów uciskanie klatki piersiowej. Licznik zaczyna znowu od zera: trzydzieści uciśnięć, potem dwa oddechy.",
       "aed_resume_only": "Teraz wznów uciskanie bez oddechów i bez przerw. Licznik zaczyna znowu od zera.",
       "aed_arrived": "AED jest na miejscu. Włącz go teraz: dotknij zielonego przycisku zasilania.",
-      "aed_pads_how": "Dotknij elektrody i przenieś ją na złoty kontur na klatce piersiowej. Potem druga elektroda."
+      "aed_pads_how": "Dotknij elektrody i przenieś ją na złoty kontur na klatce piersiowej. Potem druga elektroda.",
+      "aed_pad_PadRight": "Brakuje jeszcze jednej elektrody. Przyklej ją po prawej stronie klatki piersiowej, pod obojczykiem, na złoty kontur.",
+      "aed_pad_PadLeft": "Brakuje jeszcze jednej elektrody. Przyklej ją na lewym boku, pod pachą, na złoty kontur.",
+      "aed_pad_missed_PadRight": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest po prawej stronie klatki piersiowej, pod obojczykiem.",
+      "aed_pad_missed_PadLeft": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest na lewym boku, pod pachą.",
+      "aed_pad_missed": "Ta elektroda nie leży jeszcze na konturze. Przenieś ją na jeden ze złotych konturów na klatce piersiowej."
     }
   }
 }

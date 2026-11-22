@@ -131,11 +131,8 @@ func _ready() -> void:
 			audio_manager.speak(text, lang, "", "aed")
 		if key == "aed_pads" and not _smoke_mode:
 			# The device has just said "attach the pads"; the instructor says how, after it.
-			get_tree().create_timer(AED_PADS_HOW_AFTER_S).timeout.connect(func():
-				if aed.powered and not aed.pads_ready() and scenario.state == NaretScenario.State.CPR:
-					var how := NaretTrainingCoach.instruction("aed_pads_how", _language)
-					_toast(how)
-					audio_manager.speak(how, _language, "", "instructor")))
+			get_tree().create_timer(AED_PADS_HOW_AFTER_S).timeout.connect(func(): _pad_guidance("")))
+	aed.pad_missed.connect(func(_pad_name: String): _pad_guidance("missed"))
 	director = load("res://scripts/scenario/aed_helper_director.gd").new()
 	add_child(director)
 	director.configure(scenario, $Bystanders/Anna, $Bystanders/Marek, mannequin, aed)
@@ -170,8 +167,18 @@ func _ready() -> void:
 	$Instructor.set_emotion("calm")
 	director.language = bystander_language
 	director.trainee = func(): return (xr_camera if xr.active else desktop_camera).global_position
+	# He goes when his sentence is said: not yet while it waits or is being spoken.
+	director.answer_waiting = func(): return audio_manager != null and (audio_manager.urgent_waiting() or audio_manager.answer_playing() or audio_manager.has_line(_marek_go_text))
 	director.speak = func(key: String, text: String, lang: String, speaker: String):
-		if not _smoke_mode: audio_manager.speak(text, lang, key, speaker)
+		# Marek's "I'll get the AED" answers the trainee: it does not queue behind the
+		# dispatcher's and the instructor's lines (20 Nov 2026: "it comes much later").
+		# Asked after Anna in the same sentence, it takes its turn after her answer.
+		if _smoke_mode: return
+		if key == "marek_go_aed":
+			_marek_go_text = text
+			if _marek_answers_in_turn: audio_manager.speak(text, lang, key, speaker)
+			else: audio_manager.speak_urgent(text, lang, key, speaker)
+		else: audio_manager.speak(text, lang, key, speaker)
 	scenario.event_recorded.connect(_on_event)
 	if "cprwitness.fsm" in OS.get_user_data_dir(): # Only the side-by-side FSM app runs it.
 		scenario.event_recorded.connect(_shadow_state_machine)
@@ -216,7 +223,6 @@ func _ready() -> void:
 		if hand_menu: hand_menu.set_listening(active))
 	audio_manager.utterance_started.connect(func(text: String, _lang: String, source: String, speaker: String):
 		print("NARET_AUDIO_STARTED language=", _lang, " source=", source)
-		if hand_menu: hand_menu.show_notice("Playing " + _lang.to_upper() + " audio")
 		$Bystanders/Anna.speaking = speaker in ["bystander", "anna"]
 		$Instructor.speaking = speaker == "instructor"
 		$Bystanders/Marek.speaking = speaker == "marek"
@@ -232,7 +238,8 @@ func _ready() -> void:
 			_safety_asked_ms = Time.get_ticks_msec()
 		_record_speech_status("voice_started_" + speaker)
 		if speaker in ["bystander", "anna"]: _show_reply(text, source)
-		else: _toast(text))
+		# Every spoken line is listed in the dialogue on the palm, with who said it.
+		_dialogue_line(speaker, text))
 	audio_manager.playback_changed.connect(func(active: bool):
 		if interaction: interaction.set_audio_busy(active or audio_manager.recording)
 		if not active:
@@ -250,6 +257,7 @@ func _ready() -> void:
 	observation_interpreter.configure(api)
 	add_child(observation_interpreter)
 	observation_interpreter.observation_ready.connect(_on_spoken_action)
+	observation_interpreter.safety_statement.connect(func(): _safety_statement("cloud"))
 	# Explicit witness questions are already routed to Anna in _on_transcript.
 	# An unclear exercise report needs the instructor, not unrelated witness chat.
 	observation_interpreter.conversation.connect(func(_text: String):
@@ -269,7 +277,7 @@ func _ready() -> void:
 		# The patient-side text panel is removed. Give audible feedback once per
 		# step so an unrelated recognition cannot leave the learner in silence.
 		# While the dispatcher leads she has just given it: no second voice saying it again.
-		if not _smoke_mode and _unclassified_spoken_step != step and not _dispatcher_leads():
+		if not _smoke_mode and _unclassified_spoken_step != step and not _dispatcher_leads() and not _call_connecting():
 			_unclassified_spoken_step = step
 			audio_manager.speak(guidance, _language, "", "instructor"))
 	observation_interpreter.clarification.connect(func(text: String):
@@ -293,7 +301,7 @@ func _ready() -> void:
 			# Offline: say so, then ask the step's yes/no question.
 			var heard := NaretLanguage.status("speech_not_understood", _language)
 			_toast(heard)
-			audio_manager.speak(heard, _language, "", "instructor")
+			audio_manager.speak(heard, _language, "", _guide_speaker())
 			if _ask_step_question():
 				return
 		if not api.local_ai_url.is_empty():
@@ -301,7 +309,7 @@ func _ready() -> void:
 		_toast(text)
 		if not _smoke_mode:
 			var clip := "speech_repeat" if bystander_language() == "en" else ""
-			audio_manager.speak(text, bystander_language(), clip, "instructor"))
+			audio_manager.speak(text, bystander_language(), clip, _guide_speaker()))
 	_build_ui()
 	tracker = NaretArucoTracker.new()
 	tracker.marker_layout_file = marker_layout_file
@@ -332,7 +340,7 @@ func _ready() -> void:
 		bvm.placed.connect(func():
 			get_tree().create_timer(10.0).timeout.connect(func():
 				if bvm.is_placed() and bvm.breaths_recent() == 0 and NaretTrainingCoach.step(scenario) == "breaths" and not audio_manager.is_speaking():
-					audio_manager.speak(NaretLanguage.text("coach.bvm_squeeze", _language), _language, "", "instructor")))
+					audio_manager.speak(NaretLanguage.text("coach.bvm_squeeze", _language), _language, "", _guide_speaker())))
 	interaction.action_requested.connect(_on_xr_action)
 	interaction.compression_measured.connect(_on_hand_compression)
 	interaction.head_tilt_gesture_detected.connect(func():
@@ -354,7 +362,7 @@ func _ready() -> void:
 	# ERC 2025: no more than 10 s at the face. Spoken, because the trainee's head is down.
 	interaction.face_check_long.connect(func():
 		if audio_manager and not _smoke_mode:
-			audio_manager.speak(NaretLanguage.text("coach.check_time", _language), _language, "", "instructor"))
+			audio_manager.speak(NaretLanguage.text("coach.check_time", _language), _language, "", _guide_speaker()))
 	# Tape-measure check of hand tracking: pinch both hands on the two ends of a ruler.
 	interaction.ruler_measured.connect(func(distance_m: float, left_tip_y: float, right_tip_y: float):
 		var floor_y := _speaker_floor_y()
@@ -1462,9 +1470,12 @@ func _process(delta: float) -> void:
 	_refresh_marker_evidence()
 	_update_head_scan()
 	_update_phone()
+	_update_dispatcher()
 	_update_safety_bubble()
 	_update_breathing_hint(delta)
 	_update_response_hint()
+	_update_remembered_reports()
+	_update_pad_guidance()
 	_update_welcome_instructor()
 	_update_step_back(delta)
 	_update_stay_with_person(delta)
@@ -1617,10 +1628,15 @@ func _save_alignment() -> void:
 
 func _clear_training_session() -> void:
 	llm.cancel_pending()
+	_response_reported = false
+	_breathing_reported = false
+	_early_call_request = false
+	_early_aed_request = false
 	_breathing_told = false
 	_safety_asked = false
 	_look_hinted = false
 	_answer_hinted = false
+	_safety_stated = false
 	_safety_bubble_text = ""
 	if _park: _park.visible = false
 	audio_manager.reset_training()
@@ -1759,6 +1775,8 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 		_apply_setup_to_scenario()
 		_show_park()
 		_show_reply(_opening_line())
+		if hand_menu: hand_menu.clear_dialogue()
+		if _pc_bench: _pc_bench_started()
 		return
 	if action == "briefing":
 		_open_briefing()
@@ -1786,7 +1804,14 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 	if action == "check_responsiveness" and _shoulder_gate_active():
 		# Hand tracking is on: the report counts only with a palm at the shoulders (12 Nov 2026).
 		details = details.duplicate()
-		details["shoulders_seen"] = interaction.shoulder_check.evidence_recent()
+		details["shoulders_seen"] = interaction.shoulder_check.evidence_recent() or _tap_seen
+		# Reported for the third time and the tap still was not seen: the hands are probably
+		# not tracked there. The report is taken, so the training cannot get stuck here.
+		if not details["shoulders_seen"] and str(details.get("source", "")).begins_with("speech"):
+			_response_refusals += 1
+			if _response_refusals >= 3:
+				print("NARET_SHOULDERS not seen after three reports: the report is taken")
+				details["shoulders_seen"] = true
 		print("NARET_SHOULDERS gate seen=", details["shoulders_seen"], " shaken=", interaction.shoulder_check.shaken())
 	if action == "ventilation" and str(details.get("source", "")) == "speech" and _bvm_gate_active():
 		# The breaths are proven by the bag: a counted squeeze already went in, so a sentence
@@ -1796,7 +1821,7 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 			print("NARET_BVM spoken breaths refused")
 			_toast(NaretLanguage.text("error.breaths_not_seen", _language))
 			if audio_manager and not _smoke_mode:
-				audio_manager.speak(NaretLanguage.text("error.breaths_not_seen", _language), _language, "", "instructor")
+				audio_manager.speak(NaretLanguage.text("error.breaths_not_seen", _language), _language, "", _guide_speaker())
 		return
 	if action == "check_breathing" and _face_gate_active():
 		# The headset was at the face for 3 s, or the report is refused (12 Nov 2026).
@@ -1820,14 +1845,14 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 			"request_aed":
 				# Situation B: the AED is delegated but nobody calls 112 yet (17 Nov 2026).
 				if situation == "B" and not scenario.emergency_called and not _smoke_mode:
-					get_tree().create_timer(4.0).timeout.connect(func():
-						if not scenario.emergency_called and scenario.state == NaretScenario.State.CALL_HELP:
+					get_tree().create_timer(SECOND_TASK_REMINDER_S).timeout.connect(func():
+						if not scenario.emergency_called and scenario.state == NaretScenario.State.CALL_HELP and not _trainee_talking():
 							_coach_line("coach.who_calls_112"))
 			"call_emergency":
 				# Situation B: both tasks belong to this stage; ask for the AED if it is missing.
 				if situation == "B" and not scenario.aed_requested and not scenario.cpr_witness_only and not _smoke_mode:
-					get_tree().create_timer(4.0).timeout.connect(func():
-						if not scenario.aed_requested and scenario.state == NaretScenario.State.CALL_HELP:
+					get_tree().create_timer(SECOND_TASK_REMINDER_S).timeout.connect(func():
+						if not scenario.aed_requested and scenario.state == NaretScenario.State.CALL_HELP and not _trainee_talking():
 							_coach_line("coach.who_gets_aed"))
 			"check_breathing":
 				# Airway hint: only whether the avatar's head-tilt animation played in this step.
@@ -1836,7 +1861,7 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 					# already playing when this runs; the hint queues behind it. The step passed.
 					_toast(NaretLanguage.text("coach.open_airway_hint", _language))
 					if audio_manager and not _smoke_mode:
-						audio_manager.speak(NaretLanguage.text("coach.open_airway_hint", _language), _language, "", "instructor")
+						audio_manager.speak(NaretLanguage.text("coach.open_airway_hint", _language), _language, "", _guide_speaker())
 			"compression":
 				if str(details.get("source", "desktop")) != "hand_tracking":
 					mannequin.compress(float(details.get("depth_estimate_m", 0.045)))
@@ -1861,10 +1886,19 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 			# For the breathing check the instructor says which part is missing (17 Nov 2026).
 			_speech_confirmation.clear()
 			var said := NaretLanguage.text(scenario.last_error, _language)
-			if scenario.last_error == "error.shoulders_not_seen": _response_bubble_text = said
+			if scenario.last_error == "error.shoulders_not_seen":
+				_response_bubble_text = said
+				# Said now, as the answer to the report: the timed hint does not say it again.
+				_shoulders_hinted = true
+				# The answer itself is kept: once the tap is seen the step goes on, and
+				# "Does he respond?" is not asked of somebody who has already said it.
+				_response_reported = true
+			if scenario.last_error == "error.breathing_not_seen":
+				_breathing_reported = true
 			if scenario.last_error == "error.breathing_not_seen" and not _breathing_missing.is_empty():
 				said = NaretLanguage.text(_breathing_missing, _language)
 			_toast(said)
+			if scenario.last_error == "error.breathing_not_seen" and _call_connecting(): return
 			audio_manager.speak(said, _language, "", _guide_speaker())
 
 ## --- Breathing question (face checked, no report) -------------------------------------
@@ -1881,7 +1915,7 @@ func _poll_breathing_question() -> void:
 	if not (scenario and scenario.state == NaretScenario.State.CALL_HELP and scenario.emergency_called and not scenario.breathing_checked):
 		_breathing_polling = false
 		return
-	if not _breathing_told or audio_manager.is_speaking() or audio_manager.recording:
+	if not _breathing_told or audio_manager.is_speaking() or audio_manager.recording or _call_connecting():
 		_breathing_quiet_s = 0
 	else:
 		_breathing_quiet_s += 1
@@ -1912,7 +1946,37 @@ const DISPATCHER_STEPS := ["breathing", "compressions", "compression_only", "bre
 const DISPATCHER := {
 	"answer": {"de": "Notruf 112. Was ist passiert und wo?", "pl": "Numer alarmowy 112. Co się stało i gdzie?", "en": "Emergency 112. What has happened, and where?"},
 	"speaker": {"de": "Bleib bei der Person. Ich bleibe dran und helfe dir.", "pl": "Zostań przy tej osobie. Jestem na linii i pomogę ci.", "en": "Stay with the person. I will stay on the line and help you."},
+	"again": {"de": "Ich habe dich nicht verstanden. Was ist passiert, und wo bist du?", "pl": "Nie zrozumiałam. Co się stało i gdzie jesteś?", "en": "I did not catch that. What has happened, and where are you?"},
 }
+## 20 Nov 2026 (user: "why does the emergency-call response happen automatically even if I
+## didn't say where and how?"): the dispatcher went on after ANY sentence, and by herself
+## after 12 s. She now goes on when the trainee has told her something (see
+## _answers_dispatcher). Without an answer she asks again after DISPATCHER_REASK_MS of
+## silence, DISPATCHER_REASKS times; only after that does the call go on by itself, so a
+## microphone that hears nothing cannot stop the training.
+const DISPATCHER_REASK_MS := 10000
+const DISPATCHER_REASKS := 2
+var _dispatcher_reasks := 0
+
+## An answer to "what has happened, and where?": a sentence of its own, not a word or two,
+## and not the task given to the helper ("Marek, get the AED").
+static func _answers_dispatcher(text: String) -> bool:
+	const Spoken = preload("res://scripts/scenario/spoken_observation.gd")
+	if _words(text).size() < 3: return false
+	return not Spoken.mentions_aed_fetch(text) and Spoken.aed_action_for(text).is_empty()
+
+func _update_dispatcher() -> void:
+	if _dispatcher_step != 1 or not _dispatcher_asked or audio_manager == null: return
+	if audio_manager.is_speaking() or _trainee_talking(): return
+	if Time.get_ticks_msec() - _voice_end_ms < DISPATCHER_REASK_MS: return
+	if _dispatcher_reasks < DISPATCHER_REASKS:
+		_dispatcher_reasks += 1
+		print("NARET_DISPATCHER no answer: asking again (%d)" % _dispatcher_reasks)
+		_voice_end_ms = Time.get_ticks_msec()
+		_dispatcher_say("again")
+	else:
+		print("NARET_DISPATCHER no answer after asking again: the call goes on")
+		_dispatcher_next()
 var _dispatcher_step := 0 # 0 no call, 1 waiting for what/where, 2 leading
 ## Her "what happened and where?" has been said: only an answer after it moves the call on
 ## (17 Nov 2026, B: the trainee's words to Marek made her go on before she had answered).
@@ -1922,13 +1986,13 @@ func _start_dispatcher(answer_after_s: float = 2.5, ring: bool = true) -> void:
 	_dispatcher_step = 1
 	if ring: _play_phone_ring()
 	_dispatcher_asked = false
+	_dispatcher_reasks = 0
 	get_tree().create_timer(answer_after_s).timeout.connect(func(): _when_quiet(func():
 		if _dispatcher_step != 1: return
 		_dispatcher_say("answer")
 		_dispatcher_asked = true
-		# No answer heard within a while: the call goes on anyway.
-		get_tree().create_timer(12.0).timeout.connect(func():
-			if _dispatcher_step == 1: _dispatcher_next())))
+		# What follows is in _update_dispatcher and _on_transcript.
+		_voice_end_ms = Time.get_ticks_msec()))
 
 ## Runs `then` once the instructor's "put the phone down" is neither playing nor waiting:
 ## the dispatcher answers after it, not into it (the scene's people go first in the queue).
@@ -1941,6 +2005,12 @@ func _when_quiet(then: Callable) -> void:
 	get_tree().create_timer(0.3).timeout.connect(func(): _when_quiet(then))
 
 ## The dispatcher is on the line and the step is one she guides.
+## The call is made but the dispatcher has not taken over yet (ringing, or she waits for
+## "what and where"). In this window nobody gives step guidance: she gives the step herself
+## as soon as she has the answer.
+func _call_connecting() -> bool:
+	return _dispatcher_step == 1
+
 func _dispatcher_leads() -> bool:
 	return _dispatcher_step == 2 and scenario != null and NaretTrainingCoach.step(scenario) in DISPATCHER_STEPS
 
@@ -2227,13 +2297,42 @@ var _response_bubble_text := ""
 var _shoulders_hinted := false
 var _report_hinted := false
 var _shoulders_seen_ms := 0
+## The tap was seen in this response step (a flag: a time of 0 can be a real time).
+var _tap_seen := false
+
+## 20 Nov 2026 (user: "track the stated intention separately from whether the action has
+## actually been completed"): a report that came before its action ("he is not responding"
+## without the shoulder tap, "he is not breathing" without the head tilt) is kept. The
+## instructor says what is still missing, once; as soon as the action is seen the step goes
+## on by itself. Nothing is asked again and the trainee does not have to repeat the report.
+var _response_reported := false
+var _response_refusals := 0
+var _breathing_reported := false
+
+func _update_remembered_reports() -> void:
+	if scenario == null or interaction == null or audio_manager == null: return
+	if _response_reported and scenario.state == NaretScenario.State.CHECK_PATIENT and _shoulder_gate_active() and interaction.shoulder_check.evidence_recent():
+		_response_reported = false
+		print("NARET_RESPONSE the tap is seen; the report was already given: on to the next step")
+		_coach_line("coach.tap_seen", true)
+		_on_action("check_responsiveness", {"source": "speech_confirmed"})
+	if _breathing_reported and scenario.state == NaretScenario.State.CALL_HELP and scenario.emergency_called and not scenario.breathing_checked \
+			and _face_gate_active() and interaction.head_tilt_played and interaction.face_check.evidence_recent():
+		_breathing_reported = false
+		print("NARET_BREATHING the check is seen; the report was already given: on to the next step")
+		_on_action("check_breathing", {"source": "speech_confirmed"})
+	if scenario.state != NaretScenario.State.CHECK_PATIENT: _response_reported = false
+	if scenario.state != NaretScenario.State.CALL_HELP: _breathing_reported = false
 
 func _reset_response_gates() -> void:
+	_response_reported = false
+	_response_refusals = 0
 	_response_asked = false
 	_response_bubble_text = ""
 	_shoulders_hinted = false
 	_report_hinted = false
 	_shoulders_seen_ms = 0
+	_tap_seen = false
 
 ## An instructor line in the response step, spoken and as subtitles.
 func _response_line(key: String) -> void:
@@ -2241,21 +2340,46 @@ func _response_line(key: String) -> void:
 	_toast(_response_bubble_text)
 	audio_manager.speak(_response_bubble_text, _language, "", "instructor")
 
+## 20 Nov 2026 (user: "give me time to act and speak; don't immediately repeat 'please tap
+## his shoulders'; if there's no answer after a reasonable pause, ask 'Does he respond?'"):
+## the hints count from the end of the last voice line and never come while the trainee is
+## speaking or being recognised. The tap line is said once by this timer, and not at all if
+## it was already the answer to a report without a tap. "Does he respond?" comes once: 6 s
+## after a tap was seen, or 10 s after the tap line when still nothing is said. Before: the
+## tap line 10 s after the instruction BEGAN, whether or not anyone was speaking.
+const RESPONSE_TAP_HINT_MS := 15000
+const RESPONSE_ASK_AFTER_TAP_MS := 4000
+const TAP_QUESTION_DELAY_MS := 1200
+const RESPONSE_ASK_AFTER_HINT_MS := 10000
+
 func _update_response_hint() -> void:
 	if scenario == null or scenario.state != NaretScenario.State.CHECK_PATIENT or not _response_asked: return
-	if speech_bubble:
-		speech_bubble.say(_response_bubble_text if not _response_bubble_text.is_empty() else NaretTrainingCoach.instruction("response", _language), 0.5)
-	if not _head_scan_gate_active() or audio_manager.is_speaking(): return
+	if not _head_scan_gate_active() or audio_manager.is_speaking() or _trainee_talking(): return
 	var now := Time.get_ticks_msec()
+	var quiet := now - maxi(_voice_end_ms, _response_asked_ms)
 	var shoulders: bool = interaction != null and interaction.shoulder_check.evidence_recent()
-	if shoulders and _shoulders_seen_ms == 0: _shoulders_seen_ms = now
-	if not shoulders and not _shoulders_hinted and now - _response_asked_ms > 10000:
-		_shoulders_hinted = true
-		print("NARET_RESPONSE no shoulder tap yet")
-		_response_line("error.shoulders_not_seen")
-	elif shoulders and not _report_hinted and now - _shoulders_seen_ms > 5000:
+	if shoulders and not _tap_seen:
+		_tap_seen = true
+		_shoulders_seen_ms = now
+		print("NARET_RESPONSE tap seen")
+	var tapped := _tap_seen
+	# 21 Nov 2026, the user's exact sequence: once the tap is seen (and the hands have had
+	# TAP_QUESTION_DELAY_MS to finish it), the instructor says "I saw you tap their
+	# shoulders. Are they responding? Please say yes or no." once, and waits for the answer.
+	# "No" is the report and the step goes on; "yes" is corrected (this patient never
+	# responds). Already reported before the tap: see _update_remembered_reports.
+	if tapped and not _report_hinted and not _response_reported and now - _shoulders_seen_ms >= TAP_QUESTION_DELAY_MS:
 		_report_hinted = true
-		print("NARET_RESPONSE no report yet")
+		print("NARET_RESPONSE tap seen: asking whether they respond (yes or no)")
+		_response_line("coach.tap_seen_ask")
+		return
+	if not tapped and not _shoulders_hinted and quiet > RESPONSE_TAP_HINT_MS:
+		_shoulders_hinted = true
+		print("NARET_RESPONSE no shoulder tap yet (quiet %d ms)" % quiet)
+		_response_line("error.shoulders_not_seen")
+	elif not _report_hinted and not _response_reported and not tapped and _shoulders_hinted and quiet > RESPONSE_ASK_AFTER_HINT_MS:
+		_report_hinted = true
+		print("NARET_RESPONSE no report yet: asking whether he responds (tapped=%s, quiet %d ms)" % [tapped, quiet])
 		_response_line("coach.report_response")
 
 ## "The person responds" (or "yes" to the report question): this patient never does.
@@ -2275,14 +2399,17 @@ static func _reports_responding(text: String, language: String) -> bool:
 var head_scan := NaretHeadScan.new()
 
 func _head_scan_gate_active() -> bool:
+	# The PC test bench (below) has a head to turn too, but no hands: only the safety step.
+	if _pc_bench: return scenario != null and scenario.state == NaretScenario.State.INTRO
 	return xr != null and xr.active and not _smoke_mode
 
 func _update_head_scan() -> void:
 	if scenario == null or scenario.state != NaretScenario.State.INTRO or not _head_scan_gate_active(): return
-	head_scan.update(-xr_camera.global_basis.z)
+	head_scan.update(-(desktop_camera if _pc_bench else xr_camera).global_basis.z)
 	if _looked_around() and _scan_done_ms == 0:
 		print("NARET_SAFETY looked around: left=", head_scan.left, " right=", head_scan.right)
 		_scan_done_ms = Time.get_ticks_msec()
+		_safety_both_done()
 	_safety_hints()
 
 ## Safety hints (18 Nov 2026): no head turn 10 s after S-1 -> look around; head turned
@@ -2320,6 +2447,30 @@ func _safety_hints() -> void:
 		_answer_hinted = true
 		_safety_line("coach.tell_if_safe")
 
+## 20 Nov 2026 (user): the safety step is the trainee SAYING that they check the surroundings
+## (any similar wording) and DOING it (the look to the left and right), in either order. As
+## soon as both are there the instructor asks whether the surroundings are safe; "yes"
+## goes on to the next step. Before, only an exact report ("the scene is safe") counted, a
+## sentence like "first I'll check the surroundings" got a clarification question, and after
+## the look the question came only after 8 s of silence.
+var _safety_stated := false
+
+func _safety_statement(source: String) -> void:
+	if scenario == null or scenario.state != NaretScenario.State.INTRO or NaretTrainingCoach.step(scenario) != "safety": return
+	print("NARET_SAFETY statement heard (", source, "), looked_around=", _looked_around())
+	_safety_stated = true
+	_speech_confirmation.clear()
+	_safety_both_done()
+
+func _safety_both_done() -> void:
+	## Statement and look are both there: ask whether it is safe, once.
+	if not _safety_stated or _answer_hinted: return
+	# Without a head to turn (desktop, tests) the statement alone stands for both.
+	if _head_scan_gate_active() and not _looked_around(): return
+	_answer_hinted = true
+	print("NARET_SAFETY statement and look done: asking whether it is safe")
+	_safety_line("coach.tell_if_safe")
+
 ## An instructor line in the safety step: spoken, and the subtitles show the same words.
 var _safety_bubble_text := ""
 
@@ -2334,7 +2485,7 @@ var _closer_hinted := false
 
 func _update_breathing_hint(delta: float) -> void:
 	if scenario == null or not _face_gate_active() or scenario.state != NaretScenario.State.CALL_HELP \
-			or not scenario.emergency_called or scenario.breathing_checked:
+			or not scenario.emergency_called or scenario.breathing_checked or _call_connecting():
 		_tilt_without_face_s = 0.0
 		_closer_hinted = false
 		return
@@ -2375,9 +2526,9 @@ var _safety_asked := false
 func _update_safety_bubble() -> void:
 	if speech_bubble == null or scenario == null or not _safety_asked: return
 	if scenario.state != NaretScenario.State.INTRO or NaretTrainingCoach.step(scenario) != "safety": return
-	# Matching subtitles (18 Nov 2026): the instructor's own words.
-	var text := _safety_bubble_text if not _safety_bubble_text.is_empty() else NaretTrainingCoach.instruction("safety", _language)
-	speech_bubble.say(text, 0.5)
+	# 20 Nov 2026 (user: "use the palm for all dialogue"): the card in the line of sight is
+	# for the welcome only; once the training runs every line is in the palm's dialogue.
+	if speech_bubble.visible: speech_bubble.hide_now()
 
 ## A short instructor line from the UI texts: shown on the wrist and spoken.
 func _coach_line(key: String, keep: bool = false) -> void:
@@ -2431,8 +2582,37 @@ func _continue_sequence() -> void:
 			ccbm.observe_action(next_action)
 			return
 
+var _early_call_request := false
+## After one of the two tasks (112, AED) the instructor reminds of the other only after
+## this long, so the trainee has time to give it (it was 4 s).
+const SECOND_TASK_REMINDER_S := 9.0
+var _marek_answers_in_turn := false
+var _marek_go_text := ""
+
+var _early_aed_request := false
+var _early_aed_first := false
+
+## What was asked before the call step is taken now, in the order it was asked.
+func _take_early_call() -> void:
+	if scenario.alone: return
+	var called := false
+	for task: String in (["aed", "call"] if _early_aed_first else ["call", "aed"]):
+		if task == "call" and _early_call_request and "call_emergency" in scenario.get_available_actions():
+			_early_call_request = false
+			called = true
+			print("NARET_CALL the request said earlier is taken now")
+			_on_action("call_emergency", {"source": "speech"})
+		if task == "aed" and _early_aed_request and "request_aed" in scenario.get_available_actions():
+			_early_aed_request = false
+			print("NARET_AED the request said earlier is taken now")
+			_marek_answers_in_turn = called
+			_on_action("request_aed", {"source": "speech"})
+			_marek_answers_in_turn = false
+
 func _on_event(event: Dictionary) -> void:
 	if ccbm: ccbm.observe_accepted(event)
+	if event.get("accepted", false) and event.get("action", "") == "check_responsiveness" and (_early_call_request or _early_aed_request):
+		_take_early_call.call_deferred()
 	if event.get("accepted", false) and not _pending_sequence.is_empty():
 		_continue_sequence()
 	score.record(event)
@@ -2588,6 +2768,8 @@ const WELCOME_MENU := {"de": "Wähle Sprache, Modus, Situation und Beatmung aus 
 	"pl": "Wybierz język, tryb, sytuację i oddechy, a potem naciśnij Start training.",
 	"en": "Choose your language, mode, situation and ventilation, then press Start training."}
 var _menu_line_said := false
+## The welcome card's heading (20 Nov 2026).
+const WELCOME_TITLE := {"de": "Willkommen bei NaReT", "pl": "Witamy w NaReT", "en": "Welcome to NaReT"}
 const WELCOME_PALM := {"de": "Die Person liegt jetzt richtig. Bitte öffne deine linke Handfläche, um das Menü zu öffnen.",
 	"pl": "Pacjent jest na miejscu. Otwórz lewą dłoń, aby otworzyć menu.",
 	"en": "The patient is in place. Please open your left palm to access the menu."}
@@ -2596,6 +2778,27 @@ const WELCOME_PALM := {"de": "Die Person liegt jetzt richtig. Bitte öffne deine
 const WELCOME_INSTRUCTOR_M := 1.6
 var _welcome_instructor := false
 var _welcome_instructor_placed := false
+## 20 Nov 2026 (user: "the welcome should start only when we see the instructor"): the
+## greeting used to start with the app, before the headset had a pose and so before the
+## instructor stood anywhere. In the headset it now waits until he stands in front and
+## has been within WELCOME_SEEN_DEG of the line of sight for WELCOME_SEEN_MS.
+const WELCOME_SEEN_DEG := 30.0
+const WELCOME_SEEN_MS := 400
+## Roughly the instructor's chest above his feet: what the eyes rest on at 1.6 m.
+const WELCOME_LOOK_HEIGHT_M := 1.3
+var _welcome_text := ""
+var _welcome_seen_since_ms := -1
+
+func _instructor_in_view() -> bool:
+	if not $Instructor.is_visible_in_tree(): return false
+	var to_him: Vector3 = $Instructor.global_position + Vector3.UP * WELCOME_LOOK_HEIGHT_M - xr_camera.global_position
+	if to_him.length() < 0.2: return false
+	return (-xr_camera.global_basis.z).angle_to(to_him) < deg_to_rad(WELCOME_SEEN_DEG)
+
+func _say_welcome(text: String) -> void:
+	# Subtitles in the line of sight until the left palm is opened (the menu appears).
+	if speech_bubble: speech_bubble.say(text, 600.0, WELCOME_TITLE.get(_language, WELCOME_TITLE.en))
+	audio_manager.speak(text, _language, "", "instructor")
 
 func _update_welcome_instructor() -> void:
 	if not _welcome_instructor: return
@@ -2603,12 +2806,24 @@ func _update_welcome_instructor() -> void:
 		# The patient is placed: the usual placement of the people takes over, and the
 		# instructor tells the trainee to open the menu (subtitles until the palm opens).
 		_welcome_instructor = false
+		# A greeting still waiting is dropped: "look at the markers first" is done.
+		_welcome_text = ""
 		var palm: String = WELCOME_PALM.get(_language, WELCOME_PALM.en)
-		if speech_bubble: speech_bubble.say(palm, 600.0)
+		if speech_bubble: speech_bubble.say(palm, 600.0, WELCOME_TITLE.get(_language, WELCOME_TITLE.en))
 		audio_manager.speak(palm, _language, "", "instructor", true)
 		print("NARET_WELCOME patient placed: open the palm")
 		return
-	if _welcome_instructor_placed: return
+	if _welcome_instructor_placed:
+		if _welcome_text.is_empty(): return
+		if not _instructor_in_view():
+			_welcome_seen_since_ms = -1
+			return
+		if _welcome_seen_since_ms < 0: _welcome_seen_since_ms = Time.get_ticks_msec()
+		if Time.get_ticks_msec() - _welcome_seen_since_ms >= WELCOME_SEEN_MS:
+			print("NARET_WELCOME instructor seen: greeting starts")
+			_say_welcome(WELCOME.get(_language, WELCOME.de))
+			_welcome_text = ""
+		return
 	var eye := xr_camera.global_position
 	var floor_y := _speaker_floor_y()
 	if not is_finite(floor_y) or eye.y - floor_y < 0.8: return # no headset pose yet
@@ -2629,11 +2844,13 @@ func _welcome() -> void:
 	speech_bubble.name = "WelcomeBubble"
 	speech_bubble.camera = xr_camera if xr.active else desktop_camera
 	add_child(speech_bubble)
+	if not xr.active and "--pc-step1" in OS.get_cmdline_user_args(): _pc_bench_setup()
 	var text: String = WELCOME.get(_language, WELCOME.de)
-	# Subtitles in the line of sight until the left palm is opened (the menu appears).
-	speech_bubble.say.call_deferred(text, 600.0)
-	audio_manager.speak(text, _language, "", "instructor")
 	_welcome_instructor = xr.active
+	# In the headset the greeting waits for the instructor (_update_welcome_instructor);
+	# on the desktop there is no instructor in front, so it starts at once as before.
+	if xr.active: _welcome_text = text
+	else: _say_welcome.call_deferred(text)
 	if hand_menu:
 		hand_menu.menu_shown_changed.connect(func(shown: bool):
 			if not shown or speech_bubble == null: return
@@ -2642,7 +2859,7 @@ func _welcome() -> void:
 			if anchor.locked and not _menu_line_said and scenario.state == NaretScenario.State.IDLE:
 				_menu_line_said = true
 				var line: String = WELCOME_MENU.get(_language, WELCOME_MENU.en)
-				speech_bubble.say(line, 600.0)
+				speech_bubble.say(line, 600.0, WELCOME_TITLE.get(_language, WELCOME_TITLE.en))
 				audio_manager.speak(line, _language, "", "instructor", true)
 			elif speech_bubble.visible and not _menu_line_said: speech_bubble.hide_now())
 	# The choices are the fold-out keys on the wrist (Languages, Mode, Situation,
@@ -2854,12 +3071,50 @@ func _shadow_state_machine(event: Dictionary) -> void:
 
 func _on_transcript(text: String) -> void:
 	if text.strip_edges().is_empty(): return
+	_dialogue_line("trainee", text)
+	# The timed hints and questions count their silence from here too: nothing is asked
+	# while an answer that was just given is still being worked on.
+	_voice_end_ms = Time.get_ticks_msec()
+	# "Please call 112" said before that step is due (with "he is not responding", or
+	# while the shoulder tap is still open) is kept: the call starts as soon as the step
+	# comes, and the trainee does not have to say it again (headset 20 Nov 2026).
+	var early_states := [NaretScenario.State.INTRO, NaretScenario.State.CHECK_PATIENT]
+	if scenario.state in early_states and not scenario.alone and preload("res://scripts/scenario/spoken_observation.gd").requests_emergency_call(text):
+		_early_call_request = true
+		print("NARET_CALL asked early, kept for the call step: ", text.left(80))
+	# The same for "get the defibrillator" (headset 20 Nov 2026: asked early, it was lost,
+	# and the instructor later asked "who gets the defibrillator?" although it had been said).
+	if scenario.state in early_states and not scenario.alone and not scenario.cpr_witness_only and preload("res://scripts/scenario/spoken_observation.gd").requests_aed_fetch(text):
+		_early_aed_request = true
+		_early_aed_first = not _early_call_request or not preload("res://scripts/scenario/spoken_observation.gd").call_comes_first(text)
+		print("NARET_AED asked early, kept for the call step: ", text.left(80))
+	# The tasks are kept; what remains is the report of the step itself ("He is not
+	# responding."). Left in, the whole sentence matched no rule and the report was lost.
+	if scenario.state in early_states and (_early_call_request or _early_aed_request) and not scenario.alone:
+		var report := preload("res://scripts/scenario/spoken_observation.gd").without_task_requests(text)
+		if report != text:
+			print("NARET_TRANSCRIPT tasks kept, the rest is the report: ", report.left(80))
+			text = report
+			if text.strip_edges().is_empty(): return
 	if _ems_state == 1:
 		_on_handover_speech(text)
 		return
-	if _dispatcher_step == 1 and _dispatcher_asked:
-		# Any answer to „Was ist passiert und wo?“ moves the call on.
-		_dispatcher_next()
+	if _dispatcher_step == 1 and _dispatcher_asked and not (not scenario.alone and "request_aed" in scenario.get_available_actions() and preload("res://scripts/scenario/spoken_observation.gd").requests_aed_fetch(text)):
+		# She asked "what has happened, and where?": what is said now is the answer to HER
+		# (only "get the defibrillator" is still for the helper). It is not read as a report
+		# of the breathing step, which made the instructor say his breathing instruction in
+		# the middle of the call (headset 20 Nov 2026).
+		if _answers_dispatcher(text):
+			print("NARET_DISPATCHER answered: ", text.left(80))
+			_dispatcher_next()
+		elif _dispatcher_reasks < DISPATCHER_REASKS:
+			_dispatcher_reasks += 1
+			print("NARET_DISPATCHER did not get it, asks again: ", text.left(80))
+			_voice_end_ms = Time.get_ticks_msec()
+			_dispatcher_say("again")
+		else:
+			_dispatcher_next()
+		return
 	if scenario.state == NaretScenario.State.CHECK_PATIENT:
 		# "The person responds" / "yes" is corrected: this patient never responds.
 		if _reports_responding(text, _language) or (_report_hinted and NaretHandover.answers_yes(text, _language)):
@@ -2882,11 +3137,24 @@ func _on_transcript(text: String) -> void:
 		_speech_confirmation.clear()
 		ccbm.observe_breath_pair()
 		return
-	# Both helpers in one sentence: Marek is sent at once (he answers first), and the rest
-	# of the sentence goes on as the call to Anna.
+	# Both helpers in one sentence: they answer in the order they were asked (user, 20 Nov
+	# 2026: "if to Anna request first then Anna should do, else defib should do"). Asked
+	# first, Marek answers at once; asked second, his answer follows Anna's "I'm calling 112".
 	const Spoken = preload("res://scripts/scenario/spoken_observation.gd")
-	if Spoken.mentions_aed_fetch(text) and Spoken.mentions_emergency_call(text):
+	if Spoken.requests_aed_fetch(text) and Spoken.requests_emergency_call(text):
 		print("NARET_TRANSCRIPT both helpers: ", text.left(160))
+		if Spoken.call_comes_first(text) and "call_emergency" in scenario.get_available_actions() and not scenario.alone:
+			_speech_confirmation.clear()
+			# Taken directly, like the AED task. Headset 21 Nov 2026: handed to the step
+			# model first, its answer was still on the way when the AED task was accepted
+			# in the same moment; that made the model's answer "uncertain", the call was
+			# dropped and the trainee had to say "please call 112" again.
+			_on_action("call_emergency", {"source": "speech"})
+			if "request_aed" in scenario.get_available_actions():
+				_marek_answers_in_turn = true
+				_on_action("request_aed", {"source": "speech"})
+				_marek_answers_in_turn = false
+			return
 		if "request_aed" in scenario.get_available_actions():
 			_on_action("request_aed", {"source": "speech"})
 		# The call is taken from this sentence directly. Left to the general reading,
@@ -2896,10 +3164,24 @@ func _on_transcript(text: String) -> void:
 		# recognised as the double request).
 		if "call_emergency" in scenario.get_available_actions():
 			_speech_confirmation.clear()
-			ccbm.observe_action("call_emergency")
+			_on_action("call_emergency", {"source": "speech"})
 			return
 		text = Spoken.without_aed_clause(text)
 		if text.strip_edges().is_empty(): return
+	# A plain request to call 112 at the call step is taken as it is, without the cloud's
+	# reading of the sentence in between (20 Nov 2026: "please call 112" was not picked up).
+	if not scenario.alone and "call_emergency" in scenario.get_available_actions() and Spoken.requests_emergency_call(text):
+		print("NARET_CALL request heard: ", text.left(80))
+		_speech_confirmation.clear()
+		_on_action("call_emergency", {"source": "speech"})
+		return
+	# The same for a plain "get the defibrillator" in any wording: before, only eleven exact
+	# sentences were taken directly and everything else depended on the cloud's reading.
+	if not scenario.alone and "request_aed" in scenario.get_available_actions() and Spoken.requests_aed_fetch(text):
+		print("NARET_AED request heard: ", text.left(80))
+		_speech_confirmation.clear()
+		_on_action("request_aed", {"source": "speech"})
+		return
 	var aed_request := preload("res://scripts/scenario/spoken_observation.gd").aed_action_for(text)
 	if not aed_request.is_empty():
 		_on_spoken_action(aed_request)
@@ -2913,7 +3195,6 @@ func _on_transcript(text: String) -> void:
 		return
 	_last_heard_report = text.left(100)
 	_record_speech_status("heard")
-	_toast("Heard: " + text.left(160))
 	print("NARET_TRANSCRIPT ", text.left(160))
 	# Several steps in one breath (11 Nov 2026): each clear sentence is taken in order, a step
 	# already done or not yet due is skipped, and the next is handed over once the previous
@@ -2935,6 +3216,9 @@ func _on_transcript(text: String) -> void:
 		if safety == "safe":
 			print("NARET_SAFETY safe")
 			_speech_confirmation.clear()
+			# Said before the look: it counts as the statement, and the question whether it is
+			# safe follows once the trainee has looked (the gate in _on_action asks for the look).
+			if _head_scan_gate_active() and not _looked_around(): _safety_stated = true
 			ccbm.observe_action("begin_check")
 			return
 		if safety == "unsafe":
@@ -2963,6 +3247,10 @@ func _on_transcript(text: String) -> void:
 			if _unsafe_reports >= 2:
 				ccbm.observe_action("begin_check")
 			return
+		# "First I'll check the surroundings" and the like: the statement of this step.
+		if NaretTrainingCoach.step(scenario) == "safety" and preload("res://scripts/scenario/spoken_observation.gd").states_safety_check(text):
+			_safety_statement("words")
+			return
 	if _language in ["en", "de", "pl"]:
 		var context := _confirmation_context()
 		var interpreted: Dictionary = _speech_confirmation.evaluate(text, context, scenario.get_available_actions(), Time.get_ticks_msec(), _language)
@@ -2982,7 +3270,7 @@ func _on_transcript(text: String) -> void:
 			return
 		if interpreted.has("message"):
 			_toast(str(interpreted.message))
-			audio_manager.speak(str(interpreted.message), _language, "", "instructor")
+			audio_manager.speak(str(interpreted.message), _language, "", _guide_speaker())
 			return
 	# Progression observations go to CCBM, never to Anna's generated action field.
 	if ccbm and ccbm.observe_speech(text): return
@@ -2999,7 +3287,7 @@ func _confirmation_context() -> String:
 ## "Did you report that he is not breathing normally?" is answered with one word; "please say
 ## it again" looped on the headset (9 Nov). Steps without a spoken report keep the old prompt.
 func _ask_step_question() -> bool:
-	if scenario == null or _smoke_mode or audio_manager == null: return false
+	if scenario == null or _smoke_mode or audio_manager == null or _call_connecting(): return false
 	var pick: Dictionary = NaretTrainingCoach.step_question(NaretTrainingCoach.step(scenario))
 	if pick.is_empty() or str(pick.action) not in scenario.get_available_actions(): return false
 	_speech_confirmation.propose(str(pick.action), _confirmation_context(), Time.get_ticks_msec(), _language, int(pick.breaths))
@@ -3080,6 +3368,7 @@ func _step_actions() -> Dictionary:
 	return {"step": step, "done": done, "missing": missing}
 
 func _queue_coach_question(text: String) -> void:
+	if _call_connecting(): return
 	var actions := _step_actions()
 	if actions.step != _help_step:
 		_help_step = actions.step
@@ -3101,6 +3390,43 @@ func _queue_coach_question(text: String) -> void:
 			break
 	print("NARET_HELP step=", actions.step, " attempt=", _help_attempt, " missing=", missing)
 	llm.enqueue_transcript(text, context)
+
+## 20 Nov 2026 (user: "check both pads individually ... if both are already correctly
+## placed, skip the placement instruction; if one is missing or misplaced, give guidance
+## only for that pad"). The pads are looked at one by one before anything is said:
+##   both on their outlines     -> nothing is said
+##   none on yet                -> how to place them (the general instruction, once)
+##   one on, one missing        -> only where the missing one goes
+##   a pad let go off its place -> that it is not on the outline, and where it belongs
+## Before: one fixed instruction 4 s after "attach the pads" unless both were already on.
+const PAD_GUIDANCE_QUIET_MS := 8000
+var _pad_guidance_ms := -100000
+var _pads_missing_before := -1
+
+func _pad_guidance(why: String) -> void:
+	if aed == null or scenario == null or _smoke_mode or not aed.powered or scenario.aed_attached: return
+	if scenario.state != NaretScenario.State.CPR and scenario.state != NaretScenario.State.CALL_HELP: return
+	var missing: Array[String] = aed.missing_pads()
+	if missing.is_empty(): return
+	var key := "aed_pads_how"
+	if why == "missed": key = "aed_pad_missed_" + missing[0] if missing.size() == 1 else "aed_pad_missed"
+	elif missing.size() == 1: key = "aed_pad_" + missing[0]
+	var now := Time.get_ticks_msec()
+	if why != "one_left" and now - _pad_guidance_ms < PAD_GUIDANCE_QUIET_MS: return
+	_pad_guidance_ms = now
+	var text := NaretTrainingCoach.instruction(key, _language)
+	print("NARET_AED pad guidance ", key, " missing=", missing)
+	_toast(text)
+	audio_manager.speak(text, _language, "", "instructor")
+
+## The first pad is on: the instructor says where the other one goes (once).
+func _update_pad_guidance() -> void:
+	if aed == null or scenario == null or not aed.powered or scenario.aed_attached:
+		_pads_missing_before = -1
+		return
+	var missing := aed.missing_pads().size()
+	if _pads_missing_before == 2 and missing == 1: _pad_guidance("one_left")
+	_pads_missing_before = missing
 
 ## The device's own "attach the pads" takes about this long.
 const AED_PADS_HOW_AFTER_S := 4.0
@@ -3159,6 +3485,16 @@ func _announce_coach_step() -> void:
 		return
 	# Critical instructions use approved text. The LLM handles follow-up questions.
 	var instruction := NaretTrainingCoach.current_instruction(scenario, _language)
+	# Asked for early (before this step): the tasks are taken in a moment (_take_early_call),
+	# so the instructor does not ask for what was already said.
+	if key == "call" and not scenario.alone:
+		if _early_call_request and (_early_aed_request or scenario.cpr_witness_only):
+			print("NARET_COACH_STEP call: both tasks were given early, nothing to ask")
+			return
+		if _early_call_request:
+			instruction = NaretLanguage.text("coach.who_gets_aed", _language)
+		elif _early_aed_request:
+			instruction = NaretTrainingCoach.instruction("call", _language)
 	# After the call the dispatcher leads over the speaker (A and B), in her own words: she
 	# cannot see the green box, the bag or the stool. Lines she has no wording for (the
 	# AED's) stay with the instructor.
@@ -3232,7 +3568,6 @@ func _instructor_subtitles(text: String) -> void:
 	match NaretTrainingCoach.step(scenario):
 		"safety": _safety_bubble_text = text
 		"response": _response_bubble_text = text
-		_: speech_bubble.say(text, clampf(text.length() * 0.08, 4.0, 14.0))
 
 func _on_ccbm_status(status: String) -> void:
 	print("NARET_CCBM_STATUS ", status)
@@ -3250,8 +3585,17 @@ func _on_ccbm_status(status: String) -> void:
 	var message := str(messages.get(status, [status, status, status])[index])
 	if status in ["ccbm_out_of_order", "ccbm_uncertain_repeat"]:
 		_pending_sequence.clear()
-		message = NaretTrainingCoach.feedback(scenario, _last_heard_report, status, _language)
-		if not _smoke_mode: audio_manager.speak(message, _language, "", "instructor")
+		if _call_connecting():
+			print("NARET_CCBM_STATUS not answered: the emergency call is connecting")
+			return
+		message = NaretTrainingCoach.feedback(scenario, _last_heard_report, status, _language, _dispatcher_leads())
+		# Said with the step's own instruction, which has a recorded voice. The longer
+		# sentence ("That report does not confirm the current check. ...") had none, and
+		# when the cloud voice timed out the instructor's answer was silent (21 Nov 2026).
+		var spoken := NaretTrainingCoach.current_instruction(scenario, _language)
+		if _dispatcher_leads() and _has_coach_text("dispatcher_" + NaretTrainingCoach.current_key(scenario)):
+			spoken = NaretTrainingCoach.instruction("dispatcher_" + NaretTrainingCoach.current_key(scenario), _language)
+		if not _smoke_mode: audio_manager.speak(spoken, _language, "", _guide_speaker())
 	if _language == "en":
 		message = "Heard: " + _last_heard_report + "\n" + message + "\nNext: " + _next_spoken_step()
 	_toast(message)
@@ -3346,8 +3690,19 @@ func _record_speech_status(status: String) -> void:
 				"recognising": audio_manager._transcribing if audio_manager else false}))
 			trace.close()
 
+## The trainee's plate on the palm shows "…" while their words are being recognised.
+func _speech_progress(status: String) -> void:
+	if hand_menu == null or scenario == null or scenario.state in [NaretScenario.State.IDLE]: return
+	var names: Dictionary = DIALOGUE_NAMES.get("trainee", {})
+	var who := str(names.get(_language, names.get("en", "You")))
+	if status == "transcribing": hand_menu.set_own_pending(who, true)
+	elif status in ["microphone_silent", "speech_not_understood", "speech_recognition_timeout", "speech_connection_failed", "speech_server_error", "speech_request_busy", "asr_offline_use_text", "recording_empty"]:
+		hand_menu.set_own_pending(who, false)
+
 func _on_service_status(status: String) -> void:
+	_speech_progress(status)
 	print("NARET_SPEECH_STATUS ", status)
+	if _pc_bench: _pc_note("Status: " + status)
 	_last_service_status = status
 	_record_speech_status(status)
 	var text := NaretLanguage.status(status, _language)
@@ -3359,7 +3714,7 @@ func _on_service_status(status: String) -> void:
 	if status in ["microphone_silent", "speech_not_understood"] and audio_manager and not _smoke_mode:
 		# First the reason ("I cannot hear you"), then the step's own yes/no question, so the
 		# trainee knows both what happened and what one word gets them on (11 Nov 2026).
-		audio_manager.speak(text, _language, "", "instructor")
+		audio_manager.speak(text, _language, "", _guide_speaker())
 		# Safety step, not looked around yet: no "is it safe? yes or no" now (19 Nov 2026: a
 		# 1.8 s silent recording asked it before the trainee had checked anything).
 		if not (NaretTrainingCoach.step(scenario) == "safety" and not _looked_around()):
@@ -3370,7 +3725,47 @@ func _show_reply(text: String, source: String = "") -> void:
 	if xr_info: xr_info.show_reply(text)
 	if not source.is_empty(): _on_service_status(source)
 
+## 20 Nov 2026 (user: "no repetition of subtitles in different parts"): a sentence the card
+## in the line of sight shows, or is about to show as the running subtitle of the safety or
+## response step, is not written on the hand as well. Before, every spoken line went to the
+## hand notice too.
+func _on_card(text: String) -> bool:
+	if text.is_empty() or speech_bubble == null: return false
+	return speech_bubble.shown_text() == text
+
+## Who said a line, as named in the palm's dialogue.
+const DIALOGUE_NAMES := {
+	"instructor": {"de": "Instruktor", "pl": "Instruktor", "en": "Instructor"},
+	"dispatcher": {"de": "Leitstelle 112", "pl": "Dyspozytor 112", "en": "Dispatcher 112"},
+	"bystander": {"de": "Zeugin", "pl": "Świadek", "en": "Witness"},
+	"marek": {"de": "AED-Helfer", "pl": "Pomocnik AED", "en": "AED helper"},
+	"aed": {"de": "AED", "pl": "AED", "en": "AED"},
+	"ems": {"de": "Rettungsdienst", "pl": "Ratownik", "en": "Ambulance crew"},
+	"trainee": {"de": "Du", "pl": "Ty", "en": "You"},
+}
+
+## 20 Nov 2026 (user: "use the palm for all dialogue; show my dialogue too"): every line that
+## is spoken, and what the app heard the trainee say, goes to the dialogue on the hand menu.
+func _dialogue_line(speaker: String, text: String) -> void:
+	if text.strip_edges().is_empty(): return
+	if speaker == "anna": speaker = "bystander"
+	var names: Dictionary = DIALOGUE_NAMES.get(speaker, {})
+	var who := str(names.get(_language, names.get("en", speaker.capitalize())))
+	if _pc_bench: _pc_note(who + ": " + text.left(150))
+	if hand_menu: hand_menu.add_dialogue(who, text, speaker == "trainee")
+
+## A notice on the hand: only what is not spoken (measurements, saving, errors). A line that
+## is being said or about to be said is in the dialogue instead, once.
 func _toast(text: String) -> void:
+	if text.is_empty() or _on_card(text):
+		if hand_menu: hand_menu.show_notice("")
+		return
+	_notice_unless_spoken.call_deferred(text)
+
+func _notice_unless_spoken(text: String) -> void:
+	# Deferred: most callers queue the voice line right after this call.
+	if audio_manager != null and audio_manager.has_line(text): return
+	if _pc_bench: _pc_note("Notice on the hand: " + text.left(120))
 	if hand_menu: hand_menu.show_notice(text)
 	if dashboard: dashboard.toast(text)
 	if xr_info: xr_info.toast(text)
@@ -3413,6 +3808,9 @@ func _trainer_rosc() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not scenario or xr.active: return
+	if _pc_bench:
+		_pc_bench_input(event)
+		return
 	if is_instance_valid(_modal):
 		if event is InputEventKey and event.pressed and event.physical_keycode == KEY_ESCAPE: _modal.queue_free()
 		return
@@ -3448,7 +3846,114 @@ func _unhandled_input(event: InputEvent) -> void:
 		_elevation = clampf(_elevation + event.relative.y * 0.005, 0.3, 1.45)
 		_update_camera()
 
+## --- PC test bench for the first step (20 Nov 2026) ---------------------------------------
+## User: "let's test Step 1 here: the instructor speaks, I reply by voice, the cloud
+## processes my response and replies, so we can make changes before installing on the
+## Quest." Started with the user argument --pc-step1 on a PC:
+##   godot --path . --xr-mode off -- --pc-step1
+## It is the app itself (same scenario, speech recognition, interpreter and voice), seen
+## from the trainee's eyes instead of the desktop dashboard: the instructor stands in front
+## and greets, Enter presses "Start training", and the PC's microphone is the headset's.
+## What a PC cannot do is left out: no hands, no markers, no hand menu. Texts that would go
+## to the hand menu are listed in the corner instead. The look to the left and right of
+## the safety step is done with the arrow keys or by dragging the mouse.
+const PC_EYE := Vector3(0.4, 1.62, 2.6)
+var _pc_bench := false
+var _pc_yaw := 0.0
+var _pc_log: Label
+var _pc_lines: Array[String] = []
+var _pc_instructor_home: Transform3D
+
+func _pc_bench_setup() -> void:
+	_pc_bench = true
+	get_window().title = "NaReT Step 1 test (PC)"
+	if dashboard: dashboard.visible = false
+	desktop_camera.fov = 62.0
+	_update_camera()
+	# As at the welcome in the headset: the instructor 1.6 m in front, nobody else yet.
+	_pc_instructor_home = $Instructor.global_transform
+	var spot := Vector3(PC_EYE.x, 0.0, PC_EYE.z - WELCOME_INSTRUCTOR_M)
+	$Instructor.place_on_floor(_speaker_floor_pose(spot, PC_EYE))
+	$Instructor.visible = true
+	$Bystanders/Anna.visible = false
+	$Bystanders/Marek.visible = false
+	_update_name_tags()
+	var help := Label.new()
+	help.position = Vector2(16, 10)
+	help.add_theme_font_size_override("font_size", 17)
+	help.text = "Enter: Start / Restart training     Left / Right arrow or mouse drag: turn your head     Down arrow: look ahead\nSpeak into the microphone when the instructor has finished (hold T to force recording)     D / E / P: language     Esc: close"
+	_ui_layer.add_child(help)
+	_pc_log = Label.new()
+	_pc_log.position = Vector2(16, 70)
+	_pc_log.add_theme_font_size_override("font_size", 16)
+	_pc_log.add_theme_color_override("font_color", Color(1, 1, 0.75))
+	_ui_layer.add_child(_pc_log)
+	_pc_note("Cloud: " + ("connected" if api.is_available() else "NOT available (offline)"))
+	if "--pc-auto" in OS.get_cmdline_user_args(): _pc_auto()
+
+func _pc_auto() -> void:
+	## --pc-auto: plays step 1 by itself with typed answers in place of the microphone, to
+	## check the loop (question, answer, interpretation, reply) without a person.
+	var wait := func(seconds: float): await get_tree().create_timer(seconds).timeout
+	await wait.call(8.0)
+	_on_action("start")
+	await wait.call(10.0)
+	_pc_note("AUTO state=%s step=%s" % [scenario.get_state_name(), NaretTrainingCoach.step(scenario)])
+	_on_transcript("Ich schaue zuerst, ob die Umgebung sicher ist.")
+	await wait.call(12.0)
+	_pc_note("AUTO state=%s looked_around=%s" % [scenario.get_state_name(), _looked_around()])
+	for yaw in [-0.7, 0.7, 0.0]:
+		_pc_yaw = yaw
+		_update_camera()
+		await wait.call(1.0)
+	_pc_note("AUTO looked_around=%s" % _looked_around())
+	await wait.call(1.0)
+	_on_transcript("Ja, es ist sicher.")
+	await wait.call(12.0)
+	_pc_note("AUTO state=%s step=%s" % [scenario.get_state_name(), NaretTrainingCoach.step(scenario)])
+	get_tree().quit()
+
+func _pc_note(line: String) -> void:
+	if _pc_log == null: return
+	print("PC_BENCH ", line)
+	_pc_lines.append(line)
+	while _pc_lines.size() > 9: _pc_lines.pop_front()
+	_pc_log.text = "\n".join(_pc_lines)
+
+func _pc_bench_started() -> void:
+	# The training runs: the instructor takes his place beside the patient, the others come.
+	$Instructor.global_transform = _pc_instructor_home
+	$Instructor.visible = true
+	$Bystanders/Anna.visible = situation == "B"
+	$Bystanders/Marek.visible = situation == "B"
+	_pc_yaw = 0.0
+	_update_camera()
+	_pc_note("Training started: Situation %s, ventilation %s, language %s" % [situation, setup.answers.get("breaths", "?"), _language])
+
+func _pc_bench_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT: _dragging = event.pressed
+	if event is InputEventMouseMotion and _dragging:
+		_pc_yaw = clampf(_pc_yaw + event.relative.x * 0.004, -1.4, 1.4)
+		_update_camera()
+	if not (event is InputEventKey) or event.echo: return
+	if event.physical_keycode == KEY_T: _on_recording(event.pressed)
+	if not event.pressed: return
+	match event.physical_keycode:
+		KEY_ESCAPE: get_tree().quit()
+		KEY_ENTER, KEY_KP_ENTER: _on_action("start" if scenario.state == NaretScenario.State.IDLE else "restart")
+		KEY_LEFT: _pc_yaw = clampf(_pc_yaw - deg_to_rad(30), -1.4, 1.4)
+		KEY_RIGHT: _pc_yaw = clampf(_pc_yaw + deg_to_rad(30), -1.4, 1.4)
+		KEY_DOWN, KEY_UP: _pc_yaw = 0.0
+		KEY_D: _menu_language("de")
+		KEY_E: _menu_language("en")
+		KEY_P: _menu_language("pl")
+	_update_camera()
+
 func _update_camera() -> void:
+	if _pc_bench:
+		# The trainee's eyes: standing, looking ahead, the head turned by _pc_yaw.
+		desktop_camera.global_transform = Transform3D(Basis(Vector3.UP, -_pc_yaw), PC_EYE)
+		return
 	var target := Vector3(0.38, 0.08, -0.03)
 	desktop_camera.position = target + Vector3(sin(_rotation) * cos(_elevation), sin(_elevation), cos(_rotation) * cos(_elevation)) * _distance
 	desktop_camera.look_at(target)

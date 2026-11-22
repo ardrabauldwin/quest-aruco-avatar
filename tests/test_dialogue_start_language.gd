@@ -6,7 +6,7 @@ class Audio extends NaretAudioManager:
 	func set_listening(value: bool) -> void: listening = value
 	func set_language(value: String) -> void: language = value
 	func stop_speech() -> void: lines.clear()
-	func speak(text: String, lang: String = "pl", key: String = "calm", speaker: String = "bystander") -> void:
+	func speak(text: String, lang: String = "pl", key: String = "calm", speaker: String = "bystander", _keep: bool = false) -> void:
 		lines.append({"text":text,"language":lang,"key":key,"speaker":speaker})
 
 class LLM extends NaretLLMOrchestrator:
@@ -37,6 +37,9 @@ func run() -> Array[String]:
 	host.anchor.calibrated = true
 	host.scenario = NaretScenario.new()
 	host.add_child(host.scenario)
+	# The questions before the scenario (issue #1, 0. App-Start) are answered here; this
+	# suite checks what follows the start itself.
+	host.setup.answers = {"language": "en", "mode": "own", "situation": "B", "breaths": "yes"}
 	host.audio_manager = Audio.new()
 	host.add_child(host.audio_manager)
 	host.llm = LLM.new()
@@ -57,13 +60,13 @@ func run() -> Array[String]:
 	host.anchor.locked = true
 	host._try_pending_training_start()
 	check(host._pending_training_action.is_empty() and host.scenario.state==NaretScenario.State.INTRO, "accepted placement consumes the pending Start")
-	check(host.audio_manager.lines.size()==2 and host.audio_manager.lines[0].key=="anna_arrive" and host.audio_manager.lines[1].speaker=="instructor", "queued start triggers Anna's opening and the instructor's safety instruction")
+	check(host.audio_manager.lines.size()==1 and host.audio_manager.lines[0].speaker=="instructor", "queued start: the instructor asks first, no cry from Anna (18 Nov 2026)")
 	host._try_pending_training_start()
-	check(host.audio_manager.lines.size()==2, "later frames cannot restart or duplicate the opening dialogue")
+	check(host.audio_manager.lines.size()==1, "later frames cannot restart or duplicate the opening dialogue")
 	host._set_language("en")
-	check(host.audio_manager.lines.size()==2 and host.audio_manager.lines[0].key=="anna_arrive" and host.audio_manager.lines[0].language=="en" and host.audio_manager.lines[1].language=="en" and host.audio_manager.lines[1].speaker=="instructor", "language switch restores interrupted Anna introduction then instructor guidance in the selected language")
+	check(host.audio_manager.lines.size()==1 and host.audio_manager.lines[0].language=="en" and host.audio_manager.lines[0].speaker=="instructor", "language switch repeats the instructor's guidance in the selected language")
 	host._announce_coach_step()
-	check(host.audio_manager.lines.size()==2, "ordinary updates still deduplicate the current instruction")
+	check(host.audio_manager.lines.size()==1, "ordinary updates still deduplicate the current instruction")
 	host.scenario.submit_action("begin_check")
 	host._set_language("de")
 	check(host.audio_manager.lines.size()==1 and host.audio_manager.lines[0].speaker=="instructor" and host.audio_manager.lines[0].language=="de", "later language switches repeat current guidance without replaying Anna's arrival or changing the scenario")

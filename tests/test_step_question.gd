@@ -8,14 +8,14 @@ func run() -> Array[String]:
 	failures.clear()
 	var expected := {
 		"safety": {"action": "begin_check", "breaths": 1},
-		"response": {"action": "check_responsiveness", "breaths": 1},
 		"call": {"action": "call_emergency", "breaths": 1},
 		"breathing": {"action": "check_breathing", "breaths": 1},
 		"breaths": {"action": "ventilation", "breaths": 2},
 	}
 	for step: String in expected:
 		check(Coach.step_question(step) == expected[step], "step with a spoken report gets its question: " + step)
-	for step in ["setup", "compressions", "compression_only", "aed_clear", "aed_analyse", "aed_shock_clear", "aed_countdown", "aed_resume", "finish", "aed"]:
+	# Step 3 asks its own report question (18 Nov 2026), not a yes/no step question.
+	for step in ["setup", "response", "compressions", "compression_only", "aed_clear", "aed_analyse", "aed_shock_clear", "aed_countdown", "aed_resume", "finish", "aed"]:
 		check(Coach.step_question(step).is_empty(), "step without a spoken report gets no question: " + step)
 	for step: String in expected:
 		for language in ["en", "de", "pl"]:

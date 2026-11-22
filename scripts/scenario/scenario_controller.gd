@@ -17,6 +17,8 @@ const AED_REASSESS_SECONDS := 120.0
 @export_range(1.0, 20.0, 1.0) var simulation_speed := 1.0
 var language := "de"
 var cpr_witness_only := false
+## Situation A (issue #1): the trainee is alone; nobody can fetch an AED.
+var alone := false
 var observation_driven := false
 var state: int = State.IDLE
 var elapsed := 0.0
@@ -349,7 +351,7 @@ func get_available_actions() -> Array[String]:
 		actions.append("request_aed")
 	if state > State.IDLE and state < State.RECOVERY:
 		actions.append("reassure")
-	if cpr_witness_only:
+	if cpr_witness_only or alone:
 		for excluded in ["request_aed", "attach_aed", "clear_patient", "analyze_rhythm", "shock", "resume_cpr", "reassess", "simulate_rosc"]:
 			actions.erase(excluded)
 	return actions

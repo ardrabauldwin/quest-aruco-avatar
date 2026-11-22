@@ -1,4 +1,4 @@
-﻿{
+{
   "generator": "fish-audio-s2-pro (local, Fish Audio Research License)",
   "languages": [
     "de",
@@ -25,10 +25,11 @@
       "key": "help",
       "language": "de",
       "speaker": "anna",
-      "text": "Ich rufe den Rettungsdienst unter hundertzwÃ¶lf an.",
+      "text": "Ich rufe 112 an. Ich stelle das Telefon auf Lautsprecher.",
       "file": "tts_de/help.wav",
-      "duration_s": 2.74,
-      "sha256": "d00a3165acde7613f7ca50e0e10bf0960068414cca7366f0bab29b51a22506f6"
+      "duration_s": 4.48,
+      "sha256": "22547a7458ddba13ae06cb2d1f3c2d05fba875af8dd9e89a839e4a9598b92f59",
+      "generator": "piper:de_DE-kerstin-low"
     },
     {
       "key": "aed",
@@ -88,10 +89,11 @@
       "key": "anna_arrive",
       "language": "de",
       "speaker": "anna",
-      "text": "Hilfe! Mein Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
+      "text": "Hilfe! Der Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
       "file": "tts_de/anna_arrive.wav",
-      "duration_s": 3.437,
-      "sha256": "c710a8d67570e284972f7fab2846dd1c976ebb189a86aa3093ea38cbf4e5d3c0"
+      "duration_s": 3.744,
+      "sha256": "280bfba92f234b19c68acc162ecdf1780cc4dafc6c1d18af1b01ac0b6ac83b33",
+      "generator": "piper:de_DE-kerstin-low"
     },
     {
       "key": "anna_urge",
@@ -106,10 +108,11 @@
       "key": "anna_name",
       "language": "de",
       "speaker": "anna",
-      "text": "Jan! Jan, hÃ¶rst du mich?",
+      "text": "Hallo! Hören Sie mich?",
       "file": "tts_de/anna_name.wav",
-      "duration_s": 2.136,
-      "sha256": "48ea7182e4e6ec49394cece0a5759b8ed303b671f9288ebf2105c5495795e011"
+      "duration_s": 1.216,
+      "sha256": "b26d7c1d49d9c1117b971d644b8c2e85b9595e634f652d547e7d150a86a93e9c",
+      "generator": "piper:de_DE-kerstin-low"
     },
     {
       "key": "anna_breathing",
@@ -142,10 +145,11 @@
       "key": "anna_touch",
       "language": "de",
       "speaker": "anna",
-      "text": "Jan, ich bin da â€¦",
+      "text": "Ich will doch nur helfen …",
       "file": "tts_de/anna_touch.wav",
-      "duration_s": 1.533,
-      "sha256": "82624b599f5b4e1496c80c54c224c993ac25d8531545b8c738c99b6b4d6a4586"
+      "duration_s": 1.344,
+      "sha256": "44c747c79da1233422758e49e708ed4fa8782b9df0b046fde272b901ff1e71c5",
+      "generator": "piper:de_DE-kerstin-low"
     },
     {
       "key": "anna_sorry",
@@ -205,10 +209,11 @@
       "key": "help",
       "language": "pl",
       "speaker": "anna",
-      "text": "DzwoniÄ™ pod numer sto dwanaÅ›cie i wzywam pomoc.",
+      "text": "Dzwonię pod 112. Włączam tryb głośnomówiący.",
       "file": "tts_pl/help.wav",
-      "duration_s": 3.065,
-      "sha256": "800803766017b3d33d60b884f1a17a57aba6ffb7d4cc8672a796df70db6a5c50"
+      "duration_s": 3.855,
+      "sha256": "78f487413ca8db8e20491fe91678c8327016c4623665469064283cb726c7e8b1",
+      "generator": "piper:pl_PL-gosia-medium"
     },
     {
       "key": "aed",
@@ -268,10 +273,11 @@
       "key": "anna_arrive",
       "language": "pl",
       "speaker": "anna",
-      "text": "Pomocy! MÃ³j mÄ…Å¼ nagle upadÅ‚! ProszÄ™ mu pomÃ³c!",
+      "text": "Pomocy! Ten mężczyzna nagle upadł! Proszę mu pomóc!",
       "file": "tts_pl/anna_arrive.wav",
       "duration_s": 3.762,
-      "sha256": "0ddd2c89985b9f60bd92a38ba9aa26a316dce87375246bfed9ff873ad23e6268"
+      "sha256": "6b74e605cbc10a3361ee941994e548871d0e71e48e24d9bb65588e4a6b990bc1",
+      "generator": "piper:pl_PL-gosia-medium"
     },
     {
       "key": "anna_urge",
@@ -286,10 +292,11 @@
       "key": "anna_name",
       "language": "pl",
       "speaker": "anna",
-      "text": "Janek! Janek, sÅ‚yszysz mnie?",
+      "text": "Halo! Słyszy mnie pan?",
       "file": "tts_pl/anna_name.wav",
-      "duration_s": 2.276,
-      "sha256": "ae081c7bf546f4e7cb9dfa2b584e0a6b153efceb263dbd1191ec453cbee349bb"
+      "duration_s": 1.509,
+      "sha256": "eada9eda7dbbc6d3cbe9748a78d03e8fbf4dbaf1c5369e47ad4329f5c3eb01eb",
+      "generator": "piper:pl_PL-gosia-medium"
     },
     {
       "key": "anna_breathing",
@@ -322,10 +329,11 @@
       "key": "anna_touch",
       "language": "pl",
       "speaker": "anna",
-      "text": "Janek, jestem tutajâ€¦",
+      "text": "Chcę tylko pomóc…",
       "file": "tts_pl/anna_touch.wav",
-      "duration_s": 1.904,
-      "sha256": "8126aa9e0d70c02ce780be93b3a0bb6c7dffa4290917ce521432a8c41846edba"
+      "duration_s": 1.231,
+      "sha256": "27e5d33faa52a6acb67baae421d101f43e433c4abeccbd86dcd35c7d1821e41c",
+      "generator": "piper:pl_PL-gosia-medium"
     },
     {
       "key": "anna_sorry",
@@ -646,10 +654,10 @@
       "key": "aed_no_shock",
       "language": "de",
       "speaker": "aed",
-      "text": "Kein Schock empfohlen.",
+      "text": "Kein Schock empfohlen. Beginnen Sie sofort mit der Herzdruckmassage.",
       "file": "tts_de/aed_no_shock.wav",
-      "duration_s": 1.533,
-      "sha256": "2df83ac1c918a35d5f5fbe90b64bc8dda1457fc40b65cbb821401fe31c9f9041"
+      "duration_s": 4.24,
+      "sha256": "a8c1ebdf7c13bdddfd020d567b4bbba08f62b25e790df42355c16aa8ecedf2d1"
     },
     {
       "key": "aed_stop_cpr",
@@ -700,10 +708,10 @@
       "key": "aed_no_shock",
       "language": "pl",
       "speaker": "aed",
-      "text": "WyÅ‚adowanie niezalecane.",
+      "text": "Wyładowanie niezalecane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
       "file": "tts_pl/aed_no_shock.wav",
-      "duration_s": 1.95,
-      "sha256": "de9f183e447afcf46ebe77b0c6b7d81e193e3351077b6a16483acbffd7e4dbdf"
+      "duration_s": 4.841,
+      "sha256": "291bbec4485f14bae5108cce6043d9ac63a55cc055986d94ac3eb5f2e9c4b5db"
     },
     {
       "key": "aed_stop_cpr",
@@ -780,13 +788,13 @@
     },
     {
       "key": "help",
-      "text": "I am calling the emergency services on one one two.",
+      "text": "I'm calling 112. I'm putting the phone on speaker.",
       "speaker": "anna",
       "language": "en",
       "file": "tts_en/help.wav",
-      "duration_s": 3.46,
-      "sha256": "880dd29ff9d6d7a7d3b33cff189b8ee94e79359bd396a633183f43eb0b79b699",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
+      "duration_s": 3.973,
+      "sha256": "f4223322174ac99663cdd5ca533b53e8fbbbcd5c7337d862543750ce7d34d4fa",
+      "generator": "tts-1:af_sky"
     },
     {
       "key": "thanks",
@@ -850,13 +858,13 @@
     },
     {
       "key": "anna_arrive",
-      "text": "Help! My husband has just collapsed! Please help him!",
-      "speaker": "anna",
       "language": "en",
+      "speaker": "anna",
+      "text": "Help! This man has just collapsed! Please help him!",
       "file": "tts_en/anna_arrive.wav",
-      "duration_s": 3.046,
-      "sha256": "d51d874ab7ff8b17f21d7f4ea66f6a75208bdf8a22778306fc7b3dddcef68665",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
+      "duration_s": 2.998,
+      "sha256": "d963c1d3fa1f1c5864d76e9393d668c24dec5296cf8bbff4a876d64056e19f60",
+      "generator": "tts-1:af_sky"
     },
     {
       "key": "anna_urge",
@@ -870,13 +878,13 @@
     },
     {
       "key": "anna_name",
-      "text": "Jan! Jan, can you hear me?",
-      "speaker": "anna",
       "language": "en",
+      "speaker": "anna",
+      "text": "Hello! Can you hear me?",
       "file": "tts_en/anna_name.wav",
-      "duration_s": 1.938,
-      "sha256": "a54f09444a64cfd006719ba7e0afdc0b6b6e27d0254b84c7096017118f70f2f8",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
+      "duration_s": 1.753,
+      "sha256": "faf72401aee023c38cde3e643f2bbb7079bdcd7d8ee63ea450407fc8dea96531",
+      "generator": "tts-1:af_sky"
     },
     {
       "key": "speech_repeat",
@@ -979,26 +987,6 @@
       "generator": "cloud tts-1 af_bella + robot effect"
     },
     {
-      "key": "aed_shocked",
-      "language": "en",
-      "speaker": "aed",
-      "text": "Shock delivered.",
-      "file": "tts_en/aed_shocked.wav",
-      "duration_s": 1.204,
-      "sha256": "8f0d9c90162d806eb586815424e4a71aad671510c908ffd6b946954d4d220b13",
-      "generator": "cloud tts-1 af_bella + robot effect"
-    },
-    {
-      "key": "aed_no_shock",
-      "language": "en",
-      "speaker": "aed",
-      "text": "No shock advised.",
-      "file": "tts_en/aed_no_shock.wav",
-      "duration_s": 1.446,
-      "sha256": "07f9688dd8d05c3689d03cb0f3a1f826c035e1db28300c682478363aac25b0d3",
-      "generator": "cloud tts-1 af_bella + robot effect"
-    },
-    {
       "key": "aed_stop_cpr",
       "language": "en",
       "speaker": "aed",
@@ -1036,6 +1024,36 @@
       "file": "tts_en/aed_press_shock.wav",
       "duration_s": 2.137,
       "sha256": "ed44c9cbbaf20a9b7e620ab5263a72701c3273795f6300bb2b8796c3965e1a85",
+      "generator": "cloud tts-1 af_bella + robot effect"
+    },
+    {
+      "key": "marek_take_over",
+      "language": "en",
+      "speaker": "marek",
+      "text": "I'll keep pushing – you put the pads on!",
+      "file": "tts_en/marek_take_over.wav",
+      "duration_s": 2.843,
+      "sha256": "81761e6ad9770b2def9d4af18ddf277f1092e335906cc7e6f14e3311b128e345",
+      "generator": "cloud tts-1 bm_george"
+    },
+    {
+      "key": "aed_shocked",
+      "language": "en",
+      "speaker": "aed",
+      "text": "Shock delivered. Start chest compressions now.",
+      "file": "tts_en/aed_shocked.wav",
+      "duration_s": 3.025,
+      "sha256": "60da1e3b86d756021fa184f19284ca05750d17d61af2178104e7f0b4b13c4295",
+      "generator": "cloud tts-1 af_bella + robot effect"
+    },
+    {
+      "key": "aed_no_shock",
+      "language": "en",
+      "speaker": "aed",
+      "text": "No shock advised. Start chest compressions now.",
+      "file": "tts_en/aed_no_shock.wav",
+      "duration_s": 3.278,
+      "sha256": "7823f05edc8326f617006180f5705fd6ab713a157535f4c9211797aec998b8b5",
       "generator": "cloud tts-1 af_bella + robot effect"
     }
   ]

@@ -63,9 +63,9 @@ func run() -> Array[String]:
 	for language in ["en", "de", "pl"]:
 		menu.language = language
 		menu.update_session(setup)
-		check(menu._controls.get_child_count() == 6 and menu._reposition_key.get_parent()==menu._controls, "only the requested Reposition key extends the wrist controls")
+		check(menu._reposition_key.get_parent()==menu._controls and menu._setup_keys.size() == 4, "wrist controls: Reposition plus the four setup fold-out keys")
 		check(menu._action_keys.all(func(key): return not key.visible), "setup contains no scan/retry actions in any language")
-	check(menu._large_start.position.is_equal_approx(Vector3(-0.050,-0.022,0)) and menu._large_align.position.is_equal_approx(Vector3(0.050,-0.022,0)), "familiar Start and Save positions are preserved")
+	check(menu._large_start.position.is_equal_approx(Vector3(-0.055,-0.075,0)) and menu._large_align.position.is_equal_approx(Vector3(0.055,-0.075,0)), "Start and Save side by side below the setup keys (grid spaced out 19 Nov 2026)")
 	setup.start()
 	menu.update_session(setup)
 	check(not menu.has_signal("room_scan_requested") and not menu.has_signal("room_retry_requested"), "hand menu cannot initiate room scanning")

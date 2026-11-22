@@ -101,7 +101,7 @@ func run() -> Array[String]:
 	plain.submit_action("begin_check")
 	check(plain.submit_action("check_responsiveness", {"source": "desktop"}), "desktop report without the key is accepted")
 	plain.free()
-	for key in ["error.shoulders_not_seen", "coach.shake_firmly"]:
+	for key in ["error.shoulders_not_seen", "coach.report_response", "coach.patient_unresponsive"]:
 		for lang in ["en", "de", "pl"]:
 			var text := NaretLanguage.text(key, lang)
 			check(not text.is_empty() and text != key, "text %s exists in %s" % [key, lang])

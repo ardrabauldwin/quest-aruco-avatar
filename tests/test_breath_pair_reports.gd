@@ -14,7 +14,7 @@ class Bridge extends Node:
 
 class Voice extends NaretAudioManager:
 	var questions: Array[String] = []
-	func speak(text: String, _lang: String = "pl", _clip: String = "calm", _speaker: String = "bystander") -> void:
+	func speak(text: String, _lang: String = "pl", _clip: String = "calm", _speaker: String = "bystander", _keep: bool = false) -> void:
 		questions.append(text)
 
 func run() -> Array[String]:
@@ -49,7 +49,7 @@ func run() -> Array[String]:
 	controls.ccbm = Bridge.new()
 	controls.audio_manager = Voice.new()
 	controls._on_transcript("I have given two rescue breads.")
-	check(controls.audio_manager.questions.back() == "Did you complete two rescue breaths? Say yes or no.", "main asks the correct confirmation")
+	check(controls.audio_manager.questions.back() == "Did you give two breaths? Say yes or no.", "main asks the correct confirmation")
 	check(controls.ccbm.pairs == 0 and controls.ccbm.singles == 0, "mishearing creates no observation")
 	controls._on_transcript("yes")
 	check(controls.ccbm.pairs == 1 and controls.ccbm.singles == 0, "confirmed pair goes through the existing two-decision CCBM path")

@@ -187,7 +187,7 @@ func _build_training_panel() -> void:
 	_dialogue.custom_minimum_size.y = 66
 	dialogue_column.add_child(_dialogue)
 	_input = LineEdit.new()
-	_input.placeholder_text = "Mit Anna sprechen …"
+	_input.placeholder_text = "Mit der Zeugin sprechen …"
 	_input.custom_minimum_size.y = 42
 	_input.add_theme_stylebox_override("normal", panel_style(Color("0d1b23"), 8))
 	_input.add_theme_font_size_override("font_size", 15)
@@ -241,7 +241,7 @@ func set_language(lang: String) -> void:
 	if _qcpr_button:
 		_qcpr_button.text = NaretLanguage.ui("QCPR-Sim", "Sym. QCPR", lang)
 	_hint.text = NaretLanguage.ui("Ziehen: Ansicht drehen   ·   Scrollen: Zoom   ·   C: Drücken   ·   V: Beatmen   ·   F2: QCPR", "Przeciągnij: obrót   ·   Kółko: zoom   ·   C: ucisk   ·   V: oddech   ·   F2: QCPR", lang)
-	_input.placeholder_text = NaretLanguage.ui("Mit Anna sprechen …", "Porozmawiaj z Anną …", lang)
+	_input.placeholder_text = NaretLanguage.ui("Mit Anna sprechen …", "Porozmawiaj ze świadkiem …", lang)
 	_refresh_mode()
 	_ekg_title.text = NaretLanguage.ui("EKG / SIMULATION", "EKG / SYMULACJA", lang)
 	set_recording(_recording)

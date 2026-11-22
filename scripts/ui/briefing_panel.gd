@@ -56,7 +56,11 @@ func build_report() -> String:
 	var milestones: Dictionary = score.get("milestones_s", {})
 	var review: Array = score.get("review", [])
 	var outcome := str(session.get("outcome", "ongoing"))
-	var content := "[color=#b7f581]BLS · ERC 2025 · " + _localized("Übungsdaten", "Dane treningowe") + "[/color]\n"
+	var content := ""
+	# The instructor's debrief first (issue #1, 8.), then the data.
+	if not str(summary.get("debrief_text", "")).is_empty():
+		content += str(summary.debrief_text) + "\n"
+	content += "[color=#b7f581]BLS · ERC 2025 · " + _localized("Übungsdaten", "Dane treningowe") + "[/color]\n"
 	match outcome:
 		"simulated_handover":
 			content += _localized("Simulation beendet: Übergabe an den Rettungsdienst.", "Symulacja zakończona: przekazanie zespołowi ratownictwa.")

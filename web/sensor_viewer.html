@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NaReT Sensor-Log</title>
+<style>
+  :root { --bg: #0f1724; --panel: #172235; --ink: #e8edf6; --muted: #93a0b8; --brand: #8fb0ee; --red: #ff6a5c; --ok: #6fd39a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  #app { display: grid; grid-template-columns: 360px 1fr; height: 100%; }
+  aside { background: var(--panel); padding: 16px; overflow-y: auto; display: grid; gap: 14px; align-content: start; }
+  h1 { font-size: 18px; margin: 0; color: var(--brand); }
+  .row { display: flex; justify-content: space-between; gap: 8px; font-variant-numeric: tabular-nums; }
+  .row span:first-child { color: var(--muted); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
+  .on { background: var(--ok); } .off { background: var(--red); }
+  button { background: var(--brand); color: #0f1724; border: 0; border-radius: 6px; padding: 9px 12px; font-weight: 600; cursor: pointer; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  li a { color: var(--ink); } li small { color: var(--muted); }
+  label { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+  #view { position: relative; min-width: 0; display: grid; grid-template-rows: 1fr 190px; }
+  #stage { position: relative; min-height: 0; }
+  #plot { width: 100%; height: 190px; display: block; background: #0b111c; }
+  section { display: grid; gap: 8px; border-top: 1px solid #263450; padding-top: 12px; }
+  section h2 { font-size: 13px; margin: 0; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  input, select { width: 100%; background: #0f1724; color: var(--ink); border: 1px solid #33425f; border-radius: 6px; padding: 7px 8px; font: inherit; }
+  button.alt { background: #263450; color: var(--ink); }
+  button.rec { background: var(--red); color: #fff; font-size: 16px; padding: 12px; }
+  button.rec.on { background: #fff; color: var(--red); outline: 3px solid var(--red); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { outline-color: transparent; } }
+  #recBadge { position: absolute; top: 12px; left: 12px; padding: 6px 12px; border-radius: 6px; font-weight: 700; background: #26324a; color: var(--muted); }
+  #recBadge.on { background: var(--red); color: #fff; animation: pulse 1.2s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { button.rec.on, #recBadge.on { animation: none; } }
+  button.mark { background: #263450; color: var(--ink); text-align: left; padding: 7px 8px; }
+  button.mark kbd { color: var(--muted); font-size: 11px; margin-right: 4px; }
+  .legend { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .legend i { display: inline-block; width: 10px; height: 3px; margin-right: 4px; vertical-align: middle; }
+  #note { position: absolute; left: 12px; bottom: 10px; color: var(--muted); }
+  @media (max-width: 760px) { #app { grid-template-columns: 1fr; grid-template-rows: auto 60vh; } }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>NaReT Sensor-Log</h1>
+    <div class="row"><span>Verbindung</span><span><i class="dot" id="conn"></i><b id="connText">…</b></span></div>
+    <div class="row"><span>Take</span><b id="take">–</b></div>
+    <div class="row"><span>Frames / Dauer</span><b id="frames">–</b></div>
+    <div class="row"><span>Hand links / rechts</span><b><i class="dot" id="hl"></i><i class="dot" id="hr"></i></b></div>
+    <div class="row"><span>Body-Tracking</span><b><i class="dot" id="bd"></i><span id="bodyText">–</span></b></div>
+    <div class="row"><span>Beine / Genauigkeit</span><b id="bodyCaps">–</b></div>
+    <div class="row"><span>Live-Rate</span><b id="rate">–</b></div>
+    <div class="row"><span>Puppen-Marker</span><b id="marker">–</b></div>
+    <div class="row"><span>Szenario / Kompressionen</span><b id="scn">–</b></div>
+    <div class="row"><span>Detektor zählt</span><b id="det">–</b></div>
+
+    <section>
+      <h2>Take</h2>
+      <div class="grid2">
+        <input id="person" placeholder="Proband-ID" autocomplete="off">
+        <input id="height_cm" type="number" placeholder="Größe (cm)">
+        <input id="arm_cm" type="number" placeholder="Arm: Schulter–Handgelenk (cm)">
+        <select id="handed"><option value="">Händigkeit</option><option>rechts</option><option>links</option></select>
+        <select id="experience"><option value="">Erfahrung</option><option>Laie</option><option>geschult</option><option>Profi</option></select>
+        <input id="manikin" placeholder="Puppe (Modell)">
+      </div>
+      <input id="notes" placeholder="Notiz (Bedingung, Untergrund, …)">
+      <button id="recButton" type="button" class="rec" aria-pressed="false">● Aufnahme starten</button>
+    </section>
+
+    <section>
+      <h2>Simulation</h2>
+      <div class="grid2">
+        <button type="button" data-cmd="cpr">Endlos-CPR</button>
+        <button type="button" data-cmd="scenario" class="alt">Szenario von vorn</button>
+        <button type="button" data-cmd="language" data-lang="de" class="alt">Deutsch</button>
+        <button type="button" data-cmd="language" data-lang="pl" class="alt">Polski</button>
+        <button type="button" data-cmd="language" data-lang="en" class="alt">English</button>
+        <button type="button" id="mute" class="alt">Ton aus</button>
+        <select id="metronome"><option value="0">Metronom aus</option><option>100</option><option>110</option><option>120</option></select>
+      </div>
+    </section>
+
+    <section>
+      <h2>Markierungen (Taste)</h2>
+      <div class="grid2" id="marks"></div>
+      <div class="grid2"><input id="markText" placeholder="eigene Markierung"><button id="markSend" type="button" class="alt">Markieren</button></div>
+    </section>
+
+    <section>
+      <h2>Anzeige und Takes</h2>
+      <div class="grid2"><button type="button" id="tpose" class="alt">T-Pose kalibrieren</button><button type="button" id="tposeReset" class="alt">Kalibrierung löschen</button></div>
+      <small id="tposeNote" style="color:var(--muted)">Arme seitlich waagerecht, gerade stehen, dann klicken (3 s Countdown).</small>
+      <label><input type="checkbox" id="showChar" checked> Figur</label>
+      <label><input type="checkbox" id="showSkel" checked> Gelenke</label>
+      <div><b>Takes zum Herunterladen</b> <small>(JSON Lines)</small></div>
+      <ul id="takes"></ul>
+    </section>
+  </aside>
+  <div id="view">
+    <div id="stage"><div id="recBadge">keine Aufnahme</div><div id="note"></div></div>
+    <canvas id="plot" aria-label="Handhöhe über dem Brustbein, letzte 10 Sekunden"></canvas>
+  </div>
+</div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const pin = new URLSearchParams(location.search).get("pin") || "";
+const q = "?pin=" + encodeURIComponent(pin);
+const $ = (id) => document.getElementById(id);
+
+// --- scene -------------------------------------------------------------------
+const view = $("stage");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio);
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0f1724);
+const camera = new THREE.PerspectiveCamera(50, 1, 0.02, 50);
+camera.position.set(1.6, 1.7, 2.2);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 1.0, 0);
+scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x334055, 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(2, 4, 3); scene.add(sun);
+scene.add(new THREE.GridHelper(6, 30, 0x40506a, 0x26324a));
+function resize() { const r = view.getBoundingClientRect(); renderer.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix(); }
+addEventListener("resize", resize); resize();
+
+// --- joint overlay ---------------------------------------------------------------
+let handNames = [], bodyNames = [];
+const handChains = ["thumb_metacarpal thumb_phalanx_proximal thumb_phalanx_distal thumb_tip"]
+  .concat(["index", "middle", "ring", "pinky"].map(f => `${f}_finger_metacarpal ${f}_finger_phalanx_proximal ${f}_finger_phalanx_intermediate ${f}_finger_phalanx_distal ${f}_finger_tip`))
+  .map(c => ["wrist"].concat(c.split(" ")));
+const bodyChains = [
+  "hips spine chest upper_chest neck head head_tip",
+  "upper_chest left_shoulder left_upper_arm left_lower_arm left_wrist", "upper_chest right_shoulder right_upper_arm right_lower_arm right_wrist",
+  "hips left_upper_leg left_lower_leg left_foot left_toes", "hips right_upper_leg right_lower_leg right_foot right_toes",
+].map(c => c.split(" "));
+const lines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ vertexColors: true }));
+const dots = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size: 0.012, vertexColors: true }));
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x8fb0ee, transparent: true, opacity: 0.6 }));
+const sternum = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.004, 24), new THREE.MeshStandardMaterial({ color: 0xff6a5c }));
+lines.frustumCulled = dots.frustumCulled = false; // geometry changes every frame
+scene.add(lines, dots, head, sternum);
+
+// Untracked joints come with no flags or sit exactly at the origin.
+const generated = new THREE.Color(0x8a93a6);
+const valid = (j) => j && j[7] !== 0 && (j[0] !== 0 || j[1] !== 0 || j[2] !== 0);
+const vec = (j) => new THREE.Vector3(j[0], j[1], j[2]);
+
+function drawOverlay(frame) {
+  const pos = [], col = [], pts = [], pcol = [];
+  const add = (joints, names, chains, color) => {
+    if (!joints) return;
+    const c = new THREE.Color(color), at = (n) => joints[names.indexOf(n)];
+    for (const chain of chains) for (let i = 1; i < chain.length; i++) {
+      const a = at(chain[i - 1]), b = at(chain[i]);
+      if (valid(a) && valid(b)) {
+        // Body joints without POSITION_TRACKED (8) are generated by the runtime (legs): lighter.
+        const k = names === bodyNames && !((a[7] & 8) && (b[7] & 8)) ? generated : c;
+        pos.push(a[0], a[1], a[2], b[0], b[1], b[2]); col.push(k.r, k.g, k.b, k.r, k.g, k.b);
+      }
+    }
+    for (const j of joints) if (valid(j)) { pts.push(j[0], j[1], j[2]); pcol.push(c.r, c.g, c.b); }
+  };
+  add(frame.hands?.[0], handNames, handChains, 0x3fd9d0);
+  add(frame.hands?.[1], handNames, handChains, 0x3fd9d0);
+  if (frame.body) {
+    const side = (s) => handChains.map(ch => ch.map(n => `${s}_${n}`));
+    add(frame.body, bodyNames, bodyChains.concat(side("left"), side("right")), 0xffb04a);
+  }
+  lines.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  lines.geometry.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  dots.geometry.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+  dots.geometry.setAttribute("color", new THREE.Float32BufferAttribute(pcol, 3));
+  for (const [mesh, j] of [[head, frame.head], [sternum, frame.sternum]]) {
+    mesh.visible = !!j;
+    if (j) { mesh.position.set(j[0], j[1], j[2]); mesh.quaternion.set(j[3], j[4], j[5], j[6]); }
+  }
+}
+
+// --- character: Godot humanoid body joints -> Mixamo bones, by aiming ---------
+// Each bone is turned so it points from its joint to the next joint (twist comes
+// from a second axis on hips, chest and hands). Works for any rig with these bones.
+const SIDES = { left: "Left", right: "Right" };
+const BONES = [ // [mixamo bone, joint, aim at, optional second axis from, to]
+  ["Hips", "hips", "neck", "left_upper_leg", "right_upper_leg"],
+  ["Spine", "spine", "chest"], ["Spine1", "chest", "upper_chest"],
+  ["Spine2", "upper_chest", "neck", "left_upper_arm", "right_upper_arm"],
+  ["Neck", "neck", "head"], ["Head", "head", "head_tip"],
+];
+for (const [s, S] of Object.entries(SIDES)) {
+  BONES.push([`${S}Shoulder`, `${s}_shoulder`, `${s}_upper_arm`], [`${S}Arm`, `${s}_upper_arm`, `${s}_lower_arm`],
+    [`${S}ForeArm`, `${s}_lower_arm`, `${s}_wrist`],
+    [`${S}Hand`, `${s}_wrist`, `${s}_middle_finger_phalanx_proximal`, `${s}_index_finger_phalanx_proximal`, `${s}_pinky_finger_phalanx_proximal`]);
+  BONES.push([`${S}HandThumb1`, `${s}_thumb_metacarpal`, `${s}_thumb_phalanx_proximal`],
+    [`${S}HandThumb2`, `${s}_thumb_phalanx_proximal`, `${s}_thumb_phalanx_distal`], [`${S}HandThumb3`, `${s}_thumb_phalanx_distal`, `${s}_thumb_tip`]);
+  for (const [f, F] of [["index", "Index"], ["middle", "Middle"], ["ring", "Ring"], ["pinky", "Pinky"]]) {
+    const j = (p) => `${s}_${f}_finger_${p}`;
+    BONES.push([`${S}Hand${F}1`, j("phalanx_proximal"), j("phalanx_intermediate")],
+      [`${S}Hand${F}2`, j("phalanx_intermediate"), j("phalanx_distal")], [`${S}Hand${F}3`, j("phalanx_distal"), j("tip")]);
+  }
+  BONES.push([`${S}UpLeg`, `${s}_upper_leg`, `${s}_lower_leg`], [`${S}Leg`, `${s}_lower_leg`, `${s}_foot`], [`${S}Foot`, `${s}_foot`, `${s}_toes`]);
+}
+const JOINT_BONE = Object.fromEntries(BONES.map(b => [b[1], b[0]]));
+Object.assign(JOINT_BONE, { head_tip: "HeadTop_End", left_toes: "LeftToeBase", right_toes: "RightToeBase" });
+for (const s of ["left", "right"]) for (const [f, F] of [["thumb", "Thumb"], ["index_finger", "Index"], ["middle_finger", "Middle"], ["ring_finger", "Ring"], ["pinky_finger", "Pinky"]])
+  JOINT_BONE[`${s}_${f}_tip`] = `${SIDES[s]}Hand${F}4`;
+
+let rig = null;
+function basis(primary, secondary) {
+  const y = primary.clone().normalize(), x = secondary.clone().sub(y.clone().multiplyScalar(secondary.dot(y))).normalize();
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, new THREE.Vector3().crossVectors(x, y)));
+}
+function setupRig(model) {
+  const bones = {};
+  model.traverse(o => { if (o.isBone) bones[o.name.replace("mixamorig:", "").replace("mixamorig", "")] = o; });
+  model.updateMatrixWorld(true);
+  const wpos = (b) => b.getWorldPosition(new THREE.Vector3());
+  const entries = [];
+  for (const [name, joint, aim, from, to] of BONES) {
+    const bone = bones[name], child = bones[JOINT_BONE[aim]];
+    if (!bone || !child) continue;
+    const restDir = wpos(child).sub(wpos(bone));
+    const e = { bone, joint, aim, from, to, restWorld: bone.getWorldQuaternion(new THREE.Quaternion()), restLocal: bone.quaternion.clone() };
+    if (from && bones[JOINT_BONE[from]] && bones[JOINT_BONE[to]]) e.restBasis = basis(restDir, wpos(bones[JOINT_BONE[to]]).sub(wpos(bones[JOINT_BONE[from]])));
+    else e.restDir = restDir.normalize();
+    entries.push(e);
+  }
+  rig = { model, entries };
+}
+// Optional T-pose calibration: tracked joint rotation in T-pose -> the rig's bind
+// pose (also a T-pose). Afterwards every bone takes the full tracked rotation,
+// twist included. Kept per browser.
+let calib = null;
+try { calib = JSON.parse(localStorage.getItem("naret-tpose") || "null"); } catch { calib = null; }
+function calibrate(body) {
+  if (!rig || !body) return false;
+  const offsets = {};
+  for (const e of rig.entries) {
+    const j = body[bodyNames.indexOf(e.joint)];
+    if (!valid(j) || !(j[7] & 1)) continue;
+    const tracked = new THREE.Quaternion(j[3], j[4], j[5], j[6]);
+    offsets[e.joint] = tracked.invert().multiply(e.restWorld).toArray();
+  }
+  calib = offsets;
+  try { localStorage.setItem("naret-tpose", JSON.stringify(calib)); } catch { /* per-viewer convenience only */ }
+  return Object.keys(offsets).length > 0;
+}
+
+function drive(body) {
+  if (!rig) return;
+  rig.model.visible = $("showChar").checked && !!body;
+  if (!body) return;
+  const raw = (n) => { const j = body[bodyNames.indexOf(n)]; return valid(j) ? j : null; };
+  const J = (n) => { const j = raw(n); return j ? vec(j) : null; };
+  rig.model.updateMatrixWorld(true);
+  for (const e of rig.entries) {
+    const a = J(e.joint), b = J(e.aim), j = raw(e.joint);
+    // Each bone sits exactly on its tracked joint, whatever the rig's proportions.
+    if (a) e.bone.position.copy(e.bone.parent.worldToLocal(a.clone()));
+    const parentWorld = e.bone.parent.getWorldQuaternion(new THREE.Quaternion());
+    let world = null;
+    if (calib && calib[e.joint] && j && (j[7] & 1)) {
+      world = new THREE.Quaternion(j[3], j[4], j[5], j[6]).multiply(new THREE.Quaternion().fromArray(calib[e.joint]));
+    } else if (a && b && e.restBasis) {
+      const f = J(e.from), t = J(e.to);
+      if (f && t) world = basis(b.clone().sub(a), t.clone().sub(f)).multiply(e.restBasis.clone().invert()).multiply(e.restWorld);
+    } else if (a && b && e.restDir) {
+      world = new THREE.Quaternion().setFromUnitVectors(e.restDir, b.clone().sub(a).normalize()).multiply(e.restWorld);
+    }
+    e.bone.quaternion.copy(world ? parentWorld.invert().multiply(world) : e.restLocal);
+    e.bone.updateMatrixWorld(true);
+  }
+}
+new GLTFLoader().load("https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/models/gltf/Xbot.glb",
+  (gltf) => { scene.add(gltf.scene); setupRig(gltf.scene); gltf.scene.visible = false; },
+  undefined, () => { $("note").textContent = "Figur nicht geladen (kein Internet?) – Gelenke werden trotzdem angezeigt."; });
+
+// --- live stream -------------------------------------------------------------
+let latest = null, count = 0, lastRate = performance.now();
+function connect() {
+  const live = new EventSource("/live" + q);
+  live.addEventListener("header", (e) => { const h = JSON.parse(e.data); handNames = h.hand_joints; bodyNames = h.body_joints; });
+  live.onmessage = (e) => { latest = JSON.parse(e.data); count++; record(latest); };
+  live.addEventListener("log", (e) => events.push(JSON.parse(e.data)));
+  live.onopen = () => { $("conn").className = "dot on"; $("connText").textContent = "live"; };
+  live.onerror = () => { $("conn").className = "dot off"; $("connText").textContent = "getrennt"; };
+}
+connect();
+
+async function refresh() {
+  try {
+    const s = await (await fetch("/api/status" + q)).json();
+    $("take").textContent = s.recording ? "● " + s.take : "keine Aufnahme"; $("take").style.color = s.recording ? "var(--red)" : "";
+    // The headset is the truth: a take started or stopped elsewhere shows here too.
+    if (s.recording !== recording) { recSince = performance.now() - s.seconds * 1000; showRecording(s.recording, s.seconds); }
+    $("frames").textContent = `${s.frames} / ${s.seconds} s`;
+    $("scn").textContent = `${s.state ?? "–"} · ${s.compressions ?? "–"}`;
+    const ok = s.marker === "marker_tracked" || s.anchored;
+    $("marker").textContent = `ID ${s.marker_id} · ${s.anchored ? "Puppe erfasst" : s.marker === "marker_tracked" ? "erfasst, rastet ein" : (s.marker || "–")}`;
+    $("marker").style.color = ok ? "var(--ok)" : "var(--red)";
+    const bt = s.body_tracking || {};
+    $("bodyCaps").textContent = bt.available ? `${bt.full_body ? "generiert (grau)" : "keine"} · ${bt.fidelity ?? "–"}` : "nicht verfügbar";
+    if (document.activeElement !== $("metronome")) $("metronome").value = String(s.metronome ?? 0);
+    const takes = await (await fetch("/api/takes" + q)).json();
+    $("takes").replaceChildren(...takes.map(t => {
+      const li = document.createElement("li"), a = document.createElement("a");
+      a.href = `/takes/${encodeURIComponent(t.name)}${q}`; a.textContent = t.name; a.download = t.name;
+      li.append(a, " ", Object.assign(document.createElement("small"), { textContent: `${(t.bytes / 1048576).toFixed(1)} MB` }));
+      return li;
+    }));
+  } catch { /* the stream state shows the connection */ }
+  const now = performance.now();
+  $("rate").textContent = `${(count * 1000 / (now - lastRate)).toFixed(0)} Hz`; count = 0; lastRate = now;
+}
+setInterval(refresh, 1000); refresh();
+$("tpose").onclick = () => {
+  let n = 3; $("tposeNote").textContent = `T-Pose in ${n} s …`;
+  const tick = setInterval(() => {
+    n -= 1;
+    if (n > 0) { $("tposeNote").textContent = `T-Pose in ${n} s …`; return; }
+    clearInterval(tick);
+    $("tposeNote").textContent = calibrate(latest?.body) ? "Kalibriert: volle Gelenkdrehung aktiv." : "Kein Body-Tracking – nicht kalibriert.";
+  }, 1000);
+};
+$("tposeReset").onclick = () => { calib = null; try { localStorage.removeItem("naret-tpose"); } catch {} $("tposeNote").textContent = "Ohne Kalibrierung: Knochen zeigen zum nächsten Gelenk."; };
+if (calib) $("tposeNote").textContent = "Kalibriert: volle Gelenkdrehung aktiv.";
+
+// --- controls ------------------------------------------------------------------
+const post = (path, args = {}) => fetch(path + q + Object.entries(args).map(([k, v]) => `&${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join(""), { method: "POST" });
+// One button: start, and while it records it shows that and stops on the next press.
+let recording = false, recSince = 0;
+function showRecording(on, seconds = 0) {
+  recording = on;
+  const b = $("recButton"), badge = $("recBadge");
+  const time = `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+  b.classList.toggle("on", on); b.setAttribute("aria-pressed", on);
+  b.textContent = on ? `● REC ${time} — Aufnahme beenden` : "● Aufnahme starten";
+  badge.classList.toggle("on", on); badge.textContent = on ? `● REC ${time}` : "keine Aufnahme";
+}
+$("recButton").onclick = async () => {
+  $("recButton").disabled = true;
+  if (recording) {
+    await post("/api/take/stop");
+    showRecording(false);
+  } else {
+    const meta = {};
+    for (const id of ["person", "height_cm", "arm_cm", "handed", "experience", "manikin", "notes"]) if ($(id).value) meta[id] = $(id).value;
+    await post("/api/take", meta);
+    recSince = performance.now(); showRecording(true);
+  }
+  $("recButton").disabled = false;
+  refresh();
+};
+setInterval(() => { if (recording) showRecording(true, (performance.now() - recSince) / 1000); }, 250);
+for (const b of document.querySelectorAll("[data-cmd]")) b.onclick = () => post("/api/control", { cmd: b.dataset.cmd, ...(b.dataset.lang ? { lang: b.dataset.lang } : {}) });
+let muted = false;
+$("mute").onclick = () => { muted = !muted; $("mute").textContent = muted ? "Ton an" : "Ton aus"; post("/api/control", { cmd: "mute", on: muted ? 1 : 0 }); };
+$("metronome").onchange = () => post("/api/control", { cmd: "metronome", bpm: $("metronome").value });
+const MARKS = ["CPR Start", "CPR Stop", "korrekt", "zu flach", "zu tief", "zu schnell", "zu langsam", "nicht entlastet", "Hände falsch", "ungültig"];
+MARKS.forEach((label, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "mark";
+  b.innerHTML = `<kbd>${(i + 1) % 10}</kbd>`; b.append(label);
+  b.onclick = () => post("/api/mark", { label }); $("marks").append(b);
+});
+$("markSend").onclick = () => { if ($("markText").value) { post("/api/mark", { label: "frei", note: $("markText").value }); $("markText").value = ""; } };
+addEventListener("keydown", (e) => {
+  if (e.target.matches("input, select, textarea") || e.metaKey || e.ctrlKey) return;
+  const i = "1234567890".indexOf(e.key);
+  if (i >= 0) post("/api/mark", { label: MARKS[i] });
+});
+
+// --- live chart: palm height over the sternum, what the detector counts --------
+const plot = $("plot"), ctx = plot.getContext("2d");
+const series = [], events = [];
+function record(f) {
+  const st = f.sternum ? f.sternum[1] : 0, palm = (h) => (h && valid(h[0])) ? (h[0][1] - st) * 100 : null;
+  series.push({ t: f.t, l: palm(f.hands?.[0]), r: palm(f.hands?.[1]), travel: f.det?.travel != null ? f.det.travel * 100 : null });
+  while (series.length && series[0].t < f.t - 10) series.shift();
+  while (events.length && events[0].t < f.t - 10) events.shift();
+  if (f.det) $("det").textContent = `${f.det.count ?? "–"} · Weg ${((f.det.travel ?? 0) * 100).toFixed(1)} cm`;
+}
+function drawPlot() {
+  const w = plot.clientWidth, h = plot.clientHeight; if (plot.width !== w * devicePixelRatio) { plot.width = w * devicePixelRatio; plot.height = h * devicePixelRatio; }
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); ctx.clearRect(0, 0, w, h);
+  if (!series.length) return;
+  const t1 = series[series.length - 1].t, x = (t) => w - (t1 - t) / 10 * (w - 40) - 4;
+  const vals = series.flatMap(p => [p.l, p.r]).filter(v => v != null);
+  if (!vals.length) return;
+  let lo = Math.min(...vals) - 2, hi = Math.max(...vals) + 2; if (hi - lo < 12) { const m = (hi + lo) / 2; lo = m - 6; hi = m + 6; }
+  const step = [1, 2, 5, 10, 20, 50, 100].find(s => (hi - lo) / s <= 6);
+  const y = (v) => h - 14 - (v - lo) / (hi - lo) * (h - 28);
+  ctx.font = "11px system-ui"; ctx.fillStyle = "#93a0b8"; ctx.strokeStyle = "#1e2a40";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) { ctx.beginPath(); ctx.moveTo(36, y(v)); ctx.lineTo(w, y(v)); ctx.stroke(); ctx.fillText(`${v}`, 4, y(v) + 4); }
+  for (const e of events) {
+    const c = { detected: "#6fd39a", beat: "#5d6b85", mark: "#ff6a5c", qcpr: "#8fb0ee" }[e.type]; if (!c) continue;
+    ctx.strokeStyle = c; ctx.beginPath(); ctx.moveTo(x(e.t), e.type === "beat" ? h - 14 : 4); ctx.lineTo(x(e.t), h - 2); ctx.stroke();
+    if (e.type === "mark") { ctx.fillStyle = c; ctx.fillText(e.note || e.label, x(e.t) + 3, 14); }
+  }
+  for (const [key, color] of [["l", "#3fd9d0"], ["r", "#ffb04a"], ["travel", "#c58cff"]]) {
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath(); let pen = false;
+    for (const p of series) { const v = key === "travel" && p.travel != null ? lo + p.travel : p[key]; if (v == null) { pen = false; continue; } pen ? ctx.lineTo(x(p.t), y(v)) : ctx.moveTo(x(p.t), y(v)); pen = true; }
+    ctx.stroke(); ctx.lineWidth = 1;
+  }
+  ctx.fillStyle = "#93a0b8"; ctx.fillText("cm über Brustbein · Handfläche L (türkis) R (orange) · Detektor-Weg (lila) · erkannt (grün) · Takt (grau) · Marke (rot) · QCPR (blau)", 40, h - 2);
+}
+
+renderer.setAnimationLoop(() => {
+  if (latest) {
+    const f = latest;
+    $("hl").className = "dot " + (f.hands?.[0] ? "on" : "off");
+    $("hr").className = "dot " + (f.hands?.[1] ? "on" : "off");
+    $("bd").className = "dot " + (f.body ? "on" : "off");
+    $("bodyText").textContent = f.body ? "aktiv" : "aus";
+    lines.visible = dots.visible = $("showSkel").checked;
+    drawOverlay(f);
+    drive(f.body);
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  drawPlot();
+});
+</script>
+</body>
+</html>

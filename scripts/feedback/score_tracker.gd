@@ -30,7 +30,8 @@ func record(event: Dictionary) -> void:
 		return
 	accepted_actions += 1
 	var action := str(event.get("action", ""))
-	if action in ["check_responsiveness", "check_breathing", "call_emergency", "request_aed", "attach_aed", "clear_patient", "analyze_rhythm", "shock", "resume_cpr", "reassess", "reassure"]:
+	# begin_check and the first compression for the debrief (17 Nov 2026).
+	if action in ["begin_check", "compression", "check_responsiveness", "check_breathing", "call_emergency", "request_aed", "attach_aed", "clear_patient", "analyze_rhythm", "shock", "resume_cpr", "reassess", "reassure"]:
 		if not milestones.has(action):
 			milestones[action] = event.get("elapsed_s", 0.0)
 	var details: Dictionary = event.get("details", {})

@@ -24,19 +24,19 @@ func run() -> Array[String]:
 	check(Coach.step(scenario) == "breaths", "First accepted breath does not trigger a second voice prompt")
 	scenario.submit_action("ventilation")
 	check(Coach.step(scenario) == "compressions", "Repeat cycle")
-	check(Coach.current_instruction(scenario, "en").begins_with("Resume"), "Completed breath pair explicitly prompts resuming compressions")
+	check(Coach.current_instruction(scenario, "en").begins_with("Keep pushing"), "Completed breath pair explicitly prompts resuming compressions")
 	for language in ["en", "de", "pl"]:
 		for key in ["setup", "safety", "response", "call", "breathing", "compressions", "breaths", "breath_one", "breath_two", "compression_only", "finish", "handover", "aed"]:
 			check(not Coach.instruction(key, language).is_empty(), language + " instruction " + key)
 	check(Coach.asks_for_help("What should I do next?"), "Help routes to instructor")
 	check(Coach.asks_for_help("What shall I do?"), "Natural next-step wording routes to instructor")
-	check(Coach.asks_witness("Anna, what happened?"), "Background question routes to Anna")
-	var fact := NaretLLMOrchestrator.witness_fact_reply("What happened, Anna?", "en")
-	check("collapsed" in str(fact.get("text", "")) and fact.get("action") == "none", "Anna gives established incident fact without clinical action")
-	check(not Coach.asks_witness("Anna, please call 112."), "Emergency request remains an observation")
+	check(Coach.asks_witness("What happened?"), "Background question routes to the witness")
+	var fact := NaretLLMOrchestrator.witness_fact_reply("What happened?", "en")
+	check("collapsed" in str(fact.get("text", "")) and fact.get("action") == "none", "The witness gives the incident fact without a name or clinical action")
+	check(not "Jan" in str(fact.get("text", "")) and "don't know him" in str(fact.get("text", "")), "The witness does not know the person")
+	check(not Coach.asks_witness("You in the red jacket, please call 112."), "Emergency request remains an observation")
 	check(Coach.asks_for_help("How deep should I press?"), "Technique question routes to instructor")
 	check(Coach.asks_for_help("How many compressions?"), "Count question routes to instructor")
-	check(not Coach.asks_for_help("Anna, how can you help me?"), "Named Anna routes to witness")
 	check(not Coach.asks_for_help("He is not responding."), "Finding is not a help question")
 	# Ambient sound while TTS is in flight must not start a microphone recording
 	# and invalidate the reply before its audio is ready.

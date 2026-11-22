@@ -24,17 +24,24 @@ static func step(scenario: NaretScenario) -> String:
 static func step_question(step: String) -> Dictionary:
 	match step:
 		"safety": return {"action": "begin_check", "breaths": 1}
-		"response": return {"action": "check_responsiveness", "breaths": 1}
 		"call": return {"action": "call_emergency", "breaths": 1}
 		"breathing": return {"action": "check_breathing", "breaths": 1}
 		"breaths": return {"action": "ventilation", "breaths": 2}
 	return {}
 
+const UNCERTAIN := ["i don't know", "i dont know", "i do not know", "don't know what", "not sure", "no idea", "i'm confused", "i am confused",
+	"i don't understand", "i do not understand", "need help", "help me", "can you help", "what do i do",
+	"ich weiß nicht", "ich weiss nicht", "weiß nicht", "keine ahnung", "nicht sicher", "unsicher", "verstehe nicht", "versteh nicht",
+	"ich brauche hilfe", "kannst du mir helfen", "was muss ich", "was mache ich", "was tun",
+	"nie wiem", "nie jestem pewn", "nie rozumiem", "pomocy", "potrzebuję pomocy", "co mam robić", "co robić", "co teraz"]
+
 static func asks_for_help(text: String) -> bool:
 	var words := text.to_lower()
-	# Patient background belongs to Anna, even if the instructor was addressed.
+	# Patient background belongs to the witness, even if the instructor was addressed.
 	if asks_patient_history(text): return false
-	if "anna" in words or "anno" in words: return false
+	# Uncertainty is a request for help too (18 Nov 2026), in all three languages.
+	for phrase in UNCERTAIN:
+		if phrase in words: return true
 	for phrase in ["what shall", "what can i do", "what's next", "what is next", "what now", "can you guide", "tell me what to do"]:
 		if phrase in words: return true
 	for phrase in ["instructor", "what next", "what should", "what do i", "how do i", "how should", "how deep", "how fast", "how long", "how many", "how to", "help me", "i am stuck", "i'm stuck", "repeat the instruction", "was soll", "wie soll", "wie tief", "wie schnell", "wie lange", "wie viele", "was jetzt", "hilf mir", "co dalej", "co mam", "jak mam", "jak głęboko", "jak szybko", "jak długo", "ile ucisk", "pomóż mi"]:
@@ -51,7 +58,7 @@ static func asks_patient_history(text: String) -> bool:
 		if phrase in words: topic = true
 	if not topic: return false
 	var patient := false
-	for phrase in ["anna", "anno", "your husband", "her husband", "the patient", " he ", " his ", "ihr mann", "dein mann", "der patient", " er ", "seine ", "pani mąż", "pani maz", "twój mąż", "twoj maz", "pacjent", " on ", "jego "]:
+	for phrase in ["the patient", "the man", "this man", " he ", " his ", "der mann", "der patient", " er ", "seine ", "ten pan", "ten mężczyzna", "pacjent", " on ", "jego "]:
 		if phrase in " " + words + " ": patient = true
 	if not patient: return false
 	if "?" in words: return true
@@ -65,8 +72,7 @@ static func asks_witness(text: String) -> bool:
 	# Commands/findings remain in the observation path, not free dialogue.
 	for phrase in ["112", "call", "breath", "anrufen", "ruf ", "zadzwo", "wezwij"]:
 		if phrase in words: return false
-	if "anna" in words or "anno" in words: return true
-	for phrase in ["what happened", "what has happened", "what's happened", "what is his name", "what's his name", "how old", "your husband", "was ist passiert", "co się stało"]:
+	for phrase in ["what happened", "what has happened", "what's happened", "what is his name", "what's his name", "how old", "do you know him", "wie heißt er", "kennen sie ihn", "kennst du ihn", "was ist passiert", "co się stało"]:
 		if phrase in words: return true
 	return false
 
@@ -79,16 +85,25 @@ static func instruction(key: String, language: String) -> String:
 	return str(data.get(language, data.en).get(key, data.en.get(key, "Ask the instructor for the next step.")))
 
 static func current_instruction(scenario: NaretScenario, language: String) -> String:
+	return instruction(current_key(scenario), language)
+
+## The coach_steps key of the instruction for now (step plus situation and cycle).
+static func current_key(scenario: NaretScenario) -> String:
 	var key := step(scenario)
+	# Situation A, alone (issue #1, 4. Hilfe rufen): the trainee calls 112 personally.
+	if key == "call" and str(scenario.get_meta("situation", "B")) == "A":
+		key = "call_alone"
+	if key == "handover" and str(scenario.get_meta("situation", "B")) == "A":
+		key = "handover_alone"
 	if not scenario.cpr_witness_only and scenario.state == NaretScenario.State.CPR and scenario._aed_used and scenario._cpr_after_aed == 0:
-		return instruction("aed_resume_only" if scenario.compression_only else "aed_resume", language)
+		return "aed_resume_only" if scenario.compression_only else "aed_resume"
 	if key == "compressions" and scenario.cycles > 0:
 		key = "resume_compressions"
-	# The trainee is no longer told to send Marek for the AED (16 Nov 2026: "the
-	# instructor must say 'Marek, please bring the AED' himself, and Marek replies, while
-	# I give CPR; it is not the trainee saying it"). Main sends him a few compressions
-	# into the first set (_send_marek_for_aed). Asking him earlier still works.
-	return instruction(key, language)
+	# The full bag-and-mask explanation once; afterwards the short prompt (17 Nov 2026: the
+	# 10-s limit could not be kept while a 10-s instruction was still playing).
+	if key == "breaths" and scenario.cycles > 0:
+		key = "breaths_short"
+	return key
 
 ## ERC 2025 adult BLS facts the instructor answers CPR questions from (data/erc_bls_facts.json).
 static func erc_facts() -> Array:
@@ -118,8 +133,8 @@ static func context(scenario: NaretScenario, language: String) -> Dictionary:
 		"deviation_guide": deviation_guide(key),
 		"compression_count": scenario.cycle_compressions, "breath_reports": scenario.cycle_ventilations,
 		"emergency_call_reported": scenario.emergency_called,
-		"scope": ("one witness Anna; no AED interaction in this exercise" if scenario.cpr_witness_only else "Anna calls 112 and remains the witness; Marek is a separate helper who brings the AED; instructor guides; trainee powers AED and places pads with hands, then follows fully automatic simulated analysis/shock prompts; the continuous training pattern repeats shock, shock, no shock, with CPR after each and no automatic recovery") + "; breaths and findings are reported, not sensor verified",
-		"patient_facts": "Anna's husband Jan has collapsed. According to Anna, he had no known diagnosed medical conditions before this collapse. The cause of this collapse is unknown. Age, medication, allergies and precise timing are unspecified; do not invent them."}
+		"scope": ("one witness, a passer-by in a red jacket; no AED interaction in this exercise" if scenario.cpr_witness_only else "the passer-by in the red jacket calls 112 and remains the witness; the man with the blue backpack is a separate helper who brings the AED; instructor guides; trainee powers AED and places pads with hands, then follows fully automatic simulated analysis/shock prompts; the continuous training pattern repeats shock, shock, no shock, with CPR after each and no automatic recovery") + "; breaths and findings are reported, not sensor verified",
+		"patient_facts": "A man has collapsed in a park. Nobody present knows him or anyone else here: his name, age, medical history, medication and allergies are unknown, and so are the cause and the exact time of the collapse; do not invent them. Never use names for anyone; call him the person (die Person, osoba)."}
 
 static func feedback(scenario: NaretScenario, report: String, status: String, language: String) -> String:
 	var key := step(scenario)

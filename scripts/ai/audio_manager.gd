@@ -53,6 +53,19 @@ var _recent_frames := PackedVector2Array()
 var _recording_prefix := PackedVector2Array()
 var _last_recording_s := 0.0        # length of the last upload, for the invented-speech check
 var _last_recording_silent := false
+## Early recognition (17 Nov 2026, "the biggest challenge for a new person is the wait
+## for a response"). The university server has no live/streaming recognition (only
+## finished recordings, checked 17 Nov 2026), so: after SPECULATE_SILENCE_MS of quiet the
+## words so far are already sent. If the speaker stays quiet until VAD_SILENCE_MS, that
+## answer is used (about 0.7 s sooner); if they speak again, it is thrown away.
+const SPECULATE_SILENCE_MS := 500
+var _live_frames := PackedVector2Array()
+var _spec_id := 0
+## The early request whose audio still covers the whole utterance, or -1.
+var _spec_for := -1
+var _spec_running := false
+var _spec_result := {}
+signal _spec_finished
 
 
 func configure(api_client: NaretUniAPIClient) -> void:
@@ -80,7 +93,8 @@ func _ready() -> void:
 	var coach_manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/coaching/manifest.json")) if FileAccess.file_exists("res://assets/audio/coaching/manifest.json") else {}
 	if coach_manifest is Dictionary:
 		for clip: Dictionary in coach_manifest.get("clips", []):
-			var coach_key := str(clip.language) + ":instructor:" + str(clip.text)
+			# Dispatcher and ambulance crew clips (issue #1) carry their speaker.
+			var coach_key := str(clip.language) + ":" + str(clip.get("speaker", "instructor")) + ":" + str(clip.text)
 			_coach_clips[coach_key] = load(str(clip.path))
 	# Exact one/two-breath and multilingual confirmation clips must work even
 	# when the reply TTS endpoint is unavailable.
@@ -89,7 +103,7 @@ func _ready() -> void:
 		var confirmation_manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string(confirmation_path))
 		if confirmation_manifest is Dictionary:
 			for clip: Dictionary in confirmation_manifest.get("clips", []):
-				_coach_clips[str(clip.language) + ":instructor:" + str(clip.text)] = load(str(clip.path))
+				_coach_clips[str(clip.language) + ":" + str(clip.get("speaker", "instructor")) + ":" + str(clip.text)] = load(str(clip.path))
 	_microphone = AudioStreamPlayer.new()
 	_microphone.name = "Microphone"
 	_microphone.stream = AudioStreamMicrophone.new()
@@ -219,6 +233,8 @@ func input_level() -> float:
 		var limit := int(AudioServer.get_mix_rate() * PRE_ROLL_SECONDS)
 		if _recent_frames.size() > limit:
 			_recent_frames = _recent_frames.slice(_recent_frames.size() - limit)
+	if recording:
+		_live_frames.append_array(buffer)
 	var total := 0.0
 	for frame: Vector2 in buffer:
 		total += frame.x * frame.x
@@ -264,6 +280,7 @@ func update_voice_activity(level: float, now: int) -> void:
 	if level > VAD_THRESHOLD:
 		_speech_seen = true
 		_silence_start = 0
+		_spec_for = -1 # more words: an early answer no longer covers the utterance
 		return
 	# Trailing silence already takes 1.2 s; a separate 0.5 s recording-age
 	# guard could not shorten/extend an automatically triggered recording.
@@ -273,6 +290,8 @@ func update_voice_activity(level: float, now: int) -> void:
 		_silence_start = now
 	elif now - _silence_start > VAD_SILENCE_MS:
 		end_recording()
+	elif now - _silence_start > SPECULATE_SILENCE_MS and _spec_for < 0 and not _spec_running:
+		_speculate()
 
 
 func begin_recording() -> void:
@@ -289,6 +308,9 @@ func begin_recording() -> void:
 		return
 	recording_language = language
 	_recording_prefix = _recent_frames.duplicate()
+	_live_frames.clear()
+	_spec_for = -1
+	_spec_result = {}
 	stop_speech()
 	recording = true
 	_recording_start = Time.get_ticks_msec()
@@ -333,7 +355,58 @@ func end_recording() -> void:
 	if _last_recording_silent:
 		status_changed.emit("microphone_silent")
 		return
-	_transcribe_audio(NaretUniAPIClient.speech_wav(captured))
+	var wav := NaretUniAPIClient.speech_wav(captured)
+	if _spec_for >= 0:
+		_finish_with_speculation(_spec_for, wav)
+	else:
+		_transcribe_audio(wav)
+
+func _speculate() -> void:
+	## Sends the words so far while the speaker is quiet; see SPECULATE_SILENCE_MS.
+	var frames := _recording_prefix + _live_frames
+	if frames.size() < int(AudioServer.get_mix_rate() * 0.3):
+		return
+	_ensure_api()
+	_spec_id += 1
+	var id := _spec_id
+	_spec_for = id
+	_spec_result = {}
+	var early := AudioStreamWAV.new()
+	early.format = AudioStreamWAV.FORMAT_16_BITS
+	early.mix_rate = int(AudioServer.get_mix_rate())
+	early.stereo = true
+	early.data = encode_prefix(frames, true)
+	var stats := NaretRecordingCheck.level_stats(early.data, early.stereo, early.mix_rate)
+	if NaretRecordingCheck.near_silent(stats):
+		return
+	var generation := _capture_generation
+	var lang := language
+	_spec_running = true
+	var result: Dictionary = await _api.transcribe(NaretUniAPIClient.speech_wav(early), lang)
+	_spec_running = false
+	if generation == _capture_generation and id == _spec_for:
+		_spec_result = {"result": result, "language": lang}
+	_spec_finished.emit()
+
+func _finish_with_speculation(id: int, wav: PackedByteArray) -> void:
+	## The utterance ended as the early request assumed: use its answer, waiting for it
+	## if it is still on its way; without a usable one, send the full recording.
+	_transcribing = true
+	status_changed.emit("transcribing")
+	var generation := _capture_generation
+	while _spec_running:
+		await _spec_finished
+	if generation != _capture_generation: return
+	var result: Dictionary = _spec_result.get("result", {}) if id == _spec_for else {}
+	_spec_for = -1
+	if not result.get("ok", false):
+		_transcribing = false
+		_transcribe_audio(wav)
+		return
+	print("NARET_ASR_EARLY used")
+	recognition_language = str(_spec_result.get("language", language))
+	_transcribing = false
+	_handle_transcription(result)
 
 func _transcribe_audio(wav: PackedByteArray) -> void:
 	_ensure_api()
@@ -341,9 +414,16 @@ func _transcribe_audio(wav: PackedByteArray) -> void:
 	_transcribing = true
 	recognition_language = language
 	status_changed.emit("transcribing")
+	# One recognition request at a time: a discarded early one may still be running.
+	while _spec_running:
+		await _spec_finished
+	if generation != _capture_generation: return
 	var result: Dictionary = await _api.transcribe(wav, recognition_language)
 	if generation != _capture_generation: return
 	_transcribing = false
+	_handle_transcription(result)
+
+func _handle_transcription(result: Dictionary) -> void:
 	if result.get("ok", false):
 		var transcript: Variant = result.get("json", {}).get("text", "")
 		if transcript is String and not transcript.strip_edges().is_empty():
@@ -367,7 +447,9 @@ func _transcribe_audio(wav: PackedByteArray) -> void:
 		_: status_changed.emit("asr_offline_use_text")
 
 
-func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander") -> void:
+func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander", keep: bool = false) -> void:
+	## keep: an instructor line that a newer instruction must not replace (feedback such as
+	## "Richtig. Erst Sicherheit prüfen", which comes right before the next step's line).
 	## `speaker` says who is talking. Language no longer distinguishes them: in the
 	## own-language mode the instructor and the bystander share one language.
 	var target_language := lang if lang in ["de", "pl", "en"] else language
@@ -375,13 +457,13 @@ func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker
 	if _pending.size() >= 6:
 		_pending.pop_front()
 	var item := {"text": text.left(1000), "language": target_language, "clip_key": clip_key, "speaker": speaker,
-		"queued_ms": Time.get_ticks_msec()}
+		"queued_ms": Time.get_ticks_msec(), "keep": keep}
 	if speaker == "instructor":
 		_instruction_revision += 1
 		item["instruction_revision"] = _instruction_revision
 		# Only the newest instruction matters; one still waiting is out of date.
-		_pending.assign(_pending.filter(func(other): return other.get("speaker") != "instructor"))
-		_ready_audio.assign(_ready_audio.filter(func(other): return other.get("speaker") != "instructor"))
+		_pending.assign(_pending.filter(func(other): return other.get("speaker") != "instructor" or other.get("keep", false)))
+		_ready_audio.assign(_ready_audio.filter(func(other): return other.get("speaker") != "instructor" or other.get("keep", false)))
 	_pending.insert(_queue_slot(_pending, speaker), item)
 	if not _preparing:
 		_prepare_next()
@@ -453,6 +535,7 @@ func _prepare_next() -> void:
 			# Unscripted clarification has no matching recording. Keep its displayed
 			# text instead of replacing it with the unrelated bystander calm clip.
 			if str(item["clip_key"]).is_empty():
+				print("NARET_CLIP_MISSING speaker=%s text=%s" % [item.get("speaker", ""), str(item["text"]).left(90)])
 				status_changed.emit("audio_clip_missing")
 				continue
 			var clip_id: String = item["language"] + "/" + item["clip_key"]

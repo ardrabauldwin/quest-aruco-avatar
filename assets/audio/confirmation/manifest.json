@@ -2,44 +2,44 @@
   "generator": "Piper (local)",
   "clips": [
     {
-      "text": "Did you say the scene is safe? Say yes or no.",
+      "text": "Did you say that the environment is safe? Say yes or no.",
       "language": "en",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/en/begin_check.wav",
       "model": "tts-1:am_adam",
-      "duration_s": 89478.485
+      "duration_s": 3.569
     },
     {
-      "text": "Did you report that he is not responding? Say yes or no.",
+      "text": "Did you find that the person is not responding? Say yes or no.",
       "language": "en",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/en/check_responsiveness.wav",
       "model": "tts-1:am_adam",
-      "duration_s": 89478.485
+      "duration_s": 3.946
     },
     {
-      "text": "Did you report that he is not breathing normally? Say yes or no.",
+      "text": "Did you find that the person is not breathing normally? Say yes or no.",
       "language": "en",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/en/check_breathing.wav",
       "model": "tts-1:am_adam",
-      "duration_s": 89478.485
+      "duration_s": 4.115
     },
     {
-      "text": "Did you complete one rescue breath? Say yes or no.",
+      "text": "Did you give one breath? Say yes or no.",
       "language": "en",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/en/ventilation.wav",
       "model": "tts-1:am_adam",
-      "duration_s": 89478.485
+      "duration_s": 2.584
     },
     {
-      "text": "Did you complete two rescue breaths? Say yes or no.",
+      "text": "Did you give two breaths? Say yes or no.",
       "language": "en",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/en/pair.wav",
       "model": "tts-1:am_adam",
-      "duration_s": 89478.485
+      "duration_s": 2.548
     },
     {
       "text": "No report confirmed. Please state the completed check and finding.",
@@ -50,44 +50,44 @@
       "duration_s": 89478.485
     },
     {
-      "text": "Haben Sie gesagt, dass die Umgebung sicher ist? Antworten Sie mit ja oder nein.",
+      "text": "Hast du gesagt, dass die Umgebung sicher ist? Antworte mit ja oder nein.",
       "language": "de",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/de/begin_check.wav",
       "model": "de_DE-thorsten-medium",
-      "duration_s": 4.261
+      "duration_s": 3.901
     },
     {
-      "text": "Haben Sie festgestellt, dass er nicht reagiert? Antworten Sie mit ja oder nein.",
+      "text": "Hast du festgestellt, dass die Person nicht reagiert? Antworte mit ja oder nein.",
       "language": "de",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/de/check_responsiveness.wav",
       "model": "de_DE-thorsten-medium",
-      "duration_s": 4.168
+      "duration_s": 4.505
     },
     {
-      "text": "Haben Sie festgestellt, dass er nicht normal atmet? Antworten Sie mit ja oder nein.",
+      "text": "Hast du festgestellt, dass die Person nicht normal atmet? Antworte mit ja oder nein.",
       "language": "de",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/de/check_breathing.wav",
       "model": "de_DE-thorsten-medium",
-      "duration_s": 4.4
+      "duration_s": 4.447
     },
     {
-      "text": "Haben Sie eine Beatmung durchgeführt? Antworten Sie mit ja oder nein.",
+      "text": "Hast du einmal beatmet? Antworte mit ja oder nein.",
       "language": "de",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/de/ventilation.wav",
       "model": "de_DE-thorsten-medium",
-      "duration_s": 3.75
+      "duration_s": 2.844
     },
     {
-      "text": "Haben Sie zwei Beatmungen durchgeführt? Antworten Sie mit ja oder nein.",
+      "text": "Hast du zweimal beatmet? Antworte mit ja oder nein.",
       "language": "de",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/de/pair.wav",
       "model": "de_DE-thorsten-medium",
-      "duration_s": 3.878
+      "duration_s": 3.123
     },
     {
       "text": "Keine Meldung bestätigt. Bitte sagen Sie, was Sie geprüft und festgestellt haben.",
@@ -98,44 +98,44 @@
       "duration_s": 4.365
     },
     {
-      "text": "Czy miejsce jest bezpieczne? Odpowiedz tak lub nie.",
+      "text": "Czy otoczenie jest bezpieczne? Odpowiedz tak lub nie.",
       "language": "pl",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/pl/begin_check.wav",
       "model": "pl_PL-darkman-medium",
-      "duration_s": 3.309
+      "duration_s": 3.437
     },
     {
-      "text": "Czy stwierdzono, że pacjent nie reaguje? Odpowiedz tak lub nie.",
+      "text": "Czy stwierdzasz, że osoba nie reaguje? Odpowiedz tak lub nie.",
       "language": "pl",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/pl/check_responsiveness.wav",
       "model": "pl_PL-darkman-medium",
-      "duration_s": 4.203
+      "duration_s": 3.901
     },
     {
-      "text": "Czy stwierdzono, że pacjent nie oddycha prawidłowo? Odpowiedz tak lub nie.",
+      "text": "Czy stwierdzasz, że osoba nie oddycha normalnie? Odpowiedz tak lub nie.",
       "language": "pl",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/pl/check_breathing.wav",
       "model": "pl_PL-darkman-medium",
-      "duration_s": 4.598
+      "duration_s": 4.389
     },
     {
-      "text": "Czy wykonano jeden oddech ratowniczy? Odpowiedz tak lub nie.",
+      "text": "Czy wykonano jeden oddech? Odpowiedz tak lub nie.",
       "language": "pl",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/pl/ventilation.wav",
       "model": "pl_PL-darkman-medium",
-      "duration_s": 3.971
+      "duration_s": 3.123
     },
     {
-      "text": "Czy wykonano dwa oddechy ratownicze? Odpowiedz tak lub nie.",
+      "text": "Czy wykonano dwa oddechy? Odpowiedz tak lub nie.",
       "language": "pl",
       "speaker": "instructor",
       "path": "res://assets/audio/confirmation/pl/pair.wav",
       "model": "pl_PL-darkman-medium",
-      "duration_s": 4.063
+      "duration_s": 3.309
     },
     {
       "text": "Nie potwierdzono zgłoszenia. Powiedz, co sprawdzono i jaki był wynik.",
@@ -144,6 +144,84 @@
       "path": "res://assets/audio/confirmation/pl/repeat.wav",
       "model": "pl_PL-darkman-medium",
       "duration_s": 4.667
+    },
+    {
+      "text": "Did you call 112, or have someone call it? Say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/en/call_emergency.wav",
+      "model": "tts-1:am_adam",
+      "duration_s": 4.293
+    },
+    {
+      "text": "Hast du die 112 angerufen oder anrufen lassen? Antworte mit ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/de/call_emergency.wav",
+      "model": "de_DE-thorsten-medium",
+      "duration_s": 4.621
+    },
+    {
+      "text": "Czy zadzwoniono pod 112? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/confirmation/pl/call_emergency.wav",
+      "model": "pl_PL-darkman-medium",
+      "duration_s": 3.762
+    },
+    {
+      "text": "Hast du festgestellt, dass die Person nicht normal atmet? Antworte mit ja oder nein.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/de/dispatcher_check_breathing.wav"
+    },
+    {
+      "text": "Czy stwierdzasz, że osoba nie oddycha normalnie? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/pl/dispatcher_check_breathing.wav"
+    },
+    {
+      "text": "Did you find that the person is not breathing normally? Say yes or no.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/en/dispatcher_check_breathing.wav"
+    },
+    {
+      "text": "Hast du einmal beatmet? Antworte mit ja oder nein.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/de/dispatcher_ventilation.wav"
+    },
+    {
+      "text": "Czy wykonano jeden oddech? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/pl/dispatcher_ventilation.wav"
+    },
+    {
+      "text": "Did you give one breath? Say yes or no.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/en/dispatcher_ventilation.wav"
+    },
+    {
+      "text": "Hast du zweimal beatmet? Antworte mit ja oder nein.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/de/dispatcher_pair.wav"
+    },
+    {
+      "text": "Czy wykonano dwa oddechy? Odpowiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/pl/dispatcher_pair.wav"
+    },
+    {
+      "text": "Did you give two breaths? Say yes or no.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/confirmation/en/dispatcher_pair.wav"
     }
   ]
 }

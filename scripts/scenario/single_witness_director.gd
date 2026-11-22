@@ -11,8 +11,7 @@ func _on_state_changed(state: int) -> void:
 	if state in [NaretScenario.State.IDLE, NaretScenario.State.INTRO]:
 		_reset()
 		scenario.aed_available = false
-	if state == NaretScenario.State.INTRO:
-		_say("anna_arrive", 0.0)
+	# 18 Nov 2026 (user): no cry from Anna at the start; the instructor asks first.
 
 func _on_event(event: Dictionary) -> void:
 	pass # Witness facts are answers to questions, not automatic assessment chatter.

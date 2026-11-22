@@ -401,6 +401,8 @@ func _when_aed_quiet(action: Callable) -> void:
 	_quiet_since = -1.0
 
 func _say(key: String, cooldown: float) -> void:
+	# Situation A (issue #1): the trainee is alone; nobody else speaks.
+	if scenario != null and scenario.alone: return
 	## Speaks a line unless it was said less than `cooldown` seconds ago.
 	var last: float = _said.get(key, -INF)
 	if cooldown > 0.0 and _t - last < cooldown:

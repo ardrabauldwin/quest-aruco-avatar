@@ -85,9 +85,23 @@ func _initialize() -> void:
 	_menu.ekg = ekg
 	_menu.update_session(_scenario)
 	print("CAPTURE_MENU state=", state, " actions=", _scenario.get_available_actions())
-	# Look at the hand from the wearer's eye.
+	# Look at the hand from the wearer's eye. --wide: the whole grid beside the palm.
+	# --popup <language|mode|situation|breaths|gender>: that key's pop-up, opened at frame 40,
+	# seen from the eye looking ahead and a little down, as the wearer sees it (19 Nov 2026).
 	eye.look_at_from_position(eye.position, palm_position + Vector3(0, 0.02, 0), Vector3.UP)
+	camera.fov = 70.0 if ("--wide" in args or "--popup" in args) else 40.0
+	for index in args.size():
+		if args[index] == "--popup" and index + 1 < args.size():
+			_popup = args[index + 1]
+	if "--wide" in args:
+		eye.look_at_from_position(eye.position, palm_position + Vector3(0.12, 0.06, 0), Vector3.UP)
 	camera.transform = eye.transform
+	_eye = eye
+	_camera = camera
+
+var _popup := ""
+var _eye: Camera3D
+var _camera: Camera3D
 
 func _draw_hand(hand: XRHandTracker) -> void:
 	## Ghost joints so the review shot shows what the UI is anchored to.
@@ -109,6 +123,12 @@ func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames >= 30 and _frames < 60:
 		_menu._action_keys[0].pointer_hover(-0.003)
+	if _frames == 40 and not _popup.is_empty():
+		if _popup == "language": _menu._toggle_popup(_menu._language_choices)
+		else: _menu._toggle_setup_menu(_popup)
+		var ahead := Vector3(0, -0.10, -0.42)
+		_eye.look_at_from_position(_eye.position, _eye.position + ahead, Vector3.UP)
+		_camera.transform = _eye.transform
 	if _frames == 45:
 		_menu.update_session(_scenario)
 	if _frames == 60:

@@ -17,7 +17,7 @@ const TOWARD_CROWN_M := 0.15   # -Z, past the face
 const ABOVE_MIN_M := 0.05
 const ABOVE_MAX_M := 0.40
 ## Time at the face that counts, in total, so lifting the head for a moment is not a reset.
-const HOLD_S := 3.0
+const HOLD_S := 0.3 # ear at the mouth: a moment is enough, no pause (17 Nov 2026; was 3 s)
 ## The report must follow within this time. 30 s, not 15 (headset 13 Nov 2026: the head
 ## was at the face at 13:12:04, the report arrived at 13:12:29, 25 s later, and was refused).
 const EVIDENCE_S := 30.0

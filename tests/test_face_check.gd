@@ -40,16 +40,16 @@ func run() -> Array[String]:
 	var lean := Vector3(0.2, 0.2, 0.0)
 	check(not _feed(face, lean, 200), "inactive detector never counts")
 	face.active = true
-	check(not _feed(face, lean, 140), "2.8 s at the face is not yet a check")
-	check(_feed(face, lean, 12), "3.04 s completes the check")
+	check(not _feed(face, lean, 14), "0.28 s at the face is not yet a check")
+	check(_feed(face, lean, 2), "0.32 s completes the check")
 	check(face.evidence_recent(), "evidence after the check")
-	check(not face.too_long(), "3 s is not too long")
+	check(not face.too_long(), "0.3 s is not too long")
 	face.reset()
 	face.active = true
-	_feed(face, lean, 100)
+	_feed(face, lean, 10)
 	_feed(face, Vector3(0.0, 0.7, 0.0), 50) # head lifted for 1 s
-	check(_feed(face, lean, 52), "time at the face adds up across a lift of the head")
-	_feed(face, lean, 360) # 10.2 s in total
+	check(_feed(face, lean, 6), "time at the face adds up across a lift of the head")
+	_feed(face, lean, 500) # 10.3 s in total
 	check(face.too_long(), "more than 10 s at the face gives the hint")
 	check(not face.too_long(), "...only once")
 	face.reset()

@@ -144,13 +144,37 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	var camera := get_viewport().get_camera_3d()
 	if _walk_target != Vector3.INF:
+		_shuffle_target = Vector3.INF
 		_walk(delta)
+	elif _shuffle_target != Vector3.INF:
+		_shuffle(delta)
 	elif camera and patient and not facing_locked:
 		_face_scene(camera.global_position, delta)
 	if is_instance_valid(_rig) and _rig.has_gaze() and camera:
 		_rig.look_at_point(_gaze_point(camera.global_position, delta))
 
 	_keep_feet_on_floor()
+
+## A short step without turning round (NaretPersonalSpace): he keeps facing the scene
+## and moves slowly, backwards or sideways, to the target on the floor plane.
+const SHUFFLE_SPEED := 0.45
+var _shuffle_target := Vector3.INF
+
+func shuffle_to(target: Vector3) -> void:
+	_shuffle_target = Vector3(target.x, global_position.y, target.z)
+
+func is_shuffling() -> bool:
+	return _shuffle_target != Vector3.INF
+
+func _shuffle(delta: float) -> void:
+	var offset := _shuffle_target - global_position
+	offset.y = 0.0
+	if offset.length() < 0.02:
+		_shuffle_target = Vector3.INF
+		if is_instance_valid(_rig): _rig.set_posture(_task_posture)
+		return
+	if is_instance_valid(_rig): _rig.set_posture("walk", 0.35)
+	_step_solid(offset.normalized() * minf(SHUFFLE_SPEED * delta, offset.length()), delta)
 
 func _gaze_point(trainee: Vector3, delta: float) -> Vector3:
 	## Talking means eye contact. Otherwise glance between the trainee's face and
@@ -199,6 +223,9 @@ const PASS_CLEAR_M := 0.30
 ## after it was planned, pushes him out and he slides round it. Smaller than
 ## PASS_CLEAR_M, so a planned path never touches.
 const BODY_CLEAR_M := 0.20
+## From the patient's middle line to a walker's centre, at the least (half the patient's
+## width plus half a walker's body).
+const PATIENT_SOLID_M := 0.42
 
 func walk_to(target: Vector3) -> void:
 	## Walks on the floor plane and emits `arrived`; faces the way it goes. Never
@@ -219,16 +246,26 @@ func _around_patient(from: Vector3, to: Vector3) -> Array[Vector3]:
 		return route
 	var a := patient.to_local(from)
 	var b := patient.to_local(to)
-	const HALF := Vector2(0.5, 1.2)
+	# The patient's origin is the sternum: the crown lies about 0.47 m towards -Z, the feet
+	# about 1.33 m towards +Z. 19 Nov 2026 (headset: the helper with the AED stepped onto the
+	# patient): the footprint was +-1.2 m, so a path round the feet cut across them.
+	const HALF_X := 0.55
+	const HEAD_Z := -0.75
+	const FEET_Z := 1.55
+	# Both ends on the same side (kneeling beside the chest is 0.40 m out): only a path that
+	# comes nearer the body than either end crosses it.
+	var inner := HALF_X
+	if a.x * b.x > 0.0: inner = minf(HALF_X, minf(absf(a.x), absf(b.x)) - 0.01)
 	var crosses := false
-	for i in 21:
-		var p := a.lerp(b, i / 20.0)
-		crosses = crosses or (absf(p.x) < HALF.x and absf(p.z) < HALF.y)
+	for i in 41:
+		var p := a.lerp(b, i / 40.0)
+		crosses = crosses or (absf(p.x) < inner and p.z > HEAD_Z and p.z < FEET_Z)
 	if not crosses:
 		return route
 	var best := INF
-	for end in [-1.0, 1.0]:
-		var z: float = end * (HALF.y + 0.35)
+	for end_z: float in [HEAD_Z - 0.35, FEET_Z + 0.35]:
+		var z: float = end_z
+		const HALF := Vector2(HALF_X, 0.0)
 		var via: Array[Vector3] = [Vector3(signf(a.x if a.x != 0.0 else 1.0) * (HALF.x + 0.35), 0, z), Vector3(signf(b.x if b.x != 0.0 else 1.0) * (HALF.x + 0.35), 0, z)]
 		var length := a.distance_to(via[0]) + via[0].distance_to(via[1]) + via[1].distance_to(b)
 		if length < best:
@@ -303,6 +340,9 @@ func _collide(heading: Vector2, delta: float) -> void:
 		# is solid only up to that spot. It used to stop being solid altogether, and he
 		# walked straight through it from the far side (headset 13 Nov 2026).
 		solid = minf(solid, Vector2(goal.x, goal.z).distance_to(centre) - 0.02)
+		# The patient stays solid to his body's edge even beside his goal (kneeling at the
+		# chest): he may come close, but never onto the body (19 Nov 2026).
+		if block.get("patient", false): solid = maxf(solid, PATIENT_SOLID_M)
 		if solid <= 0.05: continue
 		var out := here - centre
 		if out.length() >= solid: continue
@@ -329,6 +369,7 @@ func is_walking() -> bool:
 func halt(at: Vector3 = Vector3.INF) -> void:
 	## Ends a walk without `arrived`; with a point, stands there (floor height kept).
 	_route.clear()
+	_shuffle_target = Vector3.INF
 	_walk_target = Vector3.INF
 	_speed = 0.0
 	if at != Vector3.INF:
@@ -355,6 +396,31 @@ func set_look(shirt: Color, skin: Texture2D = null) -> void:
 			if is_shirt: copy.albedo_color = shirt
 			if is_skin: copy.albedo_texture = skin
 			mesh.set_surface_override_material(surface, copy)
+
+## A backpack on his back (issue #1, 4. Hilfe rufen: „Du mit dem blauen Rucksack, hol den
+## AED!“): the trainee picks people out by what they wear. Rides the upper spine bone.
+func add_backpack(color: Color) -> void:
+	var skeletons := find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty(): return
+	var skeleton: Skeleton3D = skeletons[0]
+	var bone := skeleton.find_bone("spine_03")
+	if bone < 0: return
+	var attachment := BoneAttachment3D.new()
+	attachment.name = "Backpack"
+	attachment.bone_name = "spine_03"
+	skeleton.add_child(attachment)
+	var bag := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.30, 0.40, 0.14)
+	bag.mesh = box
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.8
+	bag.material_override = material
+	attachment.add_child(bag)
+	# Placed once in the standing pose: behind the spine (characters face +Z), a little low.
+	var bone_global := skeleton.global_transform * skeleton.get_bone_global_pose(bone)
+	bag.global_transform = Transform3D(global_basis.orthonormalized(), bone_global.origin - global_basis.z.normalized() * 0.16 + Vector3.DOWN * 0.08)
 
 var _task_posture := ""
 var _offer: OfferPose
@@ -603,6 +669,7 @@ func set_mouth_bands(bands: Vector3) -> void:
 func place_on_floor(spot: Transform3D) -> void:
 	## The scan supplies floor height. Offset the model's feet, not its origin,
 	## onto that floor; this also accommodates different male/female mesh origins.
+	_shuffle_target = Vector3.INF
 	global_transform = spot
 	var lowest := INF
 	for child in $Model.find_children("*", "MeshInstance3D", true, false):

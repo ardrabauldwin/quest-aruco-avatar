@@ -14,6 +14,8 @@ signal menu_shown_changed(shown: bool)
 signal action_requested(action: String)
 signal language_requested(language: String)
 signal mode_requested(mode: String)
+## A setup choice from the fold-out keys: step "situation" | "breaths" | "gender".
+signal setup_requested(step: String, value: String)
 signal recording_requested(active: bool)
 signal export_requested
 signal voice_sample_requested
@@ -29,18 +31,23 @@ signal occlusion_requested(mode: String)
 signal marker_gizmos_toggled(visible: bool)
 ## Forget floor/chest measurements and placement and begin afresh, in the app.
 signal fresh_start_requested
+## Debug: the LAN sensor log (NaretSensorLogger) on/off, and a recorded take.
+signal sensor_log_requested(on: bool)
+signal take_requested(start: bool)
 var _controls: Node3D
 var _reposition_key: Key3D
 var _large_align: Key3D
 var _floor_key: Key3D
 var _scan_key: Key3D
+var _sensor_key: Key3D
+var _take_key: Key3D
+var _sensor_on := false
+var _take_on := false
 var _scan_on := false
 var _hands_key: Key3D
 var _hands_on := false
 var _chest_key: Key3D
-var _fit_key: Key3D
 var chest_fit := "shift"
-var _ring_key: Key3D
 var _occlusion_key: Key3D
 var occlusion := "room"
 const OCCLUSION_CYCLE := ["off", "room", "all"]
@@ -95,8 +102,6 @@ const TAP_OFF_M := 0.035
 const FINGER_TIPS := [XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP,
 	XRHandTracker.HAND_JOINT_RING_FINGER_TIP, XRHandTracker.HAND_JOINT_PINKY_FINGER_TIP]
 const MAX_ACTIONS := 6
-const TRACE_POINTS := 110
-const TRACE_SECONDS := 4.0
 
 var hand_index := 0
 var language := "de"
@@ -110,10 +115,6 @@ var _palm: Node3D
 var _cuff: Node3D
 var _shown := false
 var _pop := 1.0
-var _state_label: Label3D
-var _vitals_label: Label3D
-var _trace: MeshInstance3D
-var _trace_timer := 0.0
 var _lang_key: Key3D
 var _mode_key: Key3D
 var _mic_key: Key3D
@@ -125,6 +126,8 @@ var _tapped := [false, false, false, false]
 var _last_key := ""
 var _mic_on := false
 var _recording := false
+## True while the virtual phone is held in this hand.
+var suppressed := false
 
 
 class Key3D extends Node3D:
@@ -150,6 +153,8 @@ class Key3D extends Node3D:
 	var _glow := 0.0
 	var _pressed_green_until := 0
 	var activate_on_press := false
+	## One reach can touch a key twice (tracking jitter at the face): one action only.
+	var _fired_ms := -100000
 
 	func build(text: String, key_size: Vector2, style: String) -> void:
 		size = key_size
@@ -199,11 +204,18 @@ class Key3D extends Node3D:
 
 	func pointer_press(down: bool) -> void:
 		var activate := (down and not _down) if activate_on_press else (_down and not down)
+		if activate and activate_on_press and Time.get_ticks_msec() - _fired_ms < 800:
+			activate = false
 		if activate:
+			_fired_ms = Time.get_ticks_msec()
 			_pressed_green_until = Time.get_ticks_msec() + 800
 			print("NARET_HAND_CLICK ", label.text)
 			pressed.emit()
 		_down = down
+
+	func pointer_cancel() -> void:
+		## The fingertip slid off while pressed in: back up, no action.
+		_down = false
 
 	func _process(delta: float) -> void:
 		var hovered := Time.get_ticks_msec() - _hover_ms < 120
@@ -379,6 +391,10 @@ func configure(origin: XROrigin3D, index: int, interaction: Node = null) -> void
 	_rig = Node3D.new()
 	_rig.visible = false
 	add_child(_rig)
+	# The choice pop-ups hang in the room, not on the hand (19 Nov 2026).
+	_popup_root = Node3D.new()
+	_popup_root.name = "ChoicePopups"
+	add_child(_popup_root)
 	_build_palm()
 	_build_cuff()
 	_build_exercise_controls()
@@ -430,24 +446,19 @@ func _build_palm() -> void:
 	halo.material_override = glow_material(GLOW, 0.18)
 	halo.position.z = 0.0017
 	_palm.add_child(halo)
-	var brand := _palm_text("NaReT", 30, GLOW, Vector2(-PALM_SIZE.x * 0.5 + 0.006, PALM_SIZE.y * 0.5 - 0.009))
-	brand.outline_modulate = Color(GLOW, 0.35)
-	_state_label = _palm_text("", 18, DIM, Vector2(PALM_SIZE.x * 0.5 - 0.006, PALM_SIZE.y * 0.5 - 0.009))
-	_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_state_label.outline_modulate = Color(GLOW, 0.3)
+	# 18 Nov 2026 (user): no small brand, no training state, no counter on the palm; only
+	# the large "NaReT" with "Nachbarsprache | wird | reanimiert" under it (below).
 	var rule := MeshInstance3D.new()
 	rule.mesh = BoxMesh.new()
 	(rule.mesh as BoxMesh).size = Vector3(PALM_SIZE.x - 0.012, 0.0008, 0.0008)
 	rule.material_override = glow_material(GLOW, 0.8)
 	rule.position = bend(Vector3(0, PALM_SIZE.y * 0.5 - 0.017, 0.002), PALM_BEND_M)
 	_palm.add_child(rule)
-	_trace = MeshInstance3D.new()
-	_trace.mesh = ImmediateMesh.new()
-	_trace.material_override = glow_material(PULSE)
-	_trace.material_override.render_priority = 1
-	_palm.add_child(_trace)
-	_vitals_label = _palm_text("", 22, INK, Vector2(0, -PALM_SIZE.y * 0.5 + 0.011))
-	_vitals_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var big := _palm_text("NaReT", 72, GLOW, Vector2(0.0, 0.004))
+	big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	big.outline_modulate = Color(GLOW, 0.35)
+	var motto := _palm_text("Nachbarsprache | wird | reanimiert", 17, INK, Vector2(0.0, -0.012))
+	motto.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_register(palm_panel, PALM_SIZE)
 
 
@@ -505,20 +516,10 @@ func _build_cuff() -> void:
 	_chest_key = _key("", Vector2(0.024, 0.026), "tile", func(): chest_calibration_requested.emit(), _cuff)
 	_build_target_icon(_chest_key.icon)
 	_place_on_cuff(_chest_key, -76.0, CUFF_ROW_Y[1])
-	# How the body meets that height: flattened, or lowered into the floor.
-	_fit_key = _key("", Vector2(0.024, 0.026), "key", func():
-		chest_fit_requested.emit("shift" if chest_fit == "flatten" else "flatten"), _cuff)
-	_fit_key.label.font_size = 19
-	_place_on_cuff(_fit_key, 76.0, CUFF_ROW_Y[1])
-	# Tuning: applies the Mannequin's sternum_landmark_offset as edited in the
-	# editor's Remote inspector.
-	_ring_key = _key("", Vector2(0.024, 0.026), "key", func(): sternum_landmark_apply_requested.emit(), _cuff)
-	_ring_key.label.font_size = 19
-	_place_on_cuff(_ring_key, -38.0, CUFF_ROW_Y[1])
 	# One Debug key on the cuff; its testing toggles pop out to the cuff's right.
 	_debug_menu = _key("Debug", Vector2(0.024, 0.026), "key", func():
 		_debug_choices.visible = not _debug_choices.visible
-		_language_choices.visible = false, _cuff)
+		close_popups(), _cuff)
 	_debug_menu.label.font_size = 19
 	_place_on_cuff(_debug_menu, 38.0, CUFF_ROW_Y[0])
 	# Headset review 2026-10-29: a wrong floor touch put everything on the ceiling with
@@ -536,48 +537,60 @@ func _build_exercise_controls() -> void:
 	# Other-hand poke/pinch uses the same registered hit targets as existing keys.
 	_controls = Node3D.new()
 	_rig.add_child(_controls)
-	# The languages pop out to the right of this key only while chosen, then fold away again.
+	# 19 Nov 2026 (user): a key opens a pop-up in front of the eyes with its options
+	# (Sprache: English, Deutsch, Polski), the same for every setup key. The rows that
+	# folded out beside the wrist landed far off to the side and moved with the hand.
 	_language_menu = _key("Languages", Vector2(0.090, 0.035), "key", func():
-		_language_choices.visible = not _language_choices.visible
-		_debug_choices.visible = false, _controls)
-	_language_menu.position = Vector3(0, 0.022, 0)
-	_language_choices = Node3D.new()
-	_controls.add_child(_language_choices)
-	_language_choices.visible = false
+		_debug_choices.visible = false
+		_toggle_popup(_language_choices), _controls)
+	_language_menu.activate_on_press = true
+	_language_menu.label.font_size = 19
+	# Grid of two columns (18 Nov 2026): Languages | Mode, Situation | Ventilation,
+	# Start | Save calibration, Reposition | Gender.
+	_language_menu.position = Vector3(-0.055, 0.045, 0)
+	_language_choices = _make_popup(3)
 	for i in 3:
 		var code: String = ["en", "de", "pl"][i]
 		var title: String = ["English", "Deutsch", "Polski"][i]
-		var key := _key(title, Vector2(0.052, 0.035), "key", func():
-			language_requested.emit(code)
-			_language_choices.visible = false, _language_choices)
-		# One row level with the Languages key, to its right.
-		key.position = Vector3(0.075 + i * 0.060, 0.022, 0)
-		key.label.font_size = 22
+		var key := _popup_option(_language_choices, i, title, func(): language_requested.emit(code))
 		_language_keys[code] = key
 	_refresh_language_selection()
+	_build_setup_menus()
 	_build_debug_controls()
 	_large_start = _key("Start training", Vector2(0.075, 0.045), "key", func():
+		close_popups()
+		# 19 Nov 2026 (headset log: six restarts in 3 s, one 0.16 s after an answer, each
+		# replaying "What do you do first?"): a running training restarts only on a second
+		# press within RESTART_CONFIRM_MS.
+		if _start_action == "restart" and Time.get_ticks_msec() > _restart_armed_until:
+			_restart_armed_until = Time.get_ticks_msec() + RESTART_CONFIRM_MS
+			_large_start.set_text(NaretLanguage.ui("Nochmal drücken: Neustart", "Naciśnij ponownie: restart", language))
+			_large_start.set_accent(RED.lightened(0.3), RED)
+			print("NARET_RESTART armed: press again to restart")
+			return
+		_restart_armed_until = 0
 		show_notice("Restarting training" if _start_action == "restart" else "Starting training")
 		if not _start_action.is_empty(): action_requested.emit(_start_action), _controls)
-	# Start and save share one row, 2.5 cm apart so a poke cannot hit both.
-	_large_start.position = Vector3(-0.050, -0.022, 0)
+	# Rows 2-2.5 cm apart, columns 2 cm (19 Nov 2026: 5 mm let one reach press three keys).
+	_large_start.position = Vector3(-0.055, -0.075, 0)
 	_large_start.activate_on_press = true
 	# Hands-only replacement for the right controller's A button: saves the
 	# current marker placement as the patient alignment, which Start requires.
 	_large_align = _key(NaretLanguage.ui("Kalibrierung speichern", "Zapisz kalibrację", language), Vector2(0.075, 0.035), "key", func():
 		alignment_save_requested.emit(), _controls)
-	_large_align.position = Vector3(0.050, -0.022, 0)
+	_large_align.position = Vector3(0.055, -0.075, 0)
 	_large_align.label.font_size = 20
-	_reposition_key = _key("Reposition", Vector2(0.110, 0.035), "key", func(): reposition_requested.emit(), _controls)
-	_reposition_key.position = Vector3(0, -0.067, 0)
+	_reposition_key = _key("Reposition", Vector2(0.090, 0.035), "key", func(): reposition_requested.emit(), _controls)
+	_reposition_key.position = Vector3(-0.055, -0.140, 0)
 	_reposition_key.label.font_size = 20
 	_refresh_reposition_text()
 	# The language row above replaces the cuff's language key; mode, mic and
 	# floor calibration live on the cuff.
 	_lang_key.visible = false
-	_mode_key.visible = true
+	# The mode is chosen with the Mode key above Languages (18 Nov 2026): no second key.
+	_mode_key.visible = false
 	_notice = make_label("", 21, INK)
-	_notice.position = Vector3(0.0, -0.104, 0.002)
+	_notice.position = Vector3(0.0, -0.180, 0.002)
 	_controls.add_child(_notice)
 
 func _build_debug_controls() -> void:
@@ -605,11 +618,17 @@ func _build_debug_controls() -> void:
 	# Real-world occlusion: off → room (patient excluded) → all.
 	_occlusion_key = _key("", DEBUG_KEY_SIZE, "key", func():
 		occlusion_requested.emit(OCCLUSION_CYCLE[(OCCLUSION_CYCLE.find(occlusion) + 1) % OCCLUSION_CYCLE.size()]), _debug_choices)
-	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _scan_key, _occlusion_key]
+	# Sensor log over Wi-Fi (17 Nov 2026): the address and PIN appear as a notice.
+	_sensor_key = _key("", DEBUG_KEY_SIZE, "key", func(): sensor_log_requested.emit(not _sensor_on), _debug_choices)
+	_take_key = _key("", DEBUG_KEY_SIZE, "key", func(): take_requested.emit(not _take_on), _debug_choices)
+	var keys: Array[Key3D] = [_gizmos_key, _hands_key, _scan_key, _occlusion_key, _sensor_key, _take_key]
 	# The cuff's +X is the wearer's right; the grid faces out like the cuff's front
-	# and starts 1 cm past the Export key at 76°, so a poke cannot hit both.
+	# and starts 1 cm past the Export key at 76°, so a poke cannot hit both. The two
+	# sensor-log keys are a third column.
 	for i in keys.size():
-		keys[i].position = Vector3(0.078 + (i % 2) * 0.042, CUFF_ROW_Y[0 if i < 2 else 1], CUFF_R_M * 0.3)
+		var column := 2 if i >= 4 else i % 2
+		var row := (i - 4) if i >= 4 else (0 if i < 2 else 1)
+		keys[i].position = Vector3(0.078 + column * 0.042, CUFF_ROW_Y[row], CUFF_R_M * 0.3)
 		keys[i].label.font_size = 18
 	_refresh_scan()
 
@@ -699,6 +718,11 @@ func _process(delta: float) -> void:
 		_notice.text = ""
 	if _rig == null or _origin == null:
 		return
+	# The phone is in the left hand (step 4, Situation A): the menu stays closed.
+	if suppressed:
+		_set_shown(false)
+		if popup_open(): close_popups()
+		return
 	var camera := get_viewport().get_camera_3d()
 	var hand := NaretXRInteraction.hand_tracker(hand_index)
 	var pose: Variant = _joint(hand, XRHandTracker.HAND_JOINT_PALM, true) if hand != null else null
@@ -730,8 +754,14 @@ func _process(delta: float) -> void:
 	var palm_basis := Basis(fingers.cross(normal), fingers, normal)
 	_palm.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + normal * PALM_LIFT_M)
 	if not pressing:
-		# 20 cm up the forearm puts the top (language) row past the wrist cuff.
-		_controls.global_transform = Transform3D(palm_basis.scaled(Vector3.ONE * pop), palm.origin + forearm * 0.21 + normal * 0.025)
+		# 19 Nov 2026 (user: "the options appear off to the left"): the grid sat 21 cm down
+		# the forearm, out towards the elbow. It now stands upright beside the palm, on the
+		# side towards the middle of the view, and faces the eyes; it follows the hand
+		# smoothly, so tracking jitter does not shake the keys under a fingertip.
+		var target := _grid_transform(camera, palm.origin, pop)
+		var follow := 1.0 if _grid_snap else 1.0 - exp(-14.0 * delta)
+		_grid_snap = false
+		_controls.global_transform = _controls.global_transform.interpolate_with(target, follow)
 	var cuff_out := (normal - forearm * normal.dot(forearm)).normalized()
 	_cuff.global_transform = Transform3D(Basis((-forearm).cross(cuff_out), -forearm, cuff_out).scaled(Vector3.ONE * pop), wrist_origin)
 	var thumb: Variant = _joint(hand, XRHandTracker.HAND_JOINT_THUMB_TIP)
@@ -774,10 +804,7 @@ func _process(delta: float) -> void:
 		elif _tapped[i] and gap > TAP_OFF_M:
 			_tapped[i] = false
 			node.pointer_press(false)
-	_trace_timer += delta
-	if _trace_timer >= 1.0 / 30.0:
-		_trace_timer = 0.0
-		_draw_trace()
+	# The heartbeat trace on the palm was removed (18 Nov 2026).
 
 
 func _show_control_fallback(camera: Camera3D) -> void:
@@ -798,20 +825,6 @@ func _show_control_fallback(camera: Camera3D) -> void:
 		return
 	_controls.global_transform = Transform3D(camera.global_basis, left.global_position + camera.global_basis.y * 0.10)
 
-func _draw_trace() -> void:
-	var mesh := _trace.mesh as ImmediateMesh
-	mesh.clear_surfaces()
-	if ekg == null:
-		return
-	mesh.surface_begin(Mesh.PRIMITIVE_LINE_STRIP)
-	var width := PALM_SIZE.x - 0.014
-	for i in TRACE_POINTS:
-		var fraction := float(i) / float(TRACE_POINTS - 1)
-		var t := ekg.time - (1.0 - fraction) * TRACE_SECONDS
-		mesh.surface_add_vertex(bend(Vector3(-width * 0.5 + fraction * width, 0.002 + ekg.sample(t) * 0.014, 0.0025), PALM_BEND_M))
-	mesh.surface_end()
-
-
 func _set_shown(value: bool) -> void:
 	if value == _shown:
 		return
@@ -819,25 +832,223 @@ func _set_shown(value: bool) -> void:
 	_rig.visible = value
 	if value:
 		_pop = 0.0
+		_grid_snap = true
 	else:
 		for i in 4:
 			_tapped[i] = false
 	menu_shown_changed.emit(value)
 
 
+## --- Grid placement and choice pop-ups (19 Nov 2026) ---------------------------------------
+## The grid stands beside the palm, towards the middle of the view (right of the left hand),
+## upright and facing the eyes. GRID_SIDE_M from the palm centre to the grid centre; the
+## grid's rows run from +0.022 to -0.112, so GRID_LIFT_M centres them on the palm.
+const GRID_SIDE_M := 0.16
+const GRID_LIFT_M := 0.050
+## A pop-up opens in front of the eyes, a little below them, and stays where it opened
+## (it does not follow the hand), until an option or "close" is touched.
+const POPUP_DISTANCE_M := 0.42
+const POPUP_DROP_M := 0.06
+const POPUP_KEY := Vector2(0.20, 0.048)
+const POPUP_GAP_M := 0.058
+const POPUP_TITLE_M := 0.05
+const POPUP_CLOSE := Vector2(0.12, 0.04)
+const CLOSE_TEXT := {"de": "Schließen", "pl": "Zamknij", "en": "Close"}
+## A running training restarts only on a second press within this time (19 Nov 2026).
+const RESTART_CONFIRM_MS := 3000
+var _restart_armed_until := 0
+## While the training runs the grid shows only Restart: the setup keys sat where the other
+## hand works and fired by accident (headset log 19 Nov 2026: "Situation" 8 times in 5 s).
+var _training_active := false
+var _popup_root: Node3D
+var _popups: Array[Node3D] = []
+var _grid_snap := true
+
+func _grid_transform(camera: Camera3D, palm_origin: Vector3, pop: float) -> Transform3D:
+	var side := 1.0 if hand_index == 0 else -1.0
+	var right := camera.global_basis.x
+	right.y = 0.0
+	right = right.normalized() if right.length() > 0.01 else Vector3.RIGHT
+	var at := palm_origin + right * GRID_SIDE_M * side + Vector3.UP * GRID_LIFT_M
+	var toward_eyes := camera.global_position - at
+	toward_eyes.y = 0.0
+	if toward_eyes.length() < 0.01: toward_eyes = camera.global_basis.z
+	return Transform3D(Basis.looking_at(-toward_eyes.normalized(), Vector3.UP).scaled(Vector3.ONE * pop), at)
+
+func _make_popup(option_count: int) -> Node3D:
+	## A glass panel with a title row, `option_count` option rows and a close key.
+	var popup := Node3D.new()
+	popup.visible = false
+	_popup_root.add_child(popup)
+	_popups.append(popup)
+	var size := Vector2(POPUP_KEY.x + 0.03, POPUP_TITLE_M + option_count * POPUP_GAP_M + POPUP_CLOSE.y + 0.025)
+	var outline := corner_cut(size, 0.01)
+	var back := MeshInstance3D.new()
+	back.mesh = extrude(outline[0], outline[1], 0.003)
+	back.material_override = glass_material(0.85)
+	back.material_override.render_priority = -1
+	back.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	back.position.z = -0.008
+	popup.add_child(back)
+	var rim := MeshInstance3D.new()
+	rim.mesh = frame(outline[0], outline[1], 0.0012)
+	rim.material_override = glow_material(GLOW, 0.9)
+	rim.position.z = -0.0064
+	popup.add_child(rim)
+	# The panel stops a far pinch ray; it has no action of its own.
+	_register(back, size)
+	var title := make_label("", 38, GLOW)
+	title.position = Vector3(0, size.y * 0.5 - POPUP_TITLE_M * 0.5, 0.001)
+	popup.add_child(title)
+	popup.set_meta("title", title)
+	popup.set_meta("top", size.y * 0.5 - POPUP_TITLE_M)
+	var close := _key(str(CLOSE_TEXT.get(language, CLOSE_TEXT.en)), POPUP_CLOSE, "key", close_popups, popup)
+	close.activate_on_press = true
+	close.label.font_size = 24
+	close.position = Vector3(0, _popup_row_y(popup, option_count) + (POPUP_KEY.y - POPUP_CLOSE.y) * 0.5, 0)
+	popup.set_meta("close", close)
+	return popup
+
+func _popup_row_y(popup: Node3D, row: int) -> float:
+	return float(popup.get_meta("top")) - POPUP_KEY.y * 0.5 - row * POPUP_GAP_M
+
+func _popup_option(popup: Node3D, row: int, text: String, on_pressed: Callable) -> Key3D:
+	## An option fires on touch; the pop-up closes and the choice shows on the grid key.
+	var key := _key(text, POPUP_KEY, "key", func():
+		close_popups()
+		on_pressed.call(), popup)
+	key.activate_on_press = true
+	key.label.font_size = 26
+	key.position = Vector3(0, _popup_row_y(popup, row), 0)
+	return key
+
+func popup_open() -> bool:
+	for popup in _popups:
+		if popup.visible: return true
+	return false
+
+func close_popups() -> void:
+	for popup in _popups: popup.visible = false
+	if _controls: _controls.visible = true
+
+func _toggle_popup(popup: Node3D) -> void:
+	var was_open := popup.visible
+	close_popups()
+	if was_open: return
+	_place_popup(popup)
+	popup.visible = true
+	# The grid steps aside while a pop-up is open: one target at a time for the fingertip.
+	_controls.visible = false
+
+func _place_popup(popup: Node3D) -> void:
+	var camera := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if camera == null or _origin == null or not _shown:
+		# Tests and the desktop preview: where the grid is.
+		popup.global_transform = _controls.global_transform.orthonormalized()
+		return
+	var ahead := -camera.global_basis.z
+	ahead.y = 0.0
+	ahead = ahead.normalized() if ahead.length() > 0.1 else Vector3.FORWARD
+	var at := camera.global_position + ahead * POPUP_DISTANCE_M + Vector3.DOWN * POPUP_DROP_M
+	popup.global_transform = Transform3D(Basis.looking_at(at - camera.global_position, Vector3.UP), at)
+
+## --- Setup menus (18 Nov 2026) --------------------------------------------------------------
+## Mode, Situation, Ventilation and Gender: keys like "Language" in the grid; each opens
+## its pop-up (19 Nov 2026). The key shows its name and the current choice under it.
+const SETUP_MENUS := {
+	"mode": {"title": {"de": "Modus", "pl": "Tryb", "en": "Mode"}, "options": [
+		["own", {"de": "Eigene Sprache", "pl": "Własny język", "en": "Own language"}],
+		["neighbour", {"de": "Nachbarsprache", "pl": "Język sąsiada", "en": "Neighbouring language"}]]},
+	"situation": {"title": {"de": "Situation", "pl": "Sytuacja", "en": "Situation"}, "options": [
+		["A", {"de": "A – allein, kein AED", "pl": "A – sam/sama, bez AED", "en": "A – alone, no AED"}],
+		["B", {"de": "B – weitere Personen, AED", "pl": "B – inne osoby, AED", "en": "B – other people, AED"}]]},
+	"breaths": {"title": {"de": "Beatmung", "pl": "Oddechy", "en": "Ventilation"}, "options": [
+		["yes", {"de": "Mit Beatmung (geschult, möchte, Schutzbarriere)", "pl": "Z oddechami (przeszkolenie, chęć, maska)", "en": "With ventilation (trained, willing, barrier)"}],
+		["no", {"de": "Ohne Beatmung", "pl": "Bez oddechów", "en": "No ventilation"}]]},
+	"gender": {"title": {"de": "Geschlecht", "pl": "Płeć", "en": "Gender"}, "options": [
+		["male", {"de": "Männlich", "pl": "Mężczyzna", "en": "Male"}],
+		["female", {"de": "Weiblich", "pl": "Kobieta", "en": "Female"}],
+		["other", {"de": "Divers", "pl": "Inna", "en": "Other"}]]},
+}
+const SETUP_SPOTS := {"mode": Vector2(0.055, 0.045), "situation": Vector2(-0.055, -0.010), "breaths": Vector2(0.055, -0.010), "gender": Vector2(0.055, -0.140)}
+var _setup_keys := {}
+var _setup_choices := {}
+var _setup_option_keys := {}
+var _setup_answers := {}
+
+func _build_setup_menus() -> void:
+	for step: String in SETUP_MENUS:
+		var key := _key("", Vector2(0.090, 0.035), "key", func(): _toggle_setup_menu(step), _controls)
+		key.activate_on_press = true
+		key.label.font_size = 19
+		var spot: Vector2 = SETUP_SPOTS[step]
+		key.position = Vector3(spot.x, spot.y, 0)
+		_setup_keys[step] = key
+		var options: Array = SETUP_MENUS[step].options
+		var popup := _make_popup(options.size())
+		_setup_choices[step] = popup
+		var keys := {}
+		for i in options.size():
+			var value: String = options[i][0]
+			keys[value] = _popup_option(popup, i, "", func():
+				if step == "mode": mode_requested.emit(value)
+				else: setup_requested.emit(step, value))
+		_setup_option_keys[step] = keys
+	_refresh_setup()
+
+func _toggle_setup_menu(step: String) -> void:
+	_debug_choices.visible = false
+	_toggle_popup(_setup_choices[step])
+
+## main: the current answers ({"mode", "situation", "breaths", "gender"}).
+func set_setup(answers: Dictionary) -> void:
+	_setup_answers = answers.duplicate()
+	_refresh_setup()
+
+func _refresh_setup() -> void:
+	if _setup_keys.is_empty(): return
+	var answers := _setup_answers.duplicate()
+	answers["mode"] = mode
+	for step: String in SETUP_MENUS:
+		var menu: Dictionary = SETUP_MENUS[step]
+		var title: String = menu.title.get(language, menu.title.en)
+		var current := str(answers.get(step, ""))
+		var chosen := ""
+		for option: Array in menu.options:
+			var label: String = option[1].get(language, option[1].en)
+			var option_key: Key3D = _setup_option_keys[step][option[0]]
+			option_key.set_text(label)
+			var selected: bool = option[0] == current
+			if selected: chosen = label.get_slice(" (", 0)
+			option_key.set_accent(Color("32d16d") if selected else GLOW, Color("16843c") if selected else Color.TRANSPARENT)
+		(((_setup_choices[step] as Node3D).get_meta("title")) as Label3D).text = title
+		# 19 Nov 2026 (user: keep each selection while choosing the others): the key shows its
+		# name and, under it, what is chosen; green once chosen.
+		var step_key := _setup_keys[step] as Key3D
+		step_key.set_text(title if chosen.is_empty() else title + "\n" + chosen)
+		step_key.set_accent(GLOW if chosen.is_empty() else Color("32d16d"))
+	# English has no neighbouring language here; the form only for Polish as neighbour.
+	(_setup_keys["mode"] as Key3D).visible = language != "en" and not _training_active
+	for step: String in ["situation", "breaths", "gender"]:
+		(_setup_keys[step] as Key3D).visible = not _training_active
+	for key: Key3D in [_language_menu, _large_align, _reposition_key]:
+		if key: key.visible = not _training_active
+	if not (_setup_keys["mode"] as Key3D).visible and (_setup_choices["mode"] as Node3D).visible: close_popups()
+
 func update_session(scenario: NaretScenario) -> void:
 	var actions := scenario.get_interface_actions()
 	# Reuse existing fingertip action slots; keep the wrist/cuff layout unchanged.
 	_start_action = "start" if scenario.state == NaretScenario.State.IDLE else "restart"
-	_large_start.set_text("Start training" if _start_action == "start" else "Restart training")
 	var training_active := scenario.state != NaretScenario.State.IDLE and scenario.state != NaretScenario.State.RECOVERY
-	_large_start.set_accent(Color("32d16d") if training_active else GLOW, Color("16843c") if training_active else Color.TRANSPARENT)
+	# The choices belong to the setup: a pop-up left open closes once the training runs.
+	if training_active and popup_open(): close_popups()
+	if training_active != _training_active:
+		_training_active = training_active
+		_refresh_setup()
+	if Time.get_ticks_msec() > _restart_armed_until:
+		_large_start.set_text("Start training" if _start_action == "start" else "Restart training")
+		_large_start.set_accent(Color("32d16d") if training_active else GLOW, Color("16843c") if training_active else Color.TRANSPARENT)
 	if scenario.state == NaretScenario.State.RECOVERY: actions = ["restart", "briefing"]
-	_state_label.text = NaretLanguage.text("state." + scenario.get_state_name(), language).to_upper()
-	var vitals := ekg.get_label() if ekg != null else ""
-	if scenario.state == NaretScenario.State.CPR:
-		vitals += "   %d / 30   ·   %d / 2" % [scenario.cycle_compressions, scenario.cycle_ventilations]
-	_vitals_label.text = vitals
 	var key := str(actions) + language
 	if key == _last_key: return
 	_last_key = key
@@ -876,6 +1087,7 @@ func set_language(value: String) -> void:
 	language = value
 	_refresh_reposition_text()
 	_refresh_language_selection()
+	_refresh_setup()
 	_last_key = ""
 	_lang_key.set_text(language.to_upper())
 	_lang_key.set_accent(Color("32d16d"), Color("16843c"))
@@ -895,12 +1107,19 @@ func set_mode(value: String) -> void:
 	mode = value
 	_last_key = ""
 	_refresh_mode()
+	_refresh_setup()
 
 
 func _refresh_language_selection() -> void:
 	if _language_menu:
 		var title: String = {"en": "English", "de": "Deutsch", "pl": "Polski"}.get(language, language)
-		_language_menu.set_text("Languages: " + title)
+		var heading: String = {"de": "Sprache", "pl": "Język", "en": "Language"}.get(language, "Language")
+		# The key's name and the chosen language under it (19 Nov 2026); green inside too.
+		_language_menu.set_text(heading + "\n" + title)
+		_language_menu.set_accent(Color("32d16d"))
+		(_language_choices.get_meta("title") as Label3D).text = heading
+	for popup in _popups:
+		(popup.get_meta("close") as Key3D).set_text(str(CLOSE_TEXT.get(language, CLOSE_TEXT.en)))
 	for code: String in _language_keys:
 		var selected := code == language
 		_language_keys[code].set_accent(Color("32d16d") if selected else GLOW, Color("16843c") if selected else Color.TRANSPARENT)
@@ -910,21 +1129,31 @@ func _refresh_scan() -> void:
 	_refresh_toggle(_scan_key, NaretLanguage.ui("Scan", "Skan", language), _scan_on)
 	_refresh_toggle(_hands_key, NaretLanguage.ui("Hände", "Dłonie", language), _hands_on)
 	_refresh_toggle(_gizmos_key, NaretLanguage.ui("Gizmos", "Gizmo", language), _gizmos_on)
-	if _ring_key:
-		_ring_key.set_text(NaretLanguage.ui("Ring\nanwenden", "Pierścień\nzastosuj", language))
+	_refresh_toggle(_sensor_key, NaretLanguage.ui("Sensor-Log", "Log czujn.", language), _sensor_on)
+	if _take_key:
+		_take_key.set_text(("● REC" if _take_on else NaretLanguage.ui("Aufnahme", "Nagraj", language)))
+		_take_key.set_accent(RED if _take_on else GLOW, Color(RED, 0.55) if _take_on else Color.TRANSPARENT)
 	if _occlusion_key:
 		var state: String = {"off": NaretLanguage.ui("aus", "wył.", language), "room": NaretLanguage.ui("Umgeb.", "otocz.", language), "all": NaretLanguage.ui("alle", "wszystko", language)}[occlusion]
 		_occlusion_key.set_text(NaretLanguage.ui("Tiefe", "Głębia", language) + "\n" + state)
 		_occlusion_key.set_accent(GLOW if occlusion == "off" else Color("32d16d"), Color.TRANSPARENT if occlusion == "off" else Color("16843c"))
 	if _chest_key:
 		_chest_key.set_text(NaretLanguage.ui("Brust", "Klatka", language))
-	if _fit_key:
-		# Shows the active fit; pressing switches to the other one.
-		_fit_key.set_text(NaretLanguage.ui("Brust\nflach", "Klatka\npłaska", language) if chest_fit == "flatten" else NaretLanguage.ui("Brust\ntiefer", "Klatka\nniżej", language))
 
 func set_gizmos_on(on: bool) -> void:
 	## Reflects a gizmo state set by main (e.g. on by default while reviewing placement).
 	_gizmos_on = on
+	_refresh_scan()
+
+## The logger's address while it runs (empty when off), shown as a notice.
+func set_sensor_log(url: String) -> void:
+	_sensor_on = not url.is_empty()
+	_refresh_scan()
+	if _sensor_on:
+		show_notice(url.trim_prefix("http://").replace("/?pin=", "  PIN "))
+
+func set_take(recording: bool) -> void:
+	_take_on = recording
 	_refresh_scan()
 
 func set_occlusion(value: String) -> void:

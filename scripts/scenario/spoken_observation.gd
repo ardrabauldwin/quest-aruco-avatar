@@ -174,7 +174,27 @@ const PATIENT_ADDRESS := [
 	"machen sie die augen auf", "öffnen sie die augen", "wachen sie auf", "hey",
 	"halo", "słyszy mnie pan", "słyszy mnie pani", "czy mnie pan słyszy", "czy mnie pani słyszy", "wszystko w porządku",
 	"czy wszystko w porządku", "proszę otworzyć oczy", "proszę pana", "proszę pani",
+	# du-form of the didactic structure (issue #1, 3. Reaktion prüfen, 17 Nov 2026)
+	"open your eyes", "hörst du mich", "hallo hörst du mich", "kannst du mich hören", "öffne die augen",
+	"mach die augen auf", "czy mnie słyszysz", "halo czy mnie słyszysz", "słyszysz mnie", "otwórz oczy",
 ]
+
+## Phrases that are clearly spoken TO the patient to test his response (issue #1, gate
+## "lautes Ansprechen"): found anywhere in the utterance, not only at its front.
+const RESPONSE_ADDRESS := ["can you hear me", "open your eyes", "are you okay", "are you ok", "are you all right",
+	"hörst du mich", "kannst du mich hören", "hören sie mich", "können sie mich hören", "öffne die augen",
+	"mach die augen auf", "machen sie die augen auf", "öffnen sie die augen", "czy mnie słyszysz", "słyszysz mnie",
+	"otwórz oczy", "czy mnie pan słyszy", "czy mnie pani słyszy", "słyszy mnie pan", "słyszy mnie pani", "proszę otworzyć oczy",
+	# Any similar wording (17 Nov 2026): a loud greeting or wake-up call counts too.
+	"hallo", "hello", "halo", "hey", "hörst du", "hören sie", "can you hear", "słyszysz", "słyszy pan", "słyszy pani",
+	"wach auf", "wachen sie auf", "wake up", "obudź się", "alles okay", "alles in ordnung", "geht es dir gut",
+	"geht es ihnen gut", "wszystko w porządku", "augen auf", "eyes open"]
+
+static func is_response_address(text: String) -> bool:
+	var clean := normalise(text)
+	for phrase: String in RESPONSE_ADDRESS:
+		if phrase in clean: return true
+	return false
 
 static func action_for(text: String) -> String:
 	var direct := grammar_action(text)
@@ -441,23 +461,23 @@ const MIN_SIMILARITY := 0.80
 const MIN_MARGIN := 0.08
 const ANCHORS := {
 	"en": {
-		"begin_check": ["the scene is safe", "the area is safe"],
-		"check_responsiveness": ["he is not responding", "the patient is not responding", "he is unresponsive"],
-		"check_breathing": ["he is not breathing", "he is not breathing normally", "the patient is not breathing normally"],
+		"begin_check": ["the scene is safe", "the area is safe", "the environment is safe", "the surroundings are safe"],
+		"check_responsiveness": ["he is not responding", "the patient is not responding", "he is unresponsive", "the person is not responding"],
+		"check_breathing": ["he is not breathing", "he is not breathing normally", "the patient is not breathing normally", "the person is not breathing normally", "the person is not breathing"],
 		"ventilation": ["i have given one rescue breath", "i gave one rescue breath", "i have given the first rescue breath", "i have given the second rescue breath", "we have given the first breath"],
 		"breath_pair": ["i have given two rescue breaths", "we have given two rescue breaths"]
 	},
 	"de": {
 		"begin_check": ["die umgebung ist sicher", "die einsatzstelle ist sicher"],
-		"check_responsiveness": ["er reagiert nicht", "der patient reagiert nicht"],
-		"check_breathing": ["er atmet nicht normal", "der patient atmet nicht normal"],
+		"check_responsiveness": ["er reagiert nicht", "der patient reagiert nicht", "die person reagiert nicht"],
+		"check_breathing": ["er atmet nicht normal", "der patient atmet nicht normal", "die person atmet nicht normal", "die person atmet nicht"],
 		"ventilation": ["ich habe eine beatmung gegeben", "ich habe die erste beatmung gegeben", "ich habe die zweite beatmung gegeben", "ich habe eine atemspende gegeben"],
 		"breath_pair": ["ich habe zwei beatmungen gegeben", "ich habe beide beatmungen gegeben"]
 	},
 	"pl": {
 		"begin_check": ["miejsce jest bezpieczne", "otoczenie jest bezpieczne"],
-		"check_responsiveness": ["pacjent nie reaguje", "on nie reaguje"],
-		"check_breathing": ["pacjent nie oddycha prawidłowo", "on nie oddycha normalnie"],
+		"check_responsiveness": ["pacjent nie reaguje", "on nie reaguje", "osoba nie reaguje"],
+		"check_breathing": ["pacjent nie oddycha prawidłowo", "on nie oddycha normalnie", "osoba nie oddycha normalnie", "osoba nie oddycha"],
 		"ventilation": ["wykonałem jeden oddech ratowniczy", "wykonałam jeden oddech ratowniczy", "wykonałem pierwszy oddech ratowniczy", "wykonałam drugi oddech ratowniczy"],
 		"breath_pair": ["wykonałem dwa oddechy ratownicze", "wykonałam dwa oddechy ratownicze"]
 	}

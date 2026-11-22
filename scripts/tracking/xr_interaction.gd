@@ -9,6 +9,8 @@ extends Node3D
 signal compression_measured(depth_m: float, rate_bpm: float, correct_position: bool)
 signal action_requested(action: String)
 signal placement_changed(correct: bool)
+## Each beep of the compression metronome, for the sensor log.
+signal metronome_beat(bpm: int)
 signal head_tilt_gesture_detected
 ## Both hands pinching: the distance between the two index fingertips (metres) and the
 ## fingertips' world heights, a tape-measure check of hand tracking (9 Nov 2026).
@@ -55,6 +57,17 @@ var _grabbing := [false, false]
 var _ragdoll: NaretRagdoll
 var _menu_hand := -1
 var _last_count := 0
+## Which compression counter feeds compression_measured (17 Nov 2026): "zone" is this
+## app's placed palm counter, "detector" Dennis's NaretCprDetector (wrists, forearms,
+## palms, head; team branch merge/sensorlog). Both run every frame; only one counts.
+## A build exported with the feature tag "detector_counter" uses the detector.
+const COUNTER_MODES := ["zone", "detector"]
+var counter_mode := "detector" if OS.has_feature("detector_counter") else "zone"
+var detector := NaretCprDetector.new()
+## The detector's view of the hands this frame (for the HUD in detector mode).
+var chest_contact := false
+var hands_seen := false
+var _last_frame_ms := 0
 var _cpr_feedback_root: Node3D
 const OriginalCPRHud = preload("res://addons/naret_upstream/avatar/cpr_feedback_hud.gd")
 var _pointer_capture: Dictionary = {}
@@ -98,6 +111,7 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		# The scenario owns breathing pauses; disable the standalone demo scheduler.
 		motion.set("automatic_breathing_pause", false)
 		motion.set("metronome_enabled", true)
+		motion.connect("beat_requested", func(): metronome_beat.emit(int(motion.get("target_bpm"))))
 		_zone.get_node("CollisionShape3D").position = Vector3.ZERO
 		# Keep the user's original hand-zone dimensions and acceptance logic.
 		_zone.get_node("Highlight").position = Vector3.ZERO
@@ -128,6 +142,7 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 			camera.add_child(_cpr_feedback_root)
 			var hud := OriginalCPRHud.new()
 			hud.zone = _zone
+			hud.interaction = self
 			_cpr_feedback_root.add_child(hud)
 			hud.position = Vector3(0.0, -0.22, -0.8)
 			hud.process_priority = 30
@@ -135,6 +150,10 @@ func configure(mannequin: NaretMannequin, xr_origin: XROrigin3D) -> void:
 		_zone.set_process_unhandled_key_input(false)
 		_zone.connect("placement_changed", func(correct: bool): placement_changed.emit(correct))
 		set_cpr_enabled(false)
+
+## The CPR HUD's wording follows the trainee's language (en, de or pl).
+func set_hud_language(language: String) -> void:
+	OriginalCPRHud.language = language
 
 func register_ui_panel(panel: Node3D, viewport: SubViewport, size_m: Vector2) -> void:
 	## Pointer hits land in `viewport` as mouse events, or, without one, on the
@@ -168,6 +187,24 @@ func set_cpr_enabled(value: bool) -> void:
 		if value:
 			_zone.call("reset_placement")
 		_last_count = 0
+	detector.reset()
+	_last_frame_ms = 0
+
+var _metronome_off := false
+
+## The beep's pace, or 0 when it is switched off (sensor log web page).
+func metronome_bpm() -> int:
+	if _zone == null or _metronome_off: return 0
+	return int(_zone.get("motion_session").get("target_bpm"))
+
+## 100-120/min from the sensor log web page; 0 switches the beep off.
+func set_metronome_bpm(bpm: int) -> void:
+	if _zone == null: return
+	var motion: RefCounted = _zone.get("motion_session")
+	_metronome_off = bpm <= 0
+	if not _metronome_off:
+		motion.set("target_bpm", clampf(float(bpm), 100.0, 120.0))
+	motion.set("metronome_enabled", not _audio_busy and not _metronome_off)
 
 func set_aed_active(value: bool) -> void:
 	aed_active = value
@@ -176,7 +213,7 @@ func set_aed_active(value: bool) -> void:
 func set_audio_busy(value: bool) -> void:
 	_audio_busy = value
 	if _zone == null: return
-	_zone.get("motion_session").set("metronome_enabled", not value)
+	_zone.get("motion_session").set("metronome_enabled", not value and not _metronome_off)
 	if value:
 		_zone.get("_metronome").stop()
 
@@ -186,6 +223,7 @@ func rearm_cpr_cycle() -> void:
 		var motion: RefCounted = _zone.get("motion_session")
 		motion.call("invalidate_tracking")
 		motion.set("count", 0)
+	detector.reset()
 
 func _process(delta: float) -> void:
 	if _origin == null:
@@ -201,7 +239,8 @@ func _process(delta: float) -> void:
 		_contact_poll -= delta
 		if _contact_poll <= 0.0:
 			_contact_poll = 0.15
-			_contact_hits = _contact_hits + 1 if _patient_contact_detected() else 0
+			# The avatar's whole body shape counts during analysis and shock (18 Nov 2026).
+			_contact_hits = _contact_hits + 1 if (_patient_contact_detected() or hands_touch_body()) else 0
 			if _contact_hits >= CONTACT_POLLS_TO_REVOKE:
 				action_requested.emit("patient_contact")
 	else:
@@ -218,7 +257,7 @@ func _process(delta: float) -> void:
 	var session: RefCounted = _zone.get("motion_session")
 	var count: int = session.get("total_count")
 	# Emit only when the upstream detector reports a new stroke, not each frame.
-	if cpr_enabled and count > _last_count:
+	if cpr_enabled and count > _last_count and counter_mode == "zone":
 		# Same pace source as the original needle dial: four detector intervals,
 		# at least two intervals, invalidated by the detector's 1.5-second pause.
 		var bpm := OriginalCPRHud.measured_bpm(session.get("_bpm_samples"))
@@ -227,6 +266,8 @@ func _process(delta: float) -> void:
 		for stroke in range(count - _last_count):
 			compression_measured.emit(float(session.get("last_stroke_travel_m")), bpm, true)
 	_last_count = count
+	if cpr_enabled:
+		_update_detector()
 	# Real hands on the chest push it down to their own height, in every step,
 	# so they never sink into it. This is display only: counting and depth
 	# feedback stay with the detector above. Letting go releases the chest once,
@@ -415,6 +456,22 @@ func _update_head_tilt(delta: float) -> void:
 		print("NARET_HEAD_TILT gesture_detected technique_unverified")
 		head_tilt_gesture_detected.emit()
 
+## Any tracked hand (palm or a fingertip) touching the avatar's body shape (step-back gate).
+func hands_touch_body() -> bool:
+	if _mannequin == null or not _mannequin.has_method("body_contains"):
+		return false
+	for index in range(2):
+		var hand := hand_tracker(index)
+		if hand == null:
+			continue
+		for joint: int in [XRHandTracker.HAND_JOINT_PALM, XRHandTracker.HAND_JOINT_INDEX_FINGER_TIP, XRHandTracker.HAND_JOINT_MIDDLE_FINGER_TIP, XRHandTracker.HAND_JOINT_THUMB_TIP]:
+			var local: Variant = tracked_joint(hand, joint)
+			if local == null:
+				continue
+			if _mannequin.body_contains((_origin.global_transform * (local as Transform3D)).origin):
+				return true
+	return false
+
 func _patient_contact_detected() -> bool:
 	if _mannequin == null:
 		return false
@@ -583,6 +640,34 @@ func _poke_panel(point: Vector3) -> Dictionary:
 		nearest = local.z
 	return best
 
+func _update_detector() -> void:
+	## Dennis's detector (as wired on merge/sensorlog): palms from hand tracking,
+	## wrists and forearms from body tracking, the head; heights along the chest normal.
+	var now := Time.get_ticks_msec()
+	var dt := 0.0 if _last_frame_ms == 0 else (now - _last_frame_ms) / 1000.0
+	_last_frame_ms = now
+	var palms := []
+	for i in 2:
+		var hand := hand_tracker(i)
+		var flags := hand.get_hand_joint_flags(XRHandTracker.HAND_JOINT_PALM) if hand else 0
+		var tracked := XRHandTracker.HAND_JOINT_FLAG_POSITION_VALID | XRHandTracker.HAND_JOINT_FLAG_POSITION_TRACKED
+		palms.append(_origin.global_transform * hand.get_hand_joint_transform(XRHandTracker.HAND_JOINT_PALM).origin if hand and (flags & tracked) == tracked else null)
+	var wrists := []
+	var forearms := []
+	var body := XRServer.get_tracker("/user/body_tracker") as XRBodyTracker
+	if body and body.has_tracking_data:
+		var joint := func(j: int) -> Variant:
+			return _origin.global_transform * body.get_joint_transform(j).origin if body.get_joint_flags(j) & XRBodyTracker.JOINT_FLAG_POSITION_VALID else null
+		wrists = [joint.call(XRBodyTracker.JOINT_LEFT_WRIST), joint.call(XRBodyTracker.JOINT_RIGHT_WRIST)]
+		forearms = [joint.call(XRBodyTracker.JOINT_LEFT_LOWER_ARM), joint.call(XRBodyTracker.JOINT_RIGHT_LOWER_ARM)]
+	var head := (_origin.global_transform * XRServer.get_hmd_transform()).origin.y
+	var m := NaretCprDetector.measure(_mannequin.get_sternum_transform(), palms, wrists, forearms, head)
+	chest_contact = m.on_chest
+	hands_seen = palms.any(func(p): return p != null) or wrists.any(func(p): return p != null)
+	for stroke in detector.step(now / 1000.0, dt, m.channels, m.on_chest, m.depth):
+		if counter_mode == "detector":
+			compression_measured.emit(stroke.depth_m, stroke.rate_bpm, m.on_chest)
+
 static func hand_tracker(index: int) -> XRHandTracker:
 	## Null unless this hand is really tracked by hands, not by a held controller.
 	var hand := XRServer.get_tracker(HAND_NAMES[index]) as XRHandTracker
@@ -727,19 +812,45 @@ func _update_hands(delta: float) -> void:
 		_pinched[index] = pinched
 
 
+var _poke_blocked := [false, false]
+
+func _cancel_poke(poke_id: String) -> void:
+	## Ends a poke without its click. Wrist keys (pointer_cancel) only light down; a 2D
+	## panel still gets its mouse release, as before.
+	var hit: Dictionary = _pointer_capture.get(poke_id, {})
+	_pointer_capture.erase(poke_id)
+	if hit.is_empty(): return
+	var target: Variant = hit.get("target")
+	if hit.get("viewport") == null and is_instance_valid(target) and target.has_method("pointer_cancel"):
+		target.pointer_cancel()
+	else:
+		_send_pointer(hit, true, false)
+
 func _update_poke(index: int, tip: Vector3, pointer_id: String) -> bool:
 	## True while this hand is close enough to a panel that the far ray must yield.
 	var poke_id := "poke:" + pointer_id
 	var hit := _poke_panel(tip)
 	if hit.is_empty():
+		# Slid off the key's edge: no click (19 Nov 2026, headset log: one sweeping reach
+		# fired Start training, Save calibration and Reposition within 0.1 s).
 		if _poking[index]:
-			_click_hit({}, false, poke_id)
+			_cancel_poke(poke_id)
 		_poking[index] = false
+		_poke_blocked[index] = false
 		return false
 	_send_pointer(hit, false, false)
 	var depth := float(hit.depth)
 	if hit.get("viewport") == null and hit.target.has_method("pointer_press"):
 		_near_menu_until_ms = Time.get_ticks_msec() + 200
+	if _poking[index] and _pointer_capture.has(poke_id) and _pointer_capture[poke_id].get("target") != hit.target:
+		# Slid onto the next key while pressed in: neither key fires, and a new press
+		# needs the fingertip to come back out first.
+		_cancel_poke(poke_id)
+		_poking[index] = false
+		_poke_blocked[index] = true
+	if _poke_blocked[index]:
+		if depth >= POKE_RELEASE_M: _poke_blocked[index] = false
+		return true
 	if not _poking[index] and depth <= POKE_PRESS_M:
 		_poking[index] = true
 		_click_hit(hit, true, poke_id)

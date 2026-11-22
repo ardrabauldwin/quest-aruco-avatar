@@ -6,17 +6,17 @@
     "The trainee asks which dangers to look for: traffic, fire or smoke, electricity, gas, water, falling objects, aggressive people."
   ],
   "response": [
-    "The trainee says he responds, moves or talks: Jan never responds in this scenario, so gently disagree, for example: Check again, I don't think he is responding. Ask them to gently tap or shake his shoulders and ask loudly: Are you all right? and to tell you what they find. A brief twitch or jerk is not a response.",
+    "The trainee says he responds, moves or talks: The person never responds in this scenario, so gently disagree, for example: Check again, I don't think he is responding. Ask them to gently tap or shake his shoulders and ask loudly: Are you all right? and to tell you what they find. A brief twitch or jerk is not a response.",
     "The trainee is unsure whether he reacted: no clear reaction counts as no response.",
     "The trainee asks whether to tap or shake the shoulders: both are fine, gently, while asking loudly: Are you all right?"
   ],
   "call": [
-    "The trainee wants to call 112 themself: they may, but Anna is here, so it is faster to ask her while they stay with him. When alone: call 112 yourself with the phone on speaker and stay with the person.",
+    "The trainee wants to call 112 themself: they may, but the woman in the red jacket is here, so it is faster to ask her while they stay with him. When alone: call 112 yourself with the phone on speaker and stay with the person.",
     "The trainee asks what to tell the dispatcher: where you are, what happened, that he does not respond and is not breathing normally. Keep the phone on speaker and follow the dispatcher's instructions.",
-    "The trainee asks for an AED: no AED is nearby, so Anna should call 112 now and the dispatcher will help. When an AED is close, send a second person to fetch it."
+    "The trainee asks for an AED: no AED is nearby, so the woman in the red jacket should call 112 now and the dispatcher will help. When an AED is close, send a second person to fetch it."
   ],
   "breathing": [
-    "The trainee says he breathes normally: Jan never breathes normally in this scenario, so gently disagree, for example: Look again, I don't think that is normal breathing. Ask them to check once more for no more than ten seconds, airway open, looking at the chest and listening at his mouth. Gasping or occasional breaths are not normal breathing.",
+    "The trainee says he breathes normally: The person never breathes normally in this scenario, so gently disagree, for example: Look again, I don't think that is normal breathing. Ask them to check once more for no more than ten seconds, airway open, looking at the chest and listening at his mouth. Gasping or occasional breaths are not normal breathing.",
     "The trainee is unsure: if in doubt, act as if breathing is not normal and start CPR.",
     "The trainee asks how to check: open the airway with head tilt and chin lift, look for chest movement, listen and feel for breath at his mouth and nose, for no more than ten seconds."
   ],

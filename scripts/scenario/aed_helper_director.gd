@@ -34,7 +34,8 @@ const HELPER_FETCH_S := 15.0
 ## first set is nearly done: he starts walking in at this stroke and the device is on
 ## the stool about when the 30th is given, in the pause where the breaths would be.
 ## The AED is used at once; the first breaths follow the next 30 compressions.
-var return_after_compressions := 22
+## 18 Nov 2026 (user): the AED comes sooner, after the 10th compression (was 22).
+var return_after_compressions := 10
 ## If nobody presses at all he still comes, this long after HELPER_FETCH_S.
 const RETURN_ANYWAY_S := 90.0
 const ANNOUNCE_S := 1.8
@@ -265,6 +266,47 @@ func _on_device_taken() -> void:
 func _on_device_placed() -> void:
 	if phase != "handed": return
 	_finish_delivery()
+	_take_over_or_home()
+
+## After the delivery: while the AED is switched on and the pads go on, Marek kneels across
+## from the trainee and presses on the chest (18 Nov 2026). He stops when the pads are on
+## (the AED analyses: nobody touches), when the trainee presses again, or when CPR ends.
+func _take_over_or_home() -> void:
+	if scenario.state == NaretScenario.State.CPR and not scenario.aed_attached:
+		marek.set_posture("")
+		marek.attention = "patient"
+		_walk(_helper_spot(), "to_chest")
+	else:
+		_go_home()
+
+## Beside the chest, across the body from the trainee (always to the side, never at the
+## head or the feet, wherever the trainee stands), 0.40 m out: his hands land on the sternum.
+func _helper_spot() -> Vector3:
+	var sternum := _sternum_point()
+	var body: Transform3D = patient.call("get_body_transform") if patient.has_method("get_body_transform") else patient.global_transform
+	var side := body.basis.x
+	side.y = 0.0
+	side = side.normalized()
+	var trainee_side := (trainee.call() as Vector3) - sternum
+	if trainee_side.dot(side) > 0.0: side = -side
+	return sternum + side * HELPER_REACH
+
+func _sternum_point() -> Vector3:
+	var marker: Variant = patient.get("sternum")
+	return (marker as Node3D).global_position if marker is Node3D else patient.global_position
+
+func _helper_cpr_over() -> bool:
+	return scenario.aed_attached or scenario.state != NaretScenario.State.CPR
+
+## Chest more than this above his floor (a table or bed): he stands and bends over it.
+const KNEEL_MAX_CHEST_M := 0.6
+
+func _chest_height() -> float:
+	return _sternum_point().y - marek.standing_floor_y()
+
+func _end_helper_cpr() -> void:
+	marek_compressing = false
+	marek.facing_locked = false
 	_go_home()
 
 func _finish_delivery() -> void:
@@ -350,7 +392,42 @@ func advance(delta: float) -> void:
 			_enter("rise", RISE_S)
 		"rise":
 			if _t < _phase_until: return
-			_go_home()
+			_take_over_or_home()
+		"to_chest":
+			if not _walk_done(): return
+			if _helper_cpr_over():
+				_go_home()
+				return
+			# Square to the sternum, so his hands (cpr clip: 0.40 m ahead) land on it.
+			_face(_sternum_point())
+			print("NARET_HELPER at chest: sternum=", _sternum_point(), " marek=", marek.global_position, " chest_h=%.2f" % _chest_height())
+			marek.facing_locked = true
+			# Patient on the floor: he kneels. Higher (table, bed): he stands and bends over
+			# the chest, his hands at its height (18 Nov 2026).
+			if _chest_height() <= KNEEL_MAX_CHEST_M:
+				marek.set_posture("kneel")
+			else:
+				marek.place_height_m = _chest_height()
+				marek.set_posture("place")
+			_say("marek_take_over", 0.0)
+			_enter("kneel_down", KNEEL_S)
+		"kneel_down":
+			if _t < _phase_until: return
+			if _helper_cpr_over():
+				_end_helper_cpr()
+				return
+			# He takes over once the trainee's hands have left the chest (to the AED).
+			if _hands_busy(): return
+			if _chest_height() <= KNEEL_MAX_CHEST_M: marek.set_posture("cpr")
+			marek_compressing = true
+			_take_over_t = _t
+			print("NARET_HELPER marek presses (", "kneeling" if _chest_height() <= KNEEL_MAX_CHEST_M else "bent over", ")")
+			_enter("helper_cpr", INF)
+		"helper_cpr":
+			# Pads on (the AED analyses: hands off), CPR over, or the trainee presses again.
+			if _helper_cpr_over() or _hands_t > _take_over_t + 1.0:
+				print("NARET_HELPER marek stops pressing")
+				_end_helper_cpr()
 		"walk_home":
 			if not _walk_done(): return
 			if _has_spot_home: marek.global_basis = _spot_home.basis

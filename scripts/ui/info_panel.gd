@@ -58,7 +58,7 @@ func update_session(scenario: NaretScenario) -> void:
 	var prompts := {
 		"begin_check": "NEXT: Check scene safety.\nSay: The scene is safe.",
 		"check_responsiveness": "NEXT: Check patient responsiveness.\nAsk: Are you okay? Can you hear me?\nReport: He is not responding.",
-		"call_emergency": "NEXT: Ask Anna to call for help.\nSay: Anna, please call 112.",
+		"call_emergency": "NEXT: Ask the woman in the red jacket to call for help.\nSay: You in the red jacket, please call 112.",
 		"check_breathing": "NEXT: Open the airway and check breathing.\nReport your finding: He is not breathing normally.",
 		"compression": "NEXT: Perform compressions.\nCount: %d / 30. Watch your CPR gauges." % scenario.cycle_compressions,
 		"ventilation": "NEXT: Give rescue breath %d of 2.\nThen say: I have given one rescue breath." % (scenario.cycle_ventilations + 1)

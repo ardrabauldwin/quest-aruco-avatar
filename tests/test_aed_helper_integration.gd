@@ -59,7 +59,14 @@ func run() -> Array[String]:
 	var rest := device.model.global_position
 	check(absf(rest.y) < 0.001 and Vector2(rest.x, rest.z).distance_to(Vector2(carried.x, carried.z) + Vector2(device._carry_offset.x, device._carry_offset.z)) < 0.001, "it rests under where the trainee let go, on the patient's surface")
 	director.advance(10.0)
-	check(director.phase == "" and not director.fetching, "errand ends with Marek back at his spot")
+	# 18 Nov 2026: during CPR he kneels across the chest and presses until the pads are on.
+	check(director.phase in ["to_chest", "kneel_down", "helper_cpr"] and not director.fetching, "after the delivery Marek goes to the chest to press")
+	for i in 4: director.advance(2.0)
+	check(director.phase == "helper_cpr" and director.marek_compressing, "with the trainee's hands off he presses")
+	# The trainee's hands back on the chest (a stroke event, not counted here).
+	director._on_event({"action": "compression", "accepted": false, "details": {"source": "test"}})
+	for i in 3: director.advance(5.0)
+	check(director.phase == "" and not director.marek_compressing, "the trainee presses again: he lets go and goes back to his spot")
 	check(scenario.compressions == 0, "helper animation never invents compressions")
 	device._attach()
 	check(not device._attached and device._placed.is_empty(), "XR blocks animated automatic pad placement")
@@ -178,17 +185,20 @@ func run() -> Array[String]:
 	check(director.delivered and scenario.aed_available and not device._held, "and puts it down there")
 	for seconds in [2.0, 10.0]: director.advance(seconds)
 	device.reset()
-	# Default return: not before the first set is nearly done.
-	director.return_after_compressions = 22
+	# Default return: after the 10th compression (18 Nov 2026).
+	director.return_after_compressions = 10
 	device.reset()
 	scenario.start()
 	scenario.compression_only = false
 	for action in request: scenario.submit_action(action)
 	for seconds in [1.9, 5.0, 30.0]: director.advance(seconds)
 	check(director.away and not director.presenting, "asked at the call, Marek stays away while nobody has pressed")
-	for i in 22: scenario.submit_action("compression", {"source": "test"})
+	for i in 9: scenario.submit_action("compression", {"source": "test"})
 	director.advance(0.1)
-	check(not director.away and director.presenting, "he walks in when the first set is nearly done (22 of 30)")
+	check(director.away, "not yet after 9 compressions")
+	scenario.submit_action("compression", {"source": "test"})
+	director.advance(0.1)
+	check(not director.away and director.presenting, "he walks in after the 10th compression")
 	for seconds in [10.0, 2.0, 2.0, 10.0]: director.advance(seconds)
 	director.return_after_compressions = 0
 	device.reset()

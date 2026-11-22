@@ -239,6 +239,9 @@ func _ready() -> void:
 	if chest: breathing.configure(chest)
 	_collect_skin(model)
 	_apply_pallor(1.0)
+	# Unconscious: lids shut (shape key from tools/add_patient_eyes_injuries.py), pupils
+	# hidden behind them. They open on return of circulation (set_recovered).
+	_set_eyes_closed(1.0)
 	var skeletons := model.find_children("*", "Skeleton3D", true, false)
 	if not skeletons.is_empty():
 		_tilt_modifier = HeadTilt.new()
@@ -438,6 +441,38 @@ func set_arm_clear(clear: bool) -> void:
 	if _tilt_modifier:
 		_tilt_modifier.arm_target = 1.0 if clear else 0.0
 
+## The avatar's body as capsules between its bones: [from, to, radius in m]. Radii are the
+## adult avatar's half-thickness (chest about 40 cm wide, head about 20 cm).
+const BODY_CAPSULES := [
+	["pelvis", "spine_02", 0.17], ["spine_02", "spine_03", 0.19], ["spine_03", "neck_01", 0.18],
+	["neck_01", "head", 0.07], ["head", "head", 0.12],
+	["clavicle_l", "upperarm_l", 0.07], ["upperarm_l", "lowerarm_l", 0.06], ["lowerarm_l", "hand_l", 0.05], ["hand_l", "hand_l", 0.08],
+	["clavicle_r", "upperarm_r", 0.07], ["upperarm_r", "lowerarm_r", 0.06], ["lowerarm_r", "hand_r", 0.05], ["hand_r", "hand_r", 0.08],
+	["pelvis", "thigh_l", 0.09], ["thigh_l", "calf_l", 0.09], ["calf_l", "foot_l", 0.07],
+	["pelvis", "thigh_r", 0.09], ["thigh_r", "calf_r", 0.09], ["calf_r", "foot_r", 0.07],
+]
+
+## True when a world point touches the avatar's body (its bones' capsules plus `margin`).
+## Used by the step-back gate after the handover (18 Nov 2026). The head capsule is moved
+## up from the head bone (at the base of the skull) to the head's centre.
+func body_contains(world_point: Vector3, margin: float = 0.03) -> bool:
+	var skeletons := $Model.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty(): return false
+	var skeleton := skeletons[0] as Skeleton3D
+	for capsule: Array in BODY_CAPSULES:
+		var a := skeleton.find_bone(str(capsule[0]))
+		var b := skeleton.find_bone(str(capsule[1]))
+		if a < 0 or b < 0: continue
+		var from := skeleton.global_transform * skeleton.get_bone_global_pose(a).origin
+		var to := skeleton.global_transform * skeleton.get_bone_global_pose(b).origin
+		if a == b and str(capsule[0]) == "head":
+			from = from.lerp(forehead(), 0.5)
+			to = from
+		var closest := Geometry3D.get_closest_point_to_segment(world_point, from, to)
+		if closest.distance_to(world_point) <= float(capsule[2]) + margin:
+			return true
+	return false
+
 func forehead() -> Vector3:
 	## Above the eyes towards the crown (head end is -Z, the face +Y): where a hand
 	## goes to tilt the head back.
@@ -456,9 +491,24 @@ func set_recovered(recovered: bool) -> void:
 	_recovered = recovered
 	_breath_clock = 0.0
 	pupils.set_dilation(0.4 if recovered else 1.0)
+	# ROSC: the eyes open quickly; back in arrest they close more slowly
+	# (17 Nov 2026, from the team's sensor-log branch).
+	create_tween().tween_method(_set_eyes_closed, eyes_closed, 0.0 if recovered else 1.0, 0.12 if recovered else 0.6)
 	create_tween().tween_method(_apply_pallor, _pallor, 0.0 if recovered else 1.0, 6.0 if recovered else 0.5)
 	if not recovered:
 		_rig.clear_gaze()
+
+## 1 = lids shut, 0 = open. The pupil overlays only show with the eyes open.
+var eyes_closed := 0.0
+
+func _set_eyes_closed(amount: float) -> void:
+	eyes_closed = amount
+	for mesh: MeshInstance3D in $Model.find_children("*", "MeshInstance3D", true, false):
+		var key := mesh.find_blend_shape_by_name("eyes_closed")
+		if key >= 0:
+			mesh.set_blend_shape_value(key, amount)
+	for pupil in _eyes:
+		pupil.visible = amount < 0.5
 
 func _process(delta: float) -> void:
 	_refresh_overlay()

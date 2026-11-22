@@ -236,7 +236,8 @@ const CLOUD_ENGLISH_MODEL_LISTED := "kokoro:82m"
 ## the defibrillator" was heard as the instructor saying it. bm_george checked against
 ## the service the same day. The AED speaks with a woman's voice (af_bella, checked too),
 ## so it is told apart from the instructor at once.
-const CLOUD_ENGLISH_VOICES := {"instructor": "am_adam", "bystander": "af_sky", "marek": "bm_george", "aed": "af_bella"}
+const CLOUD_ENGLISH_VOICES := {"instructor": "am_adam", "bystander": "af_sky", "marek": "bm_george", "aed": "af_bella",
+	"dispatcher": "af_sarah", "ems": "am_michael"}
 
 static func cloud_speech_payload(text: String, language: String, speaker: String, model: String, voice: String) -> Dictionary:
 	## English keeps one voice per person, matching the saved clips. A configured voice wins.
@@ -279,9 +280,9 @@ func _request_local_ai(path: String, payload: Dictionary) -> Dictionary:
 ## Vocabulary only, balanced between opposite findings; never suggest the next
 ## scenario answer. A prompt is a decoding hint, not evidence of an action.
 const ASR_VOCABULARY := {
-	"en": "CPR, cardiac arrest, collapsed, scene, safe, unsafe, unconscious, responsive, unresponsive, breathing, normal, not normal, gasping, agonal breathing, airway, head tilt, chin lift, ambulance, call 112, one one two, Anna, Jan, chest compressions, sternum, recoil, rescue breath, rescue breaths, ventilation, one, two, handover, medical history, medication, Marek, AED, defibrillator, pads, electrodes, shock, no shock, clear",
-	"de": "Reanimation, Herz-Kreislauf-Stillstand, Umgebung, sicher, unsicher, bewusstlos, ansprechbar, reagiert, keine Reaktion, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, 112, eins eins zwei, Anna, Jan, Herzdruckmassage, Brustbein, entlasten, Beatmung, Atemspende, Atemzug, eine, zwei, Übergabe, Vorerkrankungen, Marek, AED, Defibrillator, Elektroden, Schock, kein Schock, zurücktreten",
-	"pl": "RKO, resuscytacja, zatrzymanie krążenia, otoczenie, bezpieczne, niebezpieczne, nieprzytomny, reaguje, nie reaguje, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, łapie powietrze, drogi oddechowe, odchylenie głowy, uniesienie bródki, karetka, 112, sto dwanaście, Anna, Jan, uciski klatki piersiowej, mostek, oddech ratowniczy, wdech, jeden, dwa, przekazanie, choroby, Marek, AED, defibrylator, elektrody, wyładowanie, bez wyładowania, odsunąć się"
+	"en": "CPR, cardiac arrest, collapsed, scene, safe, unsafe, unconscious, responsive, unresponsive, breathing, normal, not normal, gasping, agonal breathing, airway, head tilt, chin lift, ambulance, call 112, one one two, chest compressions, sternum, recoil, rescue breath, rescue breaths, ventilation, one, two, handover, medical history, medication, AED, defibrillator, pads, electrodes, shock, no shock, clear",
+	"de": "Reanimation, Herz-Kreislauf-Stillstand, Umgebung, sicher, unsicher, bewusstlos, ansprechbar, reagiert, keine Reaktion, Atmung, atmet, normal, nicht normal, Schnappatmung, Atemwege, Kopf überstrecken, Kinn anheben, Notruf, 112, eins eins zwei, Herzdruckmassage, Brustbein, entlasten, Beatmung, Atemspende, Atemzug, eine, zwei, Übergabe, Vorerkrankungen, AED, Defibrillator, Elektroden, Schock, kein Schock, zurücktreten",
+	"pl": "RKO, resuscytacja, zatrzymanie krążenia, otoczenie, bezpieczne, niebezpieczne, nieprzytomny, reaguje, nie reaguje, oddycha, prawidłowo, nieprawidłowo, oddech agonalny, łapie powietrze, drogi oddechowe, odchylenie głowy, uniesienie bródki, karetka, 112, sto dwanaście, uciski klatki piersiowej, mostek, oddech ratowniczy, wdech, jeden, dwa, przekazanie, choroby, AED, defibrylator, elektrody, wyładowanie, bez wyładowania, odsunąć się"
 }
 
 func transcribe(wav: PackedByteArray, language: String) -> Dictionary:

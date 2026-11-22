@@ -2,10 +2,10 @@
   "_comment": "Lines of the bystanders in docs/DREHBUCH.md. The app speaks them via NaretBystanderDirector; tools/generate_voices_fish.py bakes them as offline clips. Polish must be reviewed by a native speaker before a course. 'style' is the Fish Audio S2 inline tag used when baking (tools/generate_voices_fish.py). Lines with speaker 'aed' are the device's own voice prompts (NaretAED plays them through its speaker).",
   "anna_arrive": {
     "speaker": "anna",
-    "de": "Hilfe! Mein Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
-    "pl": "Pomocy! Mój mąż nagle upadł! Proszę mu pomóc!",
+    "de": "Hilfe! Der Mann ist einfach umgefallen! Bitte helfen Sie ihm!",
+    "pl": "Pomocy! Ten mężczyzna nagle upadł! Proszę mu pomóc!",
     "style": "[panicked, breathless]",
-    "en": "Help! My husband has just collapsed! Please help him!"
+    "en": "Help! This man has just collapsed! Please help him!"
   },
   "anna_urge": {
     "speaker": "anna",
@@ -16,10 +16,10 @@
   },
   "anna_name": {
     "speaker": "anna",
-    "de": "Jan! Jan, hörst du mich?",
-    "pl": "Janek! Janek, słyszysz mnie?",
+    "de": "Hallo! Hören Sie mich?",
+    "pl": "Halo! Słyszy mnie pan?",
     "style": "[shouting, frightened]",
-    "en": "Jan! Jan, can you hear me?"
+    "en": "Hello! Can you hear me?"
   },
   "anna_breathing": {
     "speaker": "anna",
@@ -41,8 +41,8 @@
   },
   "anna_touch": {
     "speaker": "anna",
-    "de": "Jan, ich bin da …",
-    "pl": "Janek, jestem tutaj…",
+    "de": "Ich will doch nur helfen …",
+    "pl": "Chcę tylko pomóc…",
     "style": "[tearful, soft]"
   },
   "anna_sorry": {
@@ -101,8 +101,8 @@
   },
   "marek_go_aed": {
     "speaker": "marek",
-    "de": "Ich hole den Defibrillator!",
-    "pl": "Idę po defibrylator!",
+    "de": "Ich hole den AED.",
+    "pl": "Przyniosę AED.",
     "style": "[urgent]",
     "en": "I will get the defibrillator."
   },
@@ -181,14 +181,14 @@
     "de": "Schock abgegeben. Beginnen Sie sofort mit der Herzdruckmassage.",
     "pl": "Wyładowanie wykonane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
     "style": "[calm, clear, steady]",
-    "en": "Shock delivered."
+    "en": "Shock delivered. Start chest compressions now."
   },
   "aed_no_shock": {
     "speaker": "aed",
-    "de": "Kein Schock empfohlen.",
-    "pl": "Wyładowanie niezalecane.",
+    "de": "Kein Schock empfohlen. Beginnen Sie sofort mit der Herzdruckmassage.",
+    "pl": "Wyładowanie niezalecane. Natychmiast rozpocznij uciskanie klatki piersiowej.",
     "style": "[calm, clear, steady]",
-    "en": "No shock advised."
+    "en": "No shock advised. Start chest compressions now."
   },
   "aed_stop_cpr": {
     "speaker": "aed",
@@ -201,7 +201,8 @@
     "speaker": "marek",
     "de": "Ich drücke weiter – kleben Sie die Elektroden!",
     "pl": "Ja uciskam dalej – proszę naklejać elektrody!",
-    "style": "[urgent, determined]"
+    "style": "[urgent, determined]",
+    "en": "I'll keep pushing – you put the pads on!"
   },
   "marek_take_aed": {
     "speaker": "marek",

@@ -93,7 +93,8 @@ func configure(model: Node3D) -> void:
 				var shape := _canonical_name(String(animation.track_get_path(track)))
 				# Live speech amplitude and local CPR envelopes must own these weights;
 				# otherwise the imported clip overwrites them with baked morph values.
-				if shape in ["mouth_open", "mouthopen", "breathing", "compression", "chestbreath", "chestcompression"]:
+				# eyes_closed (17 Nov 2026) belongs to NaretMannequin: shut until ROSC.
+				if shape in ["mouth_open", "mouthopen", "breathing", "compression", "chestbreath", "chestcompression", "eyes_closed", "eyesclosed"]:
 					animation.track_set_enabled(track, false)
 			if not _clips.has(canonical):
 				_clips[canonical] = {"player": player, "name": imported_name}

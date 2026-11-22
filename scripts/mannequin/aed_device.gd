@@ -351,12 +351,12 @@ func _announce(scenario: NaretScenario, language: String) -> void:
 	elif _attached:
 		var now := Time.get_ticks_msec() / 1000.0
 		if now < _shocked_until:
-			# "Shock delivered" is shown, not spoken (14 Nov 2026): as a spoken line it came
-			# after the instructor's "resume compressions". The sign over the device appears
-			# with the shock itself (_show_shock_sign), and the instructor speaks at once.
-			key = ""
+			# 18 Nov 2026 (user): the AED itself says it now: "Schock abgegeben. Beginnen Sie
+			# sofort mit der Herzdruckmassage." The instructor no longer repeats it.
+			key = "aed_shocked"
 		elif scenario.state == NaretScenario.State.RECOVERY:
-			key = "aed_no_shock"
+			# Silent once the crew has taken over (fix 7, 17 Nov 2026).
+			key = ""
 		elif scenario.state == NaretScenario.State.AED:
 			# One line for the shock: advised, stand clear, then press (14 Nov 2026: said as
 			# two lines it read as "move away" followed by "come and press"). The button
@@ -364,6 +364,9 @@ func _announce(scenario: NaretScenario, language: String) -> void:
 			# reminder (_automate).
 			key = ["aed_stop_cpr", "aed_analyse", "aed_shock_advised", "aed_shock_advised", "aed_no_shock"][scenario.aed_stage]
 			if scenario.aed_stage == NaretScenario.AEDStage.READY_TO_SHOCK and _remind_press: key = "aed_press_shock"
+			# German and Polish "shock advised" says only "stand clear"; the press prompt follows
+			# at once (fix 6, 17 Nov 2026). The English line already ends with "press now".
+			if scenario.aed_stage == NaretScenario.AEDStage.READY_TO_SHOCK and language != "en": key = "aed_press_shock"
 	if key == _last_voice:
 		return
 	_last_voice = key

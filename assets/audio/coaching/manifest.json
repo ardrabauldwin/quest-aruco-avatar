@@ -211,11 +211,6 @@
       "path": "res://assets/audio/coaching/pl/resume_compressions.wav"
     },
     {
-      "text": "The AED is here. Switch it on now: touch its green power button.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_arrived.wav"
-    },
-    {
       "text": "Touch a pad and bring it to the golden outline on his chest. Then the second pad.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/aed_pads_how.wav"
@@ -559,66 +554,6 @@
       "path": "res://assets/audio/coaching/en/aed_apply.wav"
     },
     {
-      "text": "Niemand berührt die Person, solange der AED analysiert. Hände weg.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_clear.wav"
-    },
-    {
-      "text": "Nikt nie dotyka osoby, gdy AED analizuje. Ręce precz.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_clear.wav"
-    },
-    {
-      "text": "Nobody touches the person while the AED analyses. Hands off.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_clear.wav"
-    },
-    {
-      "text": "Halte Abstand, während der AED den Herzrhythmus analysiert.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_analyse.wav"
-    },
-    {
-      "text": "Nie dotykaj osoby, gdy AED analizuje rytm serca.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_analyse.wav"
-    },
-    {
-      "text": "Keep clear while the AED analyses the heart rhythm.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_analyse.wav"
-    },
-    {
-      "text": "Der AED empfiehlt einen Schock. Hände weg von der Person, dann drück die blinkende Schocktaste.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_shock_clear.wav"
-    },
-    {
-      "text": "AED zaleca wyładowanie. Ręce precz od osoby, potem naciśnij migający przycisk wyładowania.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_shock_clear.wav"
-    },
-    {
-      "text": "The AED advises a shock. Hands off the person, then press the flashing shock button.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_shock_clear.wav"
-    },
-    {
-      "text": "Hände weg von der Person. Drück die blinkende Schocktaste, wenn der AED dazu auffordert.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_countdown.wav"
-    },
-    {
-      "text": "Ręce precz od osoby. Naciśnij migający przycisk wyładowania, gdy AED o to poprosi.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_countdown.wav"
-    },
-    {
-      "text": "Hands off the person. Press the flashing shock button when the AED tells you to.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_countdown.wav"
-    },
-    {
       "text": "Drück jetzt sofort weiter. Der Zähler beginnt wieder bei null: dreißig Kompressionen, dann zweimal beatmen.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/aed_resume.wav"
@@ -637,16 +572,6 @@
       "text": "Teraz wznów uciskanie bez oddechów i bez przerw. Licznik zaczyna znowu od zera.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/aed_resume_only.wav"
-    },
-    {
-      "text": "Der AED ist da. Schalte ihn jetzt ein: Berühre den grünen Einschaltknopf.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_arrived.wav"
-    },
-    {
-      "text": "AED jest na miejscu. Włącz go teraz: dotknij zielonego przycisku zasilania.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_arrived.wav"
     },
     {
       "text": "Berühre eine Elektrode und führe sie zum goldenen Umriss auf der Brust. Dann die zweite Elektrode.",
@@ -1309,11 +1234,6 @@
       "path": "res://assets/audio/coaching/de/aed_pad_missed_padleft.wav"
     },
     {
-      "text": "Diese Elektrode liegt noch nicht auf einem Umriss. Führe sie zu einem der goldenen Umrisse auf der Brust.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_pad_missed.wav"
-    },
-    {
       "text": "Brakuje jeszcze jednej elektrody. Przyklej ją po prawej stronie klatki piersiowej, pod obojczykiem, na złoty kontur.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/aed_pad_padright.wav"
@@ -1334,11 +1254,6 @@
       "path": "res://assets/audio/coaching/pl/aed_pad_missed_padleft.wav"
     },
     {
-      "text": "Ta elektroda nie leży jeszcze na konturze. Przenieś ją na jeden ze złotych konturów na klatce piersiowej.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_pad_missed.wav"
-    },
-    {
       "text": "One pad is still missing. Put it on the right side of his chest, below the collarbone, on the golden outline.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/aed_pad_padright.wav"
@@ -1357,11 +1272,6 @@
       "text": "That pad is not on the outline yet. It belongs on his left side, below the armpit.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/aed_pad_missed_padleft.wav"
-    },
-    {
-      "text": "That pad is not on an outline yet. Bring it to one of the golden outlines on his chest.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_pad_missed.wav"
     },
     {
       "text": "Ich habe gesehen, dass du auf die Schultern getippt hast. Reagiert die Person? Bitte sag ja oder nein.",

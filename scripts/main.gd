@@ -154,13 +154,9 @@ func _ready() -> void:
 	# the blue backpack fetches the AED.
 	$Bystanders/Anna.set_look(ANNA_JACKET)
 	$Bystanders/Marek.add_backpack.call_deferred(MAREK_BACKPACK)
-	# One short sentence when the AED is there, and the pads only after it is switched
-	# on (see aed.spoke below). The former text explained power, both pads, the outlines
-	# and the whole shock pattern in one 40 s speech that every CPR prompt cut off.
-	director.device_delivered.connect(func():
-		var guidance := NaretTrainingCoach.instruction("aed_arrived", _language)
-		_toast(guidance)
-		if not _smoke_mode: audio_manager.speak(guidance, _language, "", "instructor"))
+	# When the AED arrives only Marek speaks (marek_back_aed: "Here is the AED. Switch it on
+	# with the green button."); the instructor's separate aed_arrived line was merged into
+	# it on 2026-11-26. The pads come only after it is switched on (see aed.spoke below).
 	# The instructor is a speaker, not a second rescuer in the scenario.
 	$Instructor.patient = mannequin
 	$Instructor.attention = "trainee"
@@ -273,6 +269,8 @@ func _ready() -> void:
 		# Unclassified audio must not provoke generated clinical instructions.
 		var step := NaretTrainingCoach.step(scenario)
 		var guidance := NaretTrainingCoach.instruction(step, _language)
+		# Steps without a line of their own (aed_countdown since 26 Nov 2026) stay silent.
+		if guidance.is_empty(): return
 		_toast(guidance)
 		# The patient-side text panel is removed. Give audible feedback once per
 		# step so an unrelated recognition cannot leave the learner in silence.
@@ -308,7 +306,7 @@ func _ready() -> void:
 			text = NaretTrainingCoach.feedback(scenario, _last_heard_report, "unclear", _language)
 		_toast(text)
 		if not _smoke_mode:
-			var clip := "speech_repeat" if bystander_language() == "en" else ""
+			var clip := ""
 			audio_manager.speak(text, bystander_language(), clip, _guide_speaker()))
 	_build_ui()
 	tracker = NaretArucoTracker.new()
@@ -1875,7 +1873,6 @@ func _on_action(action: String, details: Dictionary = {}) -> void:
 				# and put it back on the stool by hand, but is not told to.
 			"reassure":
 				$Bystanders/Anna.set_emotion("calm")
-				_scripted_speech("calm")
 			"shock":
 				aed.shock()
 				_toast(NaretLanguage.ui("Schock simuliert · Sofort CPR fortsetzen", "Symulowane wyładowanie · Wznów RKO", _language))
@@ -3409,7 +3406,10 @@ func _pad_guidance(why: String) -> void:
 	var missing: Array[String] = aed.missing_pads()
 	if missing.is_empty(): return
 	var key := "aed_pads_how"
-	if why == "missed": key = "aed_pad_missed_" + missing[0] if missing.size() == 1 else "aed_pad_missed"
+	if why == "missed":
+		# Both pads off the outlines: no extra line (26 Nov 2026); the outlines show it.
+		if missing.size() != 1: return
+		key = "aed_pad_missed_" + missing[0]
 	elif missing.size() == 1: key = "aed_pad_" + missing[0]
 	var now := Time.get_ticks_msec()
 	if why != "one_left" and now - _pad_guidance_ms < PAD_GUIDANCE_QUIET_MS: return
@@ -3527,6 +3527,8 @@ func _announce_coach_step() -> void:
 	# Repeat guidance only when requested; timed repeats interrupt conversation.
 
 func _on_reply(reply: Dictionary) -> void:
+	# Anna has no scripted "calm" line any more: an empty reply means she stays silent.
+	if str(reply.get("text", "")).strip_edges().is_empty(): return
 	var speaker := str(reply.get("speaker", "bystander"))
 	print("NARET_REPLY speaker=", speaker, " source=", reply.get("source", ""), " action=", reply.get("action", ""), " next=", reply.get("next_step", ""), " text=", str(reply.get("text", "")).left(120))
 	if speaker in ["instructor", "dispatcher"] and reply.get("next_step", "") != NaretTrainingCoach.step(scenario): return
@@ -3595,7 +3597,12 @@ func _on_ccbm_status(status: String) -> void:
 		var spoken := NaretTrainingCoach.current_instruction(scenario, _language)
 		if _dispatcher_leads() and _has_coach_text("dispatcher_" + NaretTrainingCoach.current_key(scenario)):
 			spoken = NaretTrainingCoach.instruction("dispatcher_" + NaretTrainingCoach.current_key(scenario), _language)
-		if not _smoke_mode: audio_manager.speak(spoken, _language, "", _guide_speaker())
+		# The step line is repeated at most once per step (26 Nov 2026): every further
+		# unclear or out-of-order report only updates the text on screen.
+		var repeat_step := NaretTrainingCoach.step(scenario)
+		if not _smoke_mode and not spoken.is_empty() and _unclassified_spoken_step != repeat_step:
+			_unclassified_spoken_step = repeat_step
+			audio_manager.speak(spoken, _language, "", _guide_speaker())
 	if _language == "en":
 		message = "Heard: " + _last_heard_report + "\n" + message + "\nNext: " + _next_spoken_step()
 	_toast(message)

@@ -6,20 +6,21 @@ signal reply_ready(reply: Dictionary)
 signal status_changed(message: String)
 
 const ACTIONS := ["calm", "call_help", "fetch_aed", "thank", "none"]
-const CLIP_KEYS := {"calm": "calm", "call_help": "help", "fetch_aed": "aed", "thank": "thanks", "none": "calm"}
+## "calm", "thank" and "none" have no spoken line (removed 2026-11-25/26): Anna stays silent.
+const CLIP_KEYS := {"calm": "", "call_help": "help", "fetch_aed": "aed", "thank": "", "none": ""}
 const REPLIES := {
-	"en": {"calm": "I will stay calm. Please tell me how I can help.", "call_help": "I am calling the emergency services on one one two.", "fetch_aed": "I will fetch the automated defibrillator.", "thank": "Thank you for helping. I will stay here."},
+	"en": {"calm": "", "call_help": "I am calling the emergency services on one one two.", "fetch_aed": "I will fetch the automated defibrillator.", "thank": ""},
 	"de": {
-		"calm": "Ich bleibe ruhig. Bitte sagen Sie mir, wie ich helfen kann.",
+		"calm": "",
 		"call_help": "Ich rufe den Rettungsdienst unter hundertzwölf an.",
 		"fetch_aed": "Ich hole den automatisierten Defibrillator.",
-		"thank": "Danke, dass Sie helfen. Ich bleibe hier.",
+		"thank": "",
 	},
 	"pl": {
-		"calm": "Zachowam spokój. Proszę powiedzieć, jak mogę pomóc.",
+		"calm": "",
 		"call_help": "Dzwonię pod numer sto dwanaście i wzywam pomoc.",
 		"fetch_aed": "Przyniosę automatyczny defibrylator.",
-		"thank": "Dziękuję za pomoc. Zostanę tutaj.",
+		"thank": "",
 	},
 }
 var single_witness := false

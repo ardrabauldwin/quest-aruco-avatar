@@ -65,7 +65,7 @@ const SHOCK_COUNTDOWN_S := 3.0
 ## After its announcement the device waits this long before it goes on by itself.
 const CLEAR_DELAY_S := 2.0
 ## The shock button waits for the trainee; the device repeats its request this often.
-const SHOCK_REMIND_S := 8.0
+const SHOCK_REMIND_S := 15.0 # 8 s until 26 Nov 2026: felt too pushy
 ## Drawn larger than in aed.glb (3.4 cm) and standing proud, like the power key; a
 ## fingertip within SHOCK_RANGE_M presses it.
 const SHOCK_BUTTON_SCALE := 1.47

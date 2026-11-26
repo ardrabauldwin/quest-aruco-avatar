@@ -21,12 +21,9 @@ func run() -> Array[String]:
 	check(said.has("anna_arrive"), "1.1 Anna calls for help when the scene starts")
 	check(not scenario.aed_available, "the AED is not on scene before anyone fetched it")
 	director.advance(9.0)
-	# Headset review 2026-10-29: the plea interrupted trainees who were already acting.
-	check(not said.has("anna_urge"), "1.1 Anna no longer pleads when nobody acts for 8 s")
 
 	scenario.submit_action("begin_check")
 	scenario.submit_action("check_responsiveness")
-	check(said.has("anna_name"), "1.2 Anna calls Jan by name during the check")
 	director.advance(3.0)
 	check(said.has("marek_offer"), "1.3 Marek offers help once Jan does not respond")
 	director.advance(16.0)
@@ -41,13 +38,13 @@ func run() -> Array[String]:
 	check(said.has("anna_breathing"), "1.5 Anna presses when the breathing check drags on")
 	scenario.submit_action("check_breathing")
 
-	# The first strokes after the pause are warm-up and do not count.
-	for i in NaretBystanderDirector.GOOD_STREAK + NaretBystanderDirector.WARMUP_STROKES:
+	# 26 Nov 2026: no praise and no rate corrections during compressions any more.
+	for i in 20:
 		scenario.submit_action("compression", {"rate_bpm": 110.0, "source": "test"})
-	check(said.has("anna_good"), "1.7 Anna notices 20 good compressions")
+	check(not said.has("anna_good"), "1.7 Anna does not comment on good compressions")
 	for i in 4:
 		scenario.submit_action("compression", {"rate_bpm": 85.0, "source": "test"})
-	check(said.has("marek_faster"), "1.8 the dispatcher asks for a faster rate")
+	check(not said.has("marek_faster"), "1.8 nobody asks for a faster rate")
 	director.advance(15.0)
 	check(said.has("anna_pause"), "1.11 Anna protests a pause longer than 10 s")
 	check(said.has("marek_prompt_aed"), "1.6 Marek offers to fetch an AED nobody asked for")

@@ -13,15 +13,6 @@
   },
   "clips": [
     {
-      "key": "calm",
-      "language": "de",
-      "speaker": "anna",
-      "text": "Ich bleibe ruhig. Bitte sagen Sie mir, wie ich helfen kann.",
-      "file": "tts_de/calm.wav",
-      "duration_s": 3.019,
-      "sha256": "7ddfb687961674068bc7b5e30ebcdd930176a088826d8888088b5836f4157341"
-    },
-    {
       "key": "help",
       "language": "de",
       "speaker": "anna",
@@ -39,15 +30,6 @@
       "file": "tts_de/aed.wav",
       "duration_s": 2.461,
       "sha256": "72749110e55fddffb1c7d9349a65debf07da5904fe7e7006f1963ee3a90f4b1f"
-    },
-    {
-      "key": "thanks",
-      "language": "de",
-      "speaker": "anna",
-      "text": "Danke, dass Sie helfen. Ich bleibe hier.",
-      "file": "tts_de/thanks.wav",
-      "duration_s": 2.183,
-      "sha256": "13857cb431c1a01fabb66956b880d1e4cb7918ed98a1090a43097d1cefc8a5e8"
     },
     {
       "key": "start",
@@ -96,25 +78,6 @@
       "generator": "piper:de_DE-kerstin-low"
     },
     {
-      "key": "anna_urge",
-      "language": "de",
-      "speaker": "anna",
-      "text": "Bitte, tun Sie doch etwas!",
-      "file": "tts_de/anna_urge.wav",
-      "duration_s": 1.95,
-      "sha256": "54d48b38e7f8cc7c3fd7b106c6c03cd5b4304e948691ffb92af88427b421a5f2"
-    },
-    {
-      "key": "anna_name",
-      "language": "de",
-      "speaker": "anna",
-      "text": "Hallo! Hören Sie mich?",
-      "file": "tts_de/anna_name.wav",
-      "duration_s": 1.216,
-      "sha256": "b26d7c1d49d9c1117b971d644b8c2e85b9595e634f652d547e7d150a86a93e9c",
-      "generator": "piper:de_DE-kerstin-low"
-    },
-    {
       "key": "anna_breathing",
       "language": "de",
       "speaker": "anna",
@@ -122,15 +85,6 @@
       "file": "tts_de/anna_breathing.wav",
       "duration_s": 2.368,
       "sha256": "ba2a892a0d0696e180bfecbf0a5f54fac56507ec66e19cbdd1da6874d0b5f94d"
-    },
-    {
-      "key": "anna_good",
-      "language": "de",
-      "speaker": "anna",
-      "text": "Ja … Sie machen das gut. Bitte hören Sie nicht auf.",
-      "file": "tts_de/anna_good.wav",
-      "duration_s": 3.437,
-      "sha256": "20a33a32cd0df4d49002693a1aea99e29e36dc426d64048f684d11fa049bd769"
     },
     {
       "key": "anna_pause",
@@ -197,15 +151,6 @@
       "sha256": "39cce9073ae1afc29ccdba6b5d33aee2ceaa4787ce398fad8cc9d02a4a12b2a2"
     },
     {
-      "key": "calm",
-      "language": "pl",
-      "speaker": "anna",
-      "text": "Zachowam spokój. Proszę powiedzieć, jak mogę pomóc.",
-      "file": "tts_pl/calm.wav",
-      "duration_s": 3.947,
-      "sha256": "9bb9140a785029090b6324507e420ce436a5f80c65a72e26f0e3bd55252856ec"
-    },
-    {
       "key": "help",
       "language": "pl",
       "speaker": "anna",
@@ -223,15 +168,6 @@
       "file": "tts_pl/aed.wav",
       "duration_s": 2.647,
       "sha256": "f484588851d3b9040daa8042acb1d811a35ac5caeae29c67f8e826a467ea5ca5"
-    },
-    {
-      "key": "thanks",
-      "language": "pl",
-      "speaker": "anna",
-      "text": "Dziękuję za pomoc. Zostanę tutaj.",
-      "file": "tts_pl/thanks.wav",
-      "duration_s": 2.647,
-      "sha256": "b0d79421ef02bf2143fa554adb45172b02d230cb5556200443a4211a57fc9d61"
     },
     {
       "key": "start",
@@ -280,25 +216,6 @@
       "generator": "piper:pl_PL-gosia-medium"
     },
     {
-      "key": "anna_urge",
-      "language": "pl",
-      "speaker": "anna",
-      "text": "Proszę, niech ktoś coś zrobi!",
-      "file": "tts_pl/anna_urge.wav",
-      "duration_s": 1.95,
-      "sha256": "654475bfb7c4b6c6615ccc89859e054b3528a7bf7d3aef0c245e37aab48aca52"
-    },
-    {
-      "key": "anna_name",
-      "language": "pl",
-      "speaker": "anna",
-      "text": "Halo! Słyszy mnie pan?",
-      "file": "tts_pl/anna_name.wav",
-      "duration_s": 1.509,
-      "sha256": "eada9eda7dbbc6d3cbe9748a78d03e8fbf4dbaf1c5369e47ad4329f5c3eb01eb",
-      "generator": "piper:pl_PL-gosia-medium"
-    },
-    {
       "key": "anna_breathing",
       "language": "pl",
       "speaker": "anna",
@@ -306,15 +223,6 @@
       "file": "tts_pl/anna_breathing.wav",
       "duration_s": 2.786,
       "sha256": "17c780b20d30a7df17c1471e0c2e71ba9562362325a94fa510f092c23dbf67d2"
-    },
-    {
-      "key": "anna_good",
-      "language": "pl",
-      "speaker": "anna",
-      "text": "Tak… dobrze to idzie. Proszę nie przestawać.",
-      "file": "tts_pl/anna_good.wav",
-      "duration_s": 3.251,
-      "sha256": "e505b479b5b5af8c0eddade9bfe7fad444a282357832631f275a38836529a27c"
     },
     {
       "key": "anna_pause",
@@ -444,33 +352,6 @@
       "sha256": "a97c3e92258c228ef88c8327fe19d5badcec5c8719c20910abd209334c99f3a4"
     },
     {
-      "key": "marek_faster",
-      "language": "de",
-      "speaker": "marek",
-      "text": "Die Leitstelle sagt: schneller drücken!",
-      "file": "tts_de/marek_faster.wav",
-      "duration_s": 2.461,
-      "sha256": "2ed72903355090675cdbbbd13064b18b05fc2488395b5f214bde7b58d3d0f7b0"
-    },
-    {
-      "key": "marek_slower",
-      "language": "de",
-      "speaker": "marek",
-      "text": "Etwas langsamer, sagt die Leitstelle.",
-      "file": "tts_de/marek_slower.wav",
-      "duration_s": 2.461,
-      "sha256": "69c7e2b957ebac8066c554ffd0d2c394a8a6781f4e166a97366480d06528f19c"
-    },
-    {
-      "key": "marek_position",
-      "language": "de",
-      "speaker": "marek",
-      "text": "Die Hände in die Mitte der Brust, sagt die Leitstelle.",
-      "file": "tts_de/marek_position.wav",
-      "duration_s": 2.972,
-      "sha256": "9ded6ec3bdfa5accecd657b015a8a79699edaeb554d27b4c8be1312434f2f64d"
-    },
-    {
       "key": "marek_resume",
       "language": "de",
       "speaker": "marek",
@@ -559,33 +440,6 @@
       "file": "tts_pl/marek_back_aed.wav",
       "duration_s": 2.926,
       "sha256": "85d892598cedb57ba885f6b49201e882a4dc22710f5c34a04e41ef3958472d3a"
-    },
-    {
-      "key": "marek_faster",
-      "language": "pl",
-      "speaker": "marek",
-      "text": "Dyspozytor mówi: szybciej uciskać!",
-      "file": "tts_pl/marek_faster.wav",
-      "duration_s": 2.972,
-      "sha256": "82c91e723c2c48285ddf373b1eaf95f2121eaddf12255ac2071f85637873c25e"
-    },
-    {
-      "key": "marek_slower",
-      "language": "pl",
-      "speaker": "marek",
-      "text": "Trochę wolniej, mówi dyspozytor.",
-      "file": "tts_pl/marek_slower.wav",
-      "duration_s": 2.136,
-      "sha256": "d2712263b2f0d8c17837959ea48a8e18a9bb37edc4829cc3a2b65f1ef55af9d0"
-    },
-    {
-      "key": "marek_position",
-      "language": "pl",
-      "speaker": "marek",
-      "text": "Ręce na środek klatki piersiowej, mówi dyspozytor.",
-      "file": "tts_pl/marek_position.wav",
-      "duration_s": 3.715,
-      "sha256": "99f19f38714101123f5159b430ee220e6682953d02fc8630a780bce3fb01f807"
     },
     {
       "key": "marek_resume",
@@ -777,16 +631,6 @@
       "sha256": "6aab0de71c57a854d7f48b84137be564c5161ad59102277dcc50f75ea93dbfd1"
     },
     {
-      "key": "calm",
-      "text": "I will stay calm. Please tell me how I can help.",
-      "speaker": "anna",
-      "language": "en",
-      "file": "tts_en/calm.wav",
-      "duration_s": 2.936,
-      "sha256": "b669d84028f7447173bbb3a9e2b3de7eeedd3823b037bdb2fb49747ee541421d",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
-    },
-    {
       "key": "help",
       "text": "I'm calling 112. I'm putting the phone on speaker.",
       "speaker": "anna",
@@ -795,16 +639,6 @@
       "duration_s": 3.973,
       "sha256": "f4223322174ac99663cdd5ca533b53e8fbbbcd5c7337d862543750ce7d34d4fa",
       "generator": "tts-1:af_sky"
-    },
-    {
-      "key": "thanks",
-      "text": "Thank you for helping. I will stay here.",
-      "speaker": "anna",
-      "language": "en",
-      "file": "tts_en/thanks.wav",
-      "duration_s": 2.317,
-      "sha256": "1cae36b72cd421fa46444a59aa42086d02764cd156c4867f74a70c0a8d40d45f",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
     },
     {
       "key": "start",
@@ -865,36 +699,6 @@
       "duration_s": 2.998,
       "sha256": "d963c1d3fa1f1c5864d76e9393d668c24dec5296cf8bbff4a876d64056e19f60",
       "generator": "tts-1:af_sky"
-    },
-    {
-      "key": "anna_urge",
-      "text": "Please, do something!",
-      "speaker": "anna",
-      "language": "en",
-      "file": "tts_en/anna_urge.wav",
-      "duration_s": 1.595,
-      "sha256": "768add10032b7516c11ca1b8ae2f00bd26d4c54116bd4a45e1bbf56308b46d50",
-      "generator": "Windows System.Speech, Microsoft Zira Desktop"
-    },
-    {
-      "key": "anna_name",
-      "language": "en",
-      "speaker": "anna",
-      "text": "Hello! Can you hear me?",
-      "file": "tts_en/anna_name.wav",
-      "duration_s": 1.753,
-      "sha256": "faf72401aee023c38cde3e643f2bbb7079bdcd7d8ee63ea450407fc8dea96531",
-      "generator": "tts-1:af_sky"
-    },
-    {
-      "key": "speech_repeat",
-      "text": "I could not confirm that step. Please say one report at a time. For example: The scene is safe.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/speech_repeat.wav",
-      "duration_s": 5.698,
-      "sha256": "5432c6c621927dcf09b6bbb3911917b5a0b43b6c2c7d7d8d46c75be821de5768",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
     },
     {
       "key": "confirm_begin_check",

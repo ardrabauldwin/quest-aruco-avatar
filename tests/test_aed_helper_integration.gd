@@ -263,7 +263,7 @@ func run() -> Array[String]:
 	meaning.action = "shock"
 	check(Interpreter.accepted_action(meaning, "Shock") == "", "speech cannot deliver a shock")
 	for lang in ["en", "de", "pl"]:
-		for key in ["aed_apply", "aed_clear", "aed_analyse", "aed_shock_clear", "aed_countdown", "aed_resume"]:
+		for key in ["aed_apply", "aed_clear", "aed_resume"]:
 			check(not NaretTrainingCoach.instruction(key, lang).is_empty(), "interactive AED guidance " + lang + " " + key)
 	for node in [director, device, world, anna, marek, patient, scenario]: node.free()
 	return failures

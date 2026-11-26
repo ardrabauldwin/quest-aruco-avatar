@@ -7,31 +7,11 @@
     "style": "[panicked, breathless]",
     "en": "Help! This man has just collapsed! Please help him!"
   },
-  "anna_urge": {
-    "speaker": "anna",
-    "de": "Bitte, tun Sie doch etwas!",
-    "pl": "Proszę, niech ktoś coś zrobi!",
-    "style": "[desperate, pleading]",
-    "en": "Please, do something!"
-  },
-  "anna_name": {
-    "speaker": "anna",
-    "de": "Hallo! Hören Sie mich?",
-    "pl": "Halo! Słyszy mnie pan?",
-    "style": "[shouting, frightened]",
-    "en": "Hello! Can you hear me?"
-  },
   "anna_breathing": {
     "speaker": "anna",
     "de": "Atmet er? Sagen Sie doch etwas!",
     "pl": "Czy on oddycha? Proszę coś powiedzieć!",
     "style": "[anxious]"
-  },
-  "anna_good": {
-    "speaker": "anna",
-    "de": "Ja … Sie machen das gut. Bitte hören Sie nicht auf.",
-    "pl": "Tak… dobrze to idzie. Proszę nie przestawać.",
-    "style": "[shaky, a little relieved]"
   },
   "anna_pause": {
     "speaker": "anna",
@@ -114,28 +94,10 @@
   },
   "marek_back_aed": {
     "speaker": "marek",
-    "de": "Hier ist der AED! Machen Sie ihn an.",
-    "pl": "Tu jest AED! Proszę go włączyć.",
+    "de": "Hier ist der AED. Schalten Sie ihn mit dem grünen Knopf ein.",
+    "pl": "Tu jest AED. Proszę go włączyć zielonym przyciskiem.",
     "style": "[out of breath]",
-    "en": "Here is the AED. Please switch it on."
-  },
-  "marek_faster": {
-    "speaker": "marek",
-    "de": "Die Leitstelle sagt: schneller drücken!",
-    "pl": "Dyspozytor mówi: szybciej uciskać!",
-    "style": "[urgent]"
-  },
-  "marek_slower": {
-    "speaker": "marek",
-    "de": "Etwas langsamer, sagt die Leitstelle.",
-    "pl": "Trochę wolniej, mówi dyspozytor.",
-    "style": "[calm]"
-  },
-  "marek_position": {
-    "speaker": "marek",
-    "de": "Die Hände in die Mitte der Brust, sagt die Leitstelle.",
-    "pl": "Ręce na środek klatki piersiowej, mówi dyspozytor.",
-    "style": "[calm, clear]"
+    "en": "Here is the AED. Switch it on with the green button."
   },
   "marek_resume": {
     "speaker": "marek",

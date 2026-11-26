@@ -495,7 +495,7 @@ func answer_playing() -> bool:
 
 var _current_urgent := false
 
-func speak(text: String, lang: String = "pl", clip_key: String = "calm", speaker: String = "bystander", keep: bool = false) -> void:
+func speak(text: String, lang: String = "pl", clip_key: String = "", speaker: String = "bystander", keep: bool = false) -> void:
 	var urgent := _next_urgent
 	_next_urgent = false
 	## keep: an instructor line that a newer instruction must not replace (feedback such as
@@ -599,9 +599,8 @@ func _prepare_next() -> void:
 				print("NARET_CLIP_MISSING speaker=%s text=%s" % [item.get("speaker", ""), str(item["text"]).left(90)])
 				status_changed.emit("audio_clip_missing")
 				continue
+			# A missing clip stays silent; no substitute line is played instead.
 			var clip_id: String = item["language"] + "/" + item["clip_key"]
-			if not _clips.has(clip_id):
-				clip_id = item["language"] + "/calm"
 			stream = _clips.get(clip_id)
 			item["text"] = _clip_texts.get(clip_id, item["text"])
 			status_changed.emit("tts_offline_clip")

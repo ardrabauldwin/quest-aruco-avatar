@@ -10,7 +10,6 @@ signal line_spoken(key: String, speaker: String)
 const LINES_PATH := "res://data/bystander_lines.json"
 ## Real public AEDs are about a minute away; the training shortens the errand.
 const FETCH_S := 45.0
-const URGE_AFTER_S := 8.0
 ## From the 112 call (ERC 2025: breathing is checked while the call connects).
 const BREATH_CHECK_S := 12.0
 ## Jan gasps once during the breathing check; Anna takes it for breathing.
@@ -20,12 +19,8 @@ const PROMPT_CALL_S := 15.0
 const PROMPT_AED_S := 20.0
 const INTRUDE_S := 4.0
 const RESUME_AFTER_SHOCK_S := 5.0
-const GOOD_STREAK := 15
 ## 1.18 The ambulance arrives this long after the circulation came back.
 const EMS_AFTER_S := 8.0
-## Strokes after a pause whose rate does not count: the rate averages the last
-## five intervals, which still hold the hands getting onto the chest.
-const WARMUP_STROKES := 5
 
 var scenario: NaretScenario
 var anna: NaretBystander
@@ -53,13 +48,6 @@ var _called_t := -1.0
 var _cpr_started_t := -1.0
 var _last_activity_t := -1.0
 var _shock_t := -1.0
-var _wrong_strokes := 0
-## Strokes after a pause that do not count for the rate: the first interval
-## still contains the time the hands took to get onto the chest.
-var _warmup := 0
-var _good := 0
-var _slow := 0
-var _fast := 0
 var _fetch_left := -1.0
 var _intrude_left := -1.0
 var _intruded := false
@@ -106,10 +94,6 @@ func advance(delta: float) -> void:
 	if scenario == null:
 		return
 	var state := scenario.state
-	# 1.1 Nobody moves: Anna pleads. Switched off on headset review 2026-10-29: the
-	# "Please, do something!" line interrupted trainees who were already acting.
-	if false and state == NaretScenario.State.INTRO and _t - _state_t > URGE_AFTER_S:
-		_say_once("anna_urge")
 	# 1.5 Nobody has been sent to call 112 yet: Marek offers.
 	if state == NaretScenario.State.CALL_HELP and not scenario.emergency_called and _t - _state_t > PROMPT_CALL_S:
 		_say_once("marek_prompt_call")
@@ -194,7 +178,6 @@ func _on_event(event: Dictionary) -> void:
 	var details: Dictionary = event.get("details", {})
 	match action:
 		"check_responsiveness":
-			_say("anna_name", 0.0)
 			# 1.3 Marek steps in once it is clear nobody responds.
 			_after(2.5, func():
 				_say("marek_offer", 0.0)
@@ -228,7 +211,7 @@ func _on_event(event: Dictionary) -> void:
 			# strokes of the handover itself).
 			if marek_compressing and _t - _take_over_t > 2.0:
 				_marek_stop()
-			_on_compression(float(details.get("rate_bpm", 0.0)))
+			_last_activity_t = _t
 		"ventilation":
 			_last_activity_t = _t
 		"analyze_rhythm":
@@ -244,39 +227,9 @@ func _on_event(event: Dictionary) -> void:
 			if scenario.aed_stage == NaretScenario.AEDStage.READY_TO_ANALYZE and not _intruded:
 				_start_intrusion()
 
-func _on_compression(rate: float) -> void:
-	if _t - _last_activity_t > 2.0:
-		_warmup = WARMUP_STROKES
-	_last_activity_t = _t
-	if _warmup > 0:
-		_warmup -= 1
-		return
-	if rate <= 0.0 or rate > 400.0:
-		return
-	# A little tolerance round 100–120/min: tracked hands measure the rate with a
-	# few per minute of noise, and one noisy stroke must not trigger a correction.
-	_good = _good + 1 if rate >= 98.0 and rate <= 122.0 else 0
-	_slow = _slow + 1 if rate < 98.0 else 0
-	_fast = _fast + 1 if rate > 124.0 else 0
-	if _good >= GOOD_STREAK:
-		_say("anna_good", 90.0)
-	# The dispatcher speaks through Marek's phone: only while he is here with it.
-	if scenario.emergency_called and _marek_on_phone():
-		if _slow >= 4:
-			_say("marek_faster", 20.0)
-		if _fast >= 4:
-			_say("marek_slower", 20.0)
-
-func on_stroke(correct_position: bool) -> void:
-	## 1.10 Every measured stroke, also off target (those never reach the scenario):
-	## three in a row off the centre of the chest and the dispatcher corrects via
-	## Marek. Hands lifted for breaths or the AED are no strokes and never count.
-	_wrong_strokes = 0 if correct_position else _wrong_strokes + 1
-	if _wrong_strokes >= 3 and scenario and scenario.emergency_called and _marek_on_phone():
-		_say("marek_position", 20.0)
-
-func _marek_on_phone() -> bool:
-	return marek == null or (marek.visible and _fetch_left <= 0.0 and not (aed and aed._held))
+## Removed 26 Nov 2026: Anna's praise (anna_good) and the dispatcher's rate and hand
+## corrections through Marek (marek_faster, marek_slower, marek_position) repeated too
+## often during compressions. Compressions now only reset the pause clock above.
 
 func on_intent(intent: String) -> void:
 	## Spoken "Abstand! Nicht berühren!" while Anna reaches for Jan (1.14).
@@ -433,13 +386,8 @@ func _reset() -> void:
 	_cpr_started_t = -1.0
 	_last_activity_t = -1.0
 	_shock_t = -1.0
-	_wrong_strokes = 0
-	_warmup = 0
 	marek_compressing = false
 	_after_quiet.clear()
-	_good = 0
-	_slow = 0
-	_fast = 0
 	_fetch_left = -1.0
 	_intrude_left = -1.0
 	_intruded = false

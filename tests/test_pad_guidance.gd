@@ -36,7 +36,7 @@ func run() -> Array[String]:
 	var pad_a := Node3D.new()
 	var pad_b := Node3D.new()
 	var text := func(key: String) -> String: return NaretTrainingCoach.instruction(key, "en")
-	for key in ["aed_pads_how", "aed_pad_PadRight", "aed_pad_PadLeft", "aed_pad_missed_PadRight", "aed_pad_missed_PadLeft", "aed_pad_missed"]:
+	for key in ["aed_pads_how", "aed_pad_PadRight", "aed_pad_PadLeft", "aed_pad_missed_PadRight", "aed_pad_missed_PadLeft"]:
 		for language in ["en", "de", "pl"]:
 			var line := NaretTrainingCoach.instruction(key, language)
 			check(not line.is_empty() and (language == "en" or line != NaretTrainingCoach.instruction(key, "en")), "%s has its own text in %s" % [key, language])
@@ -82,16 +82,17 @@ func run() -> Array[String]:
 	host._update_pad_guidance()
 	check(audio.lines.size() == before and host.aed.pads_ready(), "both pads on their outlines: nothing is said")
 
-	# A pad missed while none is on: the outline in general.
+	# A pad missed while none is on: no extra line since 26 Nov 2026 (the outlines show it).
 	host.aed._placed.clear()
 	host._pad_guidance_ms = -100000
+	var said_before: int = audio.lines.size()
 	host._pad_guidance("missed")
-	check(audio.lines.back().text == text.call("aed_pad_missed"), "a pad let go with none placed: bring it to an outline")
+	check(audio.lines.size() == said_before, "a pad let go with none placed: nothing is said")
 
 	# Every line has its recorded voice.
 	var manager := NaretAudioManager.new()
 	tree.root.add_child(manager)
-	for key in ["aed_pad_PadRight", "aed_pad_PadLeft", "aed_pad_missed_PadRight", "aed_pad_missed_PadLeft", "aed_pad_missed"]:
+	for key in ["aed_pad_PadRight", "aed_pad_PadLeft", "aed_pad_missed_PadRight", "aed_pad_missed_PadLeft"]:
 		for language in ["en", "de", "pl"]:
 			check(manager._coach_clips.get(language + ":instructor:" + NaretTrainingCoach.instruction(key, language)) is AudioStream, "%s has a recorded voice in %s" % [key, language])
 	manager.free()

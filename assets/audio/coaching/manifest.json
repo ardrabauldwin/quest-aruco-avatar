@@ -1,11 +1,6 @@
 {
   "clips": [
     {
-      "text": "Place the patient, save your controller adjustment with A, then start training.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/setup.wav"
-    },
-    {
       "text": "You see a person who needs help. What do you do first? Please perform the first step.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/safety.wav"
@@ -61,11 +56,6 @@
       "path": "res://assets/audio/coaching/en/handover.wav"
     },
     {
-      "text": "Patient platzieren, die Controller-Anpassung mit A speichern und das Training starten.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/setup.wav"
-    },
-    {
       "text": "Du siehst eine Person, die Hilfe braucht. Was tust du zuerst? Bitte führe den ersten Schritt aus.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/safety.wav"
@@ -119,11 +109,6 @@
       "text": "Drück weiter, bis der Rettungsdienst übernimmt. Der AED bleibt angeschlossen. Dann übergib kurz, tritt zurück, und wir besprechen das Training.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/handover.wav"
-    },
-    {
-      "text": "Ustaw pacjenta, zapisz dopasowanie przyciskiem A i rozpocznij trening.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/setup.wav"
     },
     {
       "text": "Widzisz osobę, która potrzebuje pomocy. Co robisz najpierw? Wykonaj pierwszy krok.",
@@ -196,21 +181,6 @@
       "path": "res://assets/audio/coaching/pl/breaths.wav"
     },
     {
-      "text": "Keep pushing now. The next 30 compressions.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/resume_compressions.wav"
-    },
-    {
-      "text": "Drück jetzt weiter. Die nächsten 30 Kompressionen.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/resume_compressions.wav"
-    },
-    {
-      "text": "Teraz uciskaj dalej. Kolejne 30 uciśnięć.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/resume_compressions.wav"
-    },
-    {
       "text": "Touch a pad and bring it to the golden outline on his chest. Then the second pad.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/aed_pads_how.wav"
@@ -244,16 +214,6 @@
       "text": "Take the bag from the ground and place the mask over his mouth and nose.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/coach_bvm_place_mask.wav"
-    },
-    {
-      "text": "Hold the mask sealed with one hand and squeeze the bag slowly with the other. Watch the chest rise.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_bvm_squeeze.wav"
-    },
-    {
-      "text": "Hold the mask with your other hand while you squeeze.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_bvm_hold_mask.wav"
     },
     {
       "text": "I didn't see you tap his shoulders. Please tap them and check whether he responds.",
@@ -433,21 +393,6 @@
       "path": "res://assets/audio/coaching/en/coach_who_gets_aed.wav"
     },
     {
-      "text": "Unterbrich die Herzdruckmassage nicht länger als 10 Sekunden.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_pause_too_long.wav"
-    },
-    {
-      "text": "Nie przerywaj uciskania na dłużej niż 10 sekund.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_pause_too_long.wav"
-    },
-    {
-      "text": "Do not interrupt the compressions for longer than 10 seconds.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_pause_too_long.wav"
-    },
-    {
       "text": "Drück weiter, bis der Rettungsdienst übernimmt. Dann übergib kurz, tritt zurück, und wir besprechen das Training.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/handover_alone.wav"
@@ -537,21 +482,6 @@
       "text": "Mężczyzna z niebieskim plecakiem przynosi AED. Kontynuuj RKO i nie czekaj na niego.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/aed_wait.wav"
-    },
-    {
-      "text": "Das ist ein virtueller Trainings-AED. Berühre den Einschaltknopf. Nimm eine Elektrode, führe sie wie abgebildet auf den freien Brustkorb und lass los; dann die zweite. Die App erkennt, wo die Elektroden kleben. Der Helfer drückt währenddessen weiter. Folge dann den Anweisungen des AED.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_apply.wav"
-    },
-    {
-      "text": "To wirtualny AED treningowy. Dotknij przycisku zasilania. Weź elektrodę, przyłóż ją do odsłoniętej klatki piersiowej zgodnie z rysunkiem i puść; potem drugą. Aplikacja wykrywa, gdzie są elektrody. Pomocnik w tym czasie uciska. Potem wykonuj polecenia AED.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_apply.wav"
-    },
-    {
-      "text": "This is a virtual training AED. Touch its power button. Take a pad, bring it to the bare chest as shown and let go; then the second pad. The app detects where the pads are. The helper keeps pushing meanwhile. Then follow the AED's prompts.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_apply.wav"
     },
     {
       "text": "Drück jetzt sofort weiter. Der Zähler beginnt wieder bei null: dreißig Kompressionen, dann zweimal beatmen.",
@@ -705,51 +635,6 @@
       "language": "en",
       "path": "res://assets/audio/coaching/en/dispatcher_speaker.wav",
       "speaker": "dispatcher"
-    },
-    {
-      "text": "Überstreck zuerst den Kopf: eine Hand an die Stirn, mit der anderen das Kinn anheben.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_tilt_head.wav"
-    },
-    {
-      "text": "Najpierw odchyl głowę: jedna ręka na czole, drugą unieś brodę.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_tilt_head.wav"
-    },
-    {
-      "text": "First tilt the head back: one hand on the forehead, lift the chin with the other.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_tilt_head.wav"
-    },
-    {
-      "text": "Geh mit dem Ohr näher an den Mund und schau dabei auf den Brustkorb.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_closer_to_mouth.wav"
-    },
-    {
-      "text": "Przyłóż ucho bliżej ust i patrz przy tym na klatkę piersiową.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_closer_to_mouth.wav"
-    },
-    {
-      "text": "Bring your ear closer to the mouth and look at the chest while you do.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_closer_to_mouth.wav"
-    },
-    {
-      "text": "Bleib bitte bei der Person.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_stay_with_person.wav"
-    },
-    {
-      "text": "Zostań przy tej osobie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_stay_with_person.wav"
-    },
-    {
-      "text": "Stay with the person.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_stay_with_person.wav"
     },
     {
       "text": "Und wer ruft die 112 an? Sprich jemanden direkt an.",
@@ -1121,21 +1006,6 @@
       "path": "res://assets/audio/coaching/en/welcome_menu.wav"
     },
     {
-      "text": "Reagiert er?",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_report_response.wav"
-    },
-    {
-      "text": "Czy ta osoba reaguje?",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_report_response.wav"
-    },
-    {
-      "text": "Does he respond?",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_report_response.wav"
-    },
-    {
       "text": "Tippe auf die grüne 112 am Handy in deiner linken Hand.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/coach_phone_tap_112.wav"
@@ -1317,6 +1187,21 @@
       "text": "I checked him too, and I think he is not responding. Please look again.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/coach_patient_unresponsive.wav"
+    },
+    {
+      "text": "The AED is here. Switch it on now: touch its green power button.",
+      "language": "en",
+      "path": "res://assets/audio/coaching/en/aed_arrived.wav"
+    },
+    {
+      "text": "Der AED ist da. Schalte ihn jetzt ein: Berühre den grünen Einschaltknopf.",
+      "language": "de",
+      "path": "res://assets/audio/coaching/de/aed_arrived.wav"
+    },
+    {
+      "text": "AED jest na miejscu. Włącz go teraz: dotknij zielonego przycisku zasilania.",
+      "language": "pl",
+      "path": "res://assets/audio/coaching/pl/aed_arrived.wav"
     }
   ]
 }

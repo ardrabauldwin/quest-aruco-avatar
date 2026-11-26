@@ -81,7 +81,7 @@ func _run() -> void:
 			_note(scenario, combination, "handover")
 			scenario.queue_free()
 	# The AED's own voice and the texts shown with it.
-	for key in ["aed_apply", "aed_clear", "aed_resume", "aed_resume_only", "aed_request", "aed_pads_how"]:
+	for key in ["aed_clear", "aed_resume", "aed_resume_only", "aed_request", "aed_pads_how"]:
 		var path := "res://assets/audio/coaching/%s/%s.wav" % [_lang, key]
 		var there := ResourceLoader.exists(path)
 		if not there: _problems += 1

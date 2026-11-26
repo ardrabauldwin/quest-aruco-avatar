@@ -31,9 +31,9 @@ BASE = str(api.get('base_url', 'https://apphubai.wolke.uni-greifswald.de/v1')).r
 CRLF = '\r\n'
 VOICES = {'instructor': 'am_adam', 'anna': 'af_sky', 'marek': 'bm_george', 'aed': 'af_bella'}
 # The instructor's lines that are spoken as they stand (not the long on-screen AED texts).
-INSTRUCTOR_GUIDANCE = ['aed_pads_how', 'aed_resume', 'aed_resume_only', 'aed_wait']
+INSTRUCTOR_GUIDANCE = ['aed_arrived', 'aed_pads_how', 'aed_resume', 'aed_resume_only', 'aed_wait']
 INSTRUCTOR_UI = ['coach.scene_unsafe', 'coach.scene_unsafe_again', 'coach.shake_firmly', 'coach.open_airway_hint', 'coach.check_time',
-    'coach.hands_on_box', 'coach.bvm_place_mask', 'coach.bvm_squeeze', 'coach.bvm_hold_mask',
+    'coach.hands_on_box', 'coach.bvm_place_mask', 'coach.bvm_squeeze',
     'error.shoulders_not_seen', 'error.breathing_not_seen', 'error.breaths_not_seen']
 
 

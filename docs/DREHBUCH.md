@@ -32,6 +32,8 @@ Die Reihenfolge des Algorithmus bleibt in jedem Szenario gleich. Die Varianten �
 
 ---
 
+> **Stand 26.11.2026:** Die App nutzt den AED-Helfer-Ablauf (`aed_helper_director.gd`). Von den Sätzen dieser Tabelle werden nur noch gesprochen: `anna_arrive` (nur als Stimmprobe im Handmenü), `marek_go_aed`, `marek_take_aed`, `marek_take_over` und die AED-Ansagen. Alle anderen Sätze von Anna und Marek wurden entfernt; der Notruf und die Anleitung kommen von der Leitstelle.
+
 ## Szenario 1 (Standard): Zusammenbruch auf dem Gehweg
 
 **Ausgangslage:** Grenzübergang Frankfurt (Oder) / Słubice, später Nachmittag. Jan ist auf dem Gehweg zusammengebrochen. Anna kniet nicht, sie steht hilflos daneben. Marek kommt gerade vorbei. Ein öffentlicher AED hängt im Eingang der nahen Apotheke, etwa eine Minute entfernt (in der Übung auf 45 s verkürzt).

@@ -203,13 +203,18 @@ class Confirmation extends RefCounted:
 			var fuzzy := Fuzzy.propose(text, language, allowed)
 			if fuzzy.is_empty(): return {}
 			_action = str(fuzzy.proposal)
-			_breaths = int(fuzzy.breaths)
+			_breaths = 2 if _action == "ventilation" else int(fuzzy.breaths)
 			_context = context
 			_deadline = now + LIFETIME_MS
+			fuzzy.breaths = _breaths
 			return fuzzy
 		_action = candidate
 		_context = context
 		_deadline = now + LIFETIME_MS
+		# Breaths are only ever asked about as the pair (26 Nov 2026).
+		if candidate == "ventilation":
+			_breaths = 2
+			return {"proposal": candidate, "breaths": 2}
 		return {"proposal": candidate}
 
 	## Holds a yes/no question about `action` that main asked because the interpreter was in
@@ -218,6 +223,8 @@ class Confirmation extends RefCounted:
 		if breaths not in [1,2] or (action != "ventilation" and breaths != 1):
 			clear()
 			return
+		# No one-breath question any more (26 Nov 2026): breaths are confirmed as the pair.
+		if action == "ventilation": breaths = 2
 		_action = action
 		_context = context
 		_deadline = now + LIFETIME_MS
@@ -235,5 +242,5 @@ class Confirmation extends RefCounted:
 			"de": {"begin_check": "Hast du gesagt, dass die Umgebung sicher ist? Antworte mit ja oder nein.", "check_responsiveness": "Hast du festgestellt, dass die Person nicht reagiert? Antworte mit ja oder nein.", "call_emergency": "Hast du die 112 angerufen oder anrufen lassen? Antworte mit ja oder nein.", "check_breathing": "Hast du festgestellt, dass die Person nicht normal atmet? Antworte mit ja oder nein.", "ventilation": "Hast du einmal beatmet? Antworte mit ja oder nein.", "pair": "Hast du zweimal beatmet? Antworte mit ja oder nein."},
 			"pl": {"begin_check": "Czy otoczenie jest bezpieczne? Odpowiedz tak lub nie.", "check_responsiveness": "Czy stwierdzasz, że osoba nie reaguje? Odpowiedz tak lub nie.", "call_emergency": "Czy zadzwoniono pod 112? Odpowiedz tak lub nie.", "check_breathing": "Czy stwierdzasz, że osoba nie oddycha normalnie? Odpowiedz tak lub nie.", "ventilation": "Czy wykonano jeden oddech? Odpowiedz tak lub nie.", "pair": "Czy wykonano dwa oddechy? Odpowiedz tak lub nie."}
 		}
-		var key := "pair" if action == "ventilation" and breaths == 2 else action
+		var key := "pair" if action == "ventilation" else action
 		return str(lines.get(language, lines.en).get(key, repeat_message(language)))

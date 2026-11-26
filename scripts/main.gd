@@ -154,9 +154,15 @@ func _ready() -> void:
 	# the blue backpack fetches the AED.
 	$Bystanders/Anna.set_look(ANNA_JACKET)
 	$Bystanders/Marek.add_backpack.call_deferred(MAREK_BACKPACK)
-	# When the AED arrives only Marek speaks (marek_back_aed: "Here is the AED. Switch it on
-	# with the green button."); the instructor's separate aed_arrived line was merged into
-	# it on 2026-11-26. The pads come only after it is switched on (see aed.spoke below).
+	# One short sentence when the AED is there, and the pads only after it is switched
+	# on (see aed.spoke below). The former text explained power, both pads, the outlines
+	# and the whole shock pattern in one 40 s speech that every CPR prompt cut off.
+	# (Restored 26 Nov 2026: the AED helper director says only "I have brought the
+	# defibrillator", so this is the one line that says to switch it on.)
+	director.device_delivered.connect(func():
+		var guidance := NaretTrainingCoach.instruction("aed_arrived", _language)
+		_toast(guidance)
+		if not _smoke_mode: audio_manager.speak(guidance, _language, "", "instructor"))
 	# The instructor is a speaker, not a second rescuer in the scenario.
 	$Instructor.patient = mannequin
 	$Instructor.attention = "trainee"
@@ -2011,9 +2017,12 @@ func _call_connecting() -> bool:
 func _dispatcher_leads() -> bool:
 	return _dispatcher_step == 2 and scenario != null and NaretTrainingCoach.step(scenario) in DISPATCHER_STEPS
 
-## Who gives a hint or yes/no question now: the dispatcher while she leads, else the instructor.
+## Who gives a hint or yes/no question now: the dispatcher from the moment the call has
+## started, in the steps she leads (breathing, compressions, breaths); else the instructor.
+## 26 Nov 2026: the instructor no longer repeats her lines while the call is connecting.
 func _guide_speaker() -> String:
-	return "dispatcher" if _dispatcher_leads() else "instructor"
+	var dispatcher_step := scenario != null and NaretTrainingCoach.step(scenario) in DISPATCHER_STEPS
+	return "dispatcher" if _dispatcher_step >= 1 and dispatcher_step else "instructor"
 
 static func _has_coach_text(key: String) -> bool:
 	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/coach_steps.json"))
@@ -3263,7 +3272,7 @@ func _on_transcript(text: String) -> void:
 			_toast(question)
 			# Exact text is mandatory: do not substitute a one-breath recording
 			# for a two-breath question or an unrelated clip when TTS is down.
-			_speak_question(question)
+			_speak_question(question, candidate)
 			return
 		if interpreted.has("message"):
 			_toast(str(interpreted.message))
@@ -3290,7 +3299,7 @@ func _ask_step_question() -> bool:
 	_speech_confirmation.propose(str(pick.action), _confirmation_context(), Time.get_ticks_msec(), _language, int(pick.breaths))
 	var question := preload("res://scripts/ai/speech_pipeline.gd").Confirmation.question(str(pick.action), int(pick.breaths), _language)
 	_toast(question)
-	_speak_question(question)
+	_speak_question(question, str(pick.action))
 	return true
 
 ## The same yes/no question is not spoken again within this time. It has three
@@ -3302,14 +3311,16 @@ const QUESTION_QUIET_MS := 25000
 var _question_said := ""
 var _question_said_ms := -100000
 
-func _speak_question(question: String) -> void:
+func _speak_question(question: String, action: String = "") -> void:
 	var now := Time.get_ticks_msec()
 	if question == _question_said and now - _question_said_ms < QUESTION_QUIET_MS:
 		print("NARET_QUESTION not repeated (asked %.0f s ago)" % ((now - _question_said_ms) / 1000.0))
 		return
 	_question_said = question
 	_question_said_ms = now
-	audio_manager.speak(question, _language, "", _guide_speaker())
+	# The breaths question is always the dispatcher's (26 Nov 2026), never the instructor's.
+	var speaker := "dispatcher" if action == "ventilation" else _guide_speaker()
+	audio_manager.speak(question, _language, "", speaker)
 
 func _on_conversation(text: String) -> void:
 	if NaretTrainingCoach.asks_for_help(text):

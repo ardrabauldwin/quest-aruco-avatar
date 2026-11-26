@@ -9,6 +9,11 @@ func run() -> Array[String]:
 		for step: String in guide[language]:
 			# The dispatcher's own wording (issue #1) is recorded in her voice.
 			var speaker := "dispatcher" if step.begins_with("dispatcher_") else "instructor"
+			# Same words as the dispatcher's line: only she says it (26 Nov 2026), no
+			# second instructor recording.
+			if speaker == "instructor" and str(guide[language].get("dispatcher_" + step, "")) == str(guide[language][step]): continue
+			# A step without a spoken line ("setup" since 26 Nov 2026) needs no recording.
+			if str(guide[language][step]).is_empty(): continue
 			var key := language + ":" + speaker + ":" + str(guide[language][step])
 			check(manager._coach_clips.get(key) is AudioStream, language + " " + step + " has bundled " + speaker + " audio")
 	manager._voice_cache.clear()

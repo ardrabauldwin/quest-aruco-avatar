@@ -1,6 +1,6 @@
 {
   "en": {
-    "setup": "Place the patient, save your controller adjustment with A, then start training.",
+    "setup": "",
     "safety": "You see a person who needs help. What do you do first? Please perform the first step.",
     "response": "Check whether the person responds and report to me.",
     "call": "Speak to someone directly and ask them to call 112.",
@@ -26,7 +26,7 @@
     "dispatcher_resume_compressions": "Keep pushing now. The next 30 compressions."
   },
   "de": {
-    "setup": "Patient platzieren, die Controller-Anpassung mit A speichern und das Training starten.",
+    "setup": "",
     "safety": "Du siehst eine Person, die Hilfe braucht. Was tust du zuerst? Bitte führe den ersten Schritt aus.",
     "response": "Prüfe, ob die Person reagiert, und berichte mir.",
     "call": "Sprich jemanden direkt an und bitte darum, die 112 anzurufen.",
@@ -52,7 +52,7 @@
     "dispatcher_resume_compressions": "Drück jetzt weiter. Die nächsten 30 Kompressionen."
   },
   "pl": {
-    "setup": "Ustaw pacjenta, zapisz dopasowanie przyciskiem A i rozpocznij trening.",
+    "setup": "",
     "safety": "Widzisz osobę, która potrzebuje pomocy. Co robisz najpierw? Wykonaj pierwszy krok.",
     "response": "Sprawdź, czy osoba reaguje, i zgłoś mi to.",
     "call": "Zwróć się do kogoś bezpośrednio i poproś o telefon pod 112.",

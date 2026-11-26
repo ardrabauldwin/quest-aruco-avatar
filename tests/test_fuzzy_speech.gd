@@ -44,7 +44,8 @@ func run() -> Array[String]:
 	for language in ["en", "de", "pl"]:
 		for action in ["begin_check", "check_responsiveness", "check_breathing", "ventilation"]:
 			check(not Gate.question(action, 1, language).is_empty(), "localized confirmation available")
-		check(Gate.question("ventilation", 1, language) != Gate.question("ventilation", 2, language), "one/two questions differ")
+		# 26 Nov 2026: no one-breath question; breaths are always asked about as the pair.
+		check(Gate.question("ventilation", 1, language) == Gate.question("ventilation", 2, language), "breaths are asked about as the pair")
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/audio/confirmation/manifest.json"))
 	var recorded := {}
 	for clip: Dictionary in manifest.clips:

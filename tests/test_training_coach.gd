@@ -26,10 +26,12 @@ func run() -> Array[String]:
 	check(Coach.step(scenario) == "compressions", "Repeat cycle")
 	check(Coach.current_instruction(scenario, "en").begins_with("Keep pushing"), "Completed breath pair explicitly prompts resuming compressions")
 	for language in ["en", "de", "pl"]:
-		for key in ["safety", "response", "call", "breathing", "compressions", "breaths", "breath_one", "breath_two", "compression_only", "finish", "handover", "aed"]:
+		for key in ["safety", "response", "call", "dispatcher_breathing", "compressions", "breaths", "breath_one", "breath_two", "compression_only", "finish", "handover", "aed"]:
 			check(not Coach.instruction(key, language).is_empty(), language + " instruction " + key)
-		# 26 Nov 2026: the setup step has no spoken line.
+		# 26 Nov 2026: the setup step has no spoken line, and the breathing check is the
+		# dispatcher's alone.
 		check(Coach.instruction("setup", language).is_empty(), language + " setup has no line")
+		check(Coach.instruction("breathing", language).is_empty(), language + " breathing is the dispatcher's")
 	check(Coach.asks_for_help("What should I do next?"), "Help routes to instructor")
 	check(Coach.asks_for_help("What shall I do?"), "Natural next-step wording routes to instructor")
 	check(Coach.asks_witness("What happened?"), "Background question routes to the witness")

@@ -73,7 +73,7 @@ func run() -> Array[String]:
 	check(scenario.submit_action("check_breathing", {"source": "speech", "face_seen": true}), "breathing report with face evidence is accepted")
 	check(scenario.get_state_name() == "cpr", "...and CPR begins")
 	scenario.free()
-	for key in ["error.breathing_not_seen", "coach.open_airway_hint", "coach.check_time"]:
+	for key in ["error.breathing_not_seen", "coach.open_airway_hint"]:
 		for lang in ["en", "de", "pl"]:
 			var text := NaretLanguage.text(key, lang)
 			check(not text.is_empty() and text != key, "text %s exists in %s" % [key, lang])

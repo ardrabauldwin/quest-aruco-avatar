@@ -494,8 +494,13 @@ func answer_playing() -> bool:
 	return _playing and _current_urgent
 
 var _current_urgent := false
+## While set, every line meant for the instructor is spoken by this speaker instead
+## (26 Nov 2026: from the 112 call until the ambulance arrives only the dispatcher talks).
+var instructor_voice := ""
 
 func speak(text: String, lang: String = "pl", clip_key: String = "", speaker: String = "bystander", keep: bool = false) -> void:
+	if speaker == "instructor" and not instructor_voice.is_empty():
+		speaker = instructor_voice
 	var urgent := _next_urgent
 	_next_urgent = false
 	## keep: an instructor line that a newer instruction must not replace (feedback such as

@@ -91,7 +91,8 @@ func run() -> Array[String]:
 	audio.lines.clear()
 	host._on_action("handover", {"source": "speech"})
 	check(host.scenario.state == NaretScenario.State.CPR, "an early handover request does not end the training (state %s)" % host.scenario.get_state_name())
-	check(audio.lines.size() == 1 and audio.lines[0].text == NaretLanguage.text("coach.keep_going_until_crew", "en"), "the trainee is told to keep going until the crew takes over")
+	# 26 Nov 2026: no spoken "keep going" any more; the request is simply ignored.
+	check(audio.lines.is_empty(), "an early handover request is ignored silently, got %s" % [audio.lines])
 	host._ems_state = 2
 	host._on_action("handover", {"source": "ems"})
 	check(host.scenario.state == NaretScenario.State.RECOVERY, "with the crew there the handover ends the training")

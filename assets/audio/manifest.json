@@ -32,42 +32,6 @@
       "sha256": "72749110e55fddffb1c7d9349a65debf07da5904fe7e7006f1963ee3a90f4b1f"
     },
     {
-      "key": "start",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Wir beginnen die Übung. Prüfen Sie zuerst, ob die Person reagiert.",
-      "file": "tts_de/start.wav",
-      "duration_s": 4.505,
-      "sha256": "188ff03ce563a09f1f57d9e3991fc0e765a67819894d8a53b1c69bba213d7f9f"
-    },
-    {
-      "key": "cpr",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Beginnen Sie die Herzdruckmassage: dreißig Kompressionen und zwei Beatmungen.",
-      "file": "tts_de/cpr.wav",
-      "duration_s": 5.201,
-      "sha256": "9edaf589394e1f5bbdda961138ce4cb6a08eb28a02933f7b0df5a6e83c410e65"
-    },
-    {
-      "key": "aed_instruction",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Schalten Sie den Defibrillator ein und folgen Sie seinen Anweisungen.",
-      "file": "tts_de/aed_instruction.wav",
-      "duration_s": 4.226,
-      "sha256": "955693de258287b8c38acb1e0497358e95d8b1527763bb1b778fb57443295c55"
-    },
-    {
-      "key": "recovery",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Die Übung ist beendet. Besprechen Sie jetzt Ihr Vorgehen.",
-      "file": "tts_de/recovery.wav",
-      "duration_s": 3.669,
-      "sha256": "e6e6662fef2aa1386d3fcdd6e8cec09e37b188a37a6ff83e02c8a861eefb6a02"
-    },
-    {
       "key": "anna_arrive",
       "language": "de",
       "speaker": "anna",
@@ -95,42 +59,6 @@
       "file": "tts_pl/aed.wav",
       "duration_s": 2.647,
       "sha256": "f484588851d3b9040daa8042acb1d811a35ac5caeae29c67f8e826a467ea5ca5"
-    },
-    {
-      "key": "start",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Zaczynamy ćwiczenie. Najpierw sprawdź, czy osoba reaguje.",
-      "file": "tts_pl/start.wav",
-      "duration_s": 5.108,
-      "sha256": "f6dbbf926c197edbf0c22ec829c5a41692a9fe9ddca170c326672a75ede9d490"
-    },
-    {
-      "key": "cpr",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Rozpocznij resuscytację: trzydzieści uciśnięć i dwa oddechy ratownicze.",
-      "file": "tts_pl/cpr.wav",
-      "duration_s": 5.526,
-      "sha256": "943be2b8a8acde620aa26bbc3093ab6c38d101ea45c79322a5c2d8077363b783"
-    },
-    {
-      "key": "aed_instruction",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Włącz defibrylator i wykonuj jego polecenia.",
-      "file": "tts_pl/aed_instruction.wav",
-      "duration_s": 3.344,
-      "sha256": "dbb992ea3f15566e37471ee2cca9a8456caf7692fa3d6be99dd1f61d6398a599"
-    },
-    {
-      "key": "recovery",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Ćwiczenie zakończone. Omówcie teraz swoje działania.",
-      "file": "tts_pl/recovery.wav",
-      "duration_s": 4.365,
-      "sha256": "d9e02c7e5e3a63eb08c405b9156ee34db970b528592c86a9812515f5269fe54e"
     },
     {
       "key": "anna_arrive",
@@ -269,42 +197,6 @@
       "sha256": "152f789a28b8c4043ef2251c9b426a6c0cebcf22a4ec982b598490d581c83c81"
     },
     {
-      "key": "check_patient",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Sprechen Sie die Person laut an und rütteln Sie sie vorsichtig an den Schultern.",
-      "file": "tts_de/check_patient.wav",
-      "duration_s": 4.69,
-      "sha256": "1d416bba560b2d8f80989ab238cdc18a497a6a2810af2dd09d2e23db3cb41c08"
-    },
-    {
-      "key": "call_help",
-      "language": "de",
-      "speaker": "instructor",
-      "text": "Keine Reaktion? Rufen Sie sofort hundertzwölf an, mit Lautsprecher. Dann Atemwege öffnen und die Atmung höchstens zehn Sekunden prüfen.",
-      "file": "tts_de/call_help.wav",
-      "duration_s": 9.845,
-      "sha256": "44ddf4616a2825becc3894e72f40ebb94bf66f2c6f6bab3a0d745a640ccb396f"
-    },
-    {
-      "key": "check_patient",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Głośno zwróć się do osoby i delikatnie potrząśnij ją za ramiona.",
-      "file": "tts_pl/check_patient.wav",
-      "duration_s": 5.016,
-      "sha256": "c3b2ed61e99e9232d45f6d63bf07630cc3b8c3677e8dd6d12cf1a7bdea02f431"
-    },
-    {
-      "key": "call_help",
-      "language": "pl",
-      "speaker": "instructor",
-      "text": "Brak reakcji? Natychmiast zadzwoń pod sto dwanaście, na głośniku. Potem udrożnij drogi oddechowe i oceniaj oddech najwyżej dziesięć sekund.",
-      "file": "tts_pl/call_help.wav",
-      "duration_s": 11.146,
-      "sha256": "b8071c81b62824a48521c28f1bff65909656ff10f7c0aeaa65a8cdbc71ad0341"
-    },
-    {
       "key": "marek_take_over",
       "language": "de",
       "speaker": "marek",
@@ -333,56 +225,6 @@
       "generator": "tts-1:af_sky"
     },
     {
-      "key": "start",
-      "text": "We are starting the exercise. First check whether the person responds.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/start.wav",
-      "duration_s": 4.175,
-      "sha256": "924d8b149a3d443a3d9ffa39110107402ef4cb56ee860019b1cf3e6bc309ec09",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "check_patient",
-      "text": "Speak loudly to the person and gently shake their shoulders.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/check_patient.wav",
-      "duration_s": 3.499,
-      "sha256": "b1fda2d91865ef0f36c8aff4d086e8607e0ad5ef146c8f8b2ad33f70e2a70dbd",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "call_help",
-      "text": "No response? Call one one two immediately, on speakerphone. Then open the airway and check breathing for no more than ten seconds.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/call_help.wav",
-      "duration_s": 7.762,
-      "sha256": "41312a8c243bdad8dcffbf329ec7c51dd2282086e073853f206df69becc5fa99",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "cpr",
-      "text": "Begin chest compressions: thirty compressions and two rescue breaths.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/cpr.wav",
-      "duration_s": 4.117,
-      "sha256": "883e258a3bb562a8a1560c32e4d5e995fdd73478abe769dc3731ccea93dbd905",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "recovery",
-      "text": "The exercise has ended. Now discuss what you did.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/recovery.wav",
-      "duration_s": 3.357,
-      "sha256": "a7594a345d5c0eb421715951b0d665851e2c28cf251cd7ad4ab2dc67ecc81e3c",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
       "key": "anna_arrive",
       "language": "en",
       "speaker": "anna",
@@ -391,36 +233,6 @@
       "duration_s": 2.998,
       "sha256": "d963c1d3fa1f1c5864d76e9393d668c24dec5296cf8bbff4a876d64056e19f60",
       "generator": "tts-1:af_sky"
-    },
-    {
-      "key": "confirm_begin_check",
-      "text": "Did you say the scene is safe? Say yes or no.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/confirm_begin_check.wav",
-      "duration_s": 2.797,
-      "sha256": "c417f4a8d2585d269c5744689acd08b420f73d8cc39b593b0ce8effbcee0a146",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "confirm_check_responsiveness",
-      "text": "Did you report that he is not responding? Say yes or no.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/confirm_check_responsiveness.wav",
-      "duration_s": 3.621,
-      "sha256": "369f12a39b69c1f34db3fb046877b7e1d643f342103a30272fa255b1977d9024",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
-    },
-    {
-      "key": "confirm_check_breathing",
-      "text": "Did you report that he is not breathing normally? Say yes or no.",
-      "speaker": "instructor",
-      "language": "en",
-      "file": "tts_en/confirm_check_breathing.wav",
-      "duration_s": 3.843,
-      "sha256": "5c74f409b3363b24106b5e64d473699d699ab9f37213cf478d423aedd5581f77",
-      "generator": "Windows System.Speech, Microsoft Hazel Desktop"
     },
     {
       "key": "marek_take_aed",

@@ -15,6 +15,6 @@ func run() -> Array[String]:
 		if item.language == "en":
 			english[item.key] = true
 			check(ResourceLoader.exists("res://assets/audio/" + item.file), "English audio exists: " + item.key)
-	for key in ["start", "check_patient", "call_help", "cpr", "recovery", "help", "anna_arrive"]:
+	for key in ["help", "anna_arrive"]:
 		check(english.has(key), "active script has English audio: " + key)
 	return failures

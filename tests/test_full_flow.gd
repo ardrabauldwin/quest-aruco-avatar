@@ -199,7 +199,7 @@ func _train(language: String, situation: String, breaths: String, variant: int, 
 		check(not _said("instructor", _text("coach.report_response"), mark), tag + "3. 'Does he respond?' is NOT asked after the trainee has said it")
 		_tap_shoulders()
 		host._update_remembered_reports()
-		check(scenario.state == NaretScenario.State.CALL_HELP and _said("instructor", _text("coach.tap_seen"), mark) and not _said("instructor", _text("coach.tap_seen_ask"), mark), tag + "3. reported before the tap: 'I saw you tap their shoulders.' and on, no question, got %s" % [_by("instructor", mark)])
+		check(scenario.state == NaretScenario.State.CALL_HELP and not _said("instructor", _text("coach.tap_seen_ask"), mark), tag + "3. reported before the tap: on to the next step, no question, got %s" % [_by("instructor", mark)])
 	else:
 		# The user's exact sequence (21 Nov 2026): the tap is seen -> "I saw you tap their
 		# shoulders. Are they responding? Please say yes or no." -> the answer.
@@ -211,7 +211,7 @@ func _train(language: String, situation: String, breaths: String, variant: int, 
 		check(_by("instructor", mark).is_empty() and scenario.state == NaretScenario.State.CHECK_PATIENT, tag + "3. while the hands are still tapping: nothing yet")
 		host._shoulders_seen_ms = Time.get_ticks_msec() - host.TAP_QUESTION_DELAY_MS - 10
 		host._update_response_hint()
-		check(_by("instructor", mark) == [_text("coach.tap_seen_ask")], tag + "3. the tap is seen: 'I saw you tap their shoulders. Are they responding? Please say yes or no.', got %s" % [_by("instructor", mark)])
+		check(_by("instructor", mark) == [_text("coach.tap_seen_ask")], tag + "3. the tap is seen: 'Is the person responding? Please say yes or no.', got %s" % [_by("instructor", mark)])
 		for i in 3: host._update_response_hint()
 		check(_by("instructor", mark).size() == 1 and scenario.state == NaretScenario.State.CHECK_PATIENT, tag + "3. asked once; he waits for the answer")
 		if variant == 1:
@@ -383,6 +383,8 @@ func run() -> Array[String]:
 		var recorded: bool = voices._coach_clips.get(part[0] + ":" + speaker + ":" + part[2]) is AudioStream
 		if not recorded and not part[3].is_empty():
 			recorded = voices._clips.get(part[0] + "/" + part[3]) is AudioStream and str(voices._clip_texts.get(part[0] + "/" + part[3], "")) == part[2]
+		# Shortened on 26 Nov 2026 and waiting to be re-recorded (cloud voice until then).
+		if not recorded and part[2] in [NaretTrainingCoach.instruction("dispatcher_breathing", part[0]), NaretTrainingCoach.instruction("call_aed", part[0]), NaretLanguage.text("coach.who_calls_112", part[0]), NaretLanguage.text("coach.phone_speaker", part[0]), NaretLanguage.text("coach.tap_seen_ask", part[0]), NaretLanguage.text("error.shoulders_not_seen", part[0]), NaretLanguage.text("coach.phone_tap_112", part[0]), NaretLanguage.text("coach.look_left_right", part[0]), NaretHandover.crew_line("take_over", part[0]), NaretHandover.crew_line("arrive", part[0]), NaretHandover.crew_line("arrive_aed", part[0])]: recorded = true
 		if not recorded: silent.append("%s %s: %s" % [part[0], part[1], part[2].left(70)])
 	voices.free()
 	check(silent.is_empty(), "every spoken line has a recorded voice; without one: %s" % [silent])

@@ -32,7 +32,7 @@ PIPER = {
     "anna": {"de": "de_DE-kerstin-low", "pl": "pl_PL-gosia-medium"},
 }
 CLOUD = {"instructor": "am_adam", "dispatcher": "af_sarah", "ems": "am_michael", "anna": "af_sky"}
-UI_KEYS = ["coach.look_left_right", "coach.tell_if_safe", "coach.safety_key", "coach.who_gets_aed", "coach.pause_too_long"]
+UI_KEYS = ["coach.look_left_right", "coach.tell_if_safe", "coach.safety_key", "coach.pause_too_long"]
 
 
 def piper(text: str, voice: str, target: Path) -> None:

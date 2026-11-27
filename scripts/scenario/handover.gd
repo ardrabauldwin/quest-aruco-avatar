@@ -17,28 +17,17 @@ const FACTS := {
 const REQUIRED := ["no_response", "not_breathing", "compressions"]
 
 const CREW := {
-	"arrive": {"de": "Guten Tag, Rettungsdienst. Wir übernehmen gleich. Drücken Sie bitte weiter und beschreiben Sie kurz den Zustand der Person und die bisherigen Maßnahmen.",
-		"pl": "Dzień dobry, ratownictwo medyczne. Zaraz przejmujemy. Proszę dalej uciskać i krótko opisać stan osoby oraz dotychczasowe działania.",
-		"en": "Hello, ambulance service. We are taking over in a moment. Please keep pushing and briefly describe the person's condition and what has been done so far."},
-	"more": {"de": "Was haben Sie bisher gemacht? Reagiert die Person, atmet sie normal?",
-		"pl": "Co Pan lub Pani do tej pory zrobił? Czy osoba reaguje, czy oddycha normalnie?",
-		"en": "What have you done so far? Does the person respond, are they breathing normally?"},
-	"take_over": {"de": "Danke. Wir übernehmen jetzt. Treten Sie bitte zurück. Der AED bleibt angeschlossen.",
-		"pl": "Dziękuję. Teraz przejmujemy. Proszę się odsunąć. AED pozostaje podłączony.",
-		"en": "Thank you. We are taking over now. Please step back. The AED stays attached."},
-	# Situation A: there is no AED.
-	"take_over_alone": {"de": "Danke. Wir übernehmen jetzt. Treten Sie bitte zurück.",
-		"pl": "Dziękuję. Teraz przejmujemy. Proszę się odsunąć.",
-		"en": "Thank you. We are taking over now. Please step back."},
-	# Follow-up for the one fact still missing (17 Nov 2026: the answer must say something).
-	"ask_no_response": {"de": "Reagiert die Person auf Ansprache?", "pl": "Czy osoba reaguje na głos?", "en": "Does the person respond when spoken to?"},
-	"ask_not_breathing": {"de": "Atmet die Person normal?", "pl": "Czy osoba oddycha normalnie?", "en": "Is the person breathing normally?"},
-	"ask_compressions": {"de": "Was haben Sie bisher gemacht?", "pl": "Co zostało dotąd zrobione?", "en": "What have you done so far?"},
-	"ask_aed": {"de": "Wurde ein AED eingesetzt, und hat er einen Schock abgegeben?", "pl": "Czy użyto AED i czy wykonał wyładowanie?", "en": "Was an AED used, and did it deliver a shock?"},
-	# Step-back gate: the hands are still at the patient.
-	"step_back": {"de": "Bitte nehmen Sie jetzt die Hände von der Person und treten Sie zurück.",
-		"pl": "Proszę teraz zabrać ręce od tej osoby i się odsunąć.",
-		"en": "Please take your hands off the person now and step back."},
+	# One prompt, once (26 Nov 2026): the crew asks for the whole handover in one sentence.
+	"arrive": {"de": "Guten Tag, Rettungsdienst. Drücken Sie bitte weiter und sagen Sie uns kurz: Reagiert die Person, atmet sie normal, und was haben Sie gemacht?",
+		"pl": "Dzień dobry, ratownictwo medyczne. Proszę dalej uciskać i krótko powiedzieć: czy osoba reaguje, czy oddycha normalnie i co zostało zrobione?",
+		"en": "Hello, ambulance service. Please keep pushing and tell us briefly: does the person respond, are they breathing normally, and what did you do?"},
+	"arrive_aed": {"de": "Guten Tag, Rettungsdienst. Drücken Sie bitte weiter und sagen Sie uns kurz: Reagiert die Person, atmet sie normal, was haben Sie gemacht, und hat der AED einen Schock abgegeben?",
+		"pl": "Dzień dobry, ratownictwo medyczne. Proszę dalej uciskać i krótko powiedzieć: czy osoba reaguje, czy oddycha normalnie, co zostało zrobione i czy AED wykonał wyładowanie?",
+		"en": "Hello, ambulance service. Please keep pushing and tell us briefly: does the person respond, are they breathing normally, what did you do, and did the AED deliver a shock?"},
+	# One line for A and B (26 Nov 2026: "The AED stays attached" removed).
+	"take_over": {"de": "Danke. Wir übernehmen jetzt. Nehmen Sie bitte die Hände von der Person und treten Sie zurück.",
+		"pl": "Dziękuję. Teraz przejmujemy. Proszę zabrać ręce od tej osoby i się odsunąć.",
+		"en": "Thank you. We are taking over now. Please take your hands off the person and step back."},
 }
 
 ## "No" to "Does the person respond?" / "Is the person breathing normally?" is the fact

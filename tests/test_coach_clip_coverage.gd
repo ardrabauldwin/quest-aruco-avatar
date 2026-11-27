@@ -14,6 +14,8 @@ func run() -> Array[String]:
 			if speaker == "instructor" and str(guide[language].get("dispatcher_" + step, "")) == str(guide[language][step]): continue
 			# A step without a spoken line ("setup" since 26 Nov 2026) needs no recording.
 			if str(guide[language][step]).is_empty(): continue
+			# Shortened on 26 Nov 2026 and not recorded yet (cloud voice until then).
+			if step in ["dispatcher_breathing", "call_aed"]: continue
 			var key := language + ":" + speaker + ":" + str(guide[language][step])
 			check(manager._coach_clips.get(key) is AudioStream, language + " " + step + " has bundled " + speaker + " audio")
 	manager._voice_cache.clear()

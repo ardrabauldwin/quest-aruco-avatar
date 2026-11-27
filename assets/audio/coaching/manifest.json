@@ -16,11 +16,6 @@
       "path": "res://assets/audio/coaching/en/call.wav"
     },
     {
-      "text": "Check whether the person is breathing normally. Tilt the head back, lift the chin, put your ear to the mouth and look at the chest: look, listen, feel – no longer than 10 seconds. Then tell me what you found.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/breathing.wav"
-    },
-    {
       "text": "Start chest compressions. Hands in the middle of the chest, on the green box. 100 to 120 per minute, 5 to 6 centimetres deep, and let the chest come fully back up each time.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/compressions.wav"
@@ -71,11 +66,6 @@
       "path": "res://assets/audio/coaching/de/call.wav"
     },
     {
-      "text": "Prüfe, ob die Person normal atmet. Kopf überstrecken, Kinn anheben, Ohr an den Mund, Blick auf den Brustkorb: sehen, hören, fühlen – höchstens 10 Sekunden. Dann sag mir, was du feststellst.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/breathing.wav"
-    },
-    {
       "text": "Beginne mit der Herzdruckmassage. Hände in die Mitte des Brustkorbs, auf das grüne Feld. 100 bis 120 pro Minute, 5 bis 6 Zentimeter tief, und den Brustkorb jedes Mal vollständig entlasten.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/compressions.wav"
@@ -124,11 +114,6 @@
       "text": "Zwróć się do kogoś bezpośrednio i poproś o telefon pod 112.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/call.wav"
-    },
-    {
-      "text": "Sprawdź, czy osoba oddycha normalnie. Odchyl głowę, unieś podbródek, przyłóż ucho do ust i patrz na klatkę piersiową: patrz, słuchaj, wyczuwaj – najwyżej 10 sekund. Potem powiedz mi, co stwierdzasz.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/breathing.wav"
     },
     {
       "text": "Rozpocznij uciskanie klatki piersiowej. Dłonie na środek klatki piersiowej, na zielone pole. 100 do 120 razy na minutę, na głębokość 5 do 6 centymetrów, i za każdym razem w pełni odciążaj klatkę.",
@@ -206,21 +191,6 @@
       "path": "res://assets/audio/coaching/en/coach_open_airway_hint.wav"
     },
     {
-      "text": "Do not check longer than 10 seconds.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_check_time.wav"
-    },
-    {
-      "text": "Take the bag from the ground and place the mask over his mouth and nose.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_bvm_place_mask.wav"
-    },
-    {
-      "text": "I didn't see you tap his shoulders. Please tap them and check whether he responds.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/error_shoulders_not_seen.wav"
-    },
-    {
       "text": "I did not see you give the breaths. Take the bag, place the mask over his mouth and nose, hold it sealed, and squeeze the bag slowly, one second per breath.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/error_breaths_not_seen.wav"
@@ -279,75 +249,6 @@
       "path": "res://assets/audio/coaching/en/dispatcher_answer.wav"
     },
     {
-      "text": "Guten Tag, Rettungsdienst. Wir übernehmen gleich. Drücken Sie bitte weiter und beschreiben Sie kurz den Zustand der Person und die bisherigen Maßnahmen.",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_arrive.wav"
-    },
-    {
-      "text": "Dzień dobry, ratownictwo medyczne. Zaraz przejmujemy. Proszę dalej uciskać i krótko opisać stan osoby oraz dotychczasowe działania.",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_arrive.wav"
-    },
-    {
-      "text": "Hello, ambulance service. We are taking over in a moment. Please keep pushing and briefly describe the person's condition and what has been done so far.",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_arrive.wav"
-    },
-    {
-      "text": "Was haben Sie bisher gemacht? Reagiert die Person, atmet sie normal?",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_more.wav"
-    },
-    {
-      "text": "Co Pan lub Pani do tej pory zrobił? Czy osoba reaguje, czy oddycha normalnie?",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_more.wav"
-    },
-    {
-      "text": "What have you done so far? Does the person respond, are they breathing normally?",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_more.wav"
-    },
-    {
-      "text": "Danke. Wir übernehmen jetzt. Treten Sie bitte zurück. Der AED bleibt angeschlossen.",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_take_over.wav"
-    },
-    {
-      "text": "Dziękuję. Teraz przejmujemy. Proszę się odsunąć. AED pozostaje podłączony.",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_take_over.wav"
-    },
-    {
-      "text": "Thank you. We are taking over now. Please step back. The AED stays attached.",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_take_over.wav"
-    },
-    {
-      "text": "Ich habe noch nicht gesehen, dass du dich umschaust. Bitte schau nach links und rechts, um nach Gefahren zu suchen.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_look_left_right.wav"
-    },
-    {
-      "text": "Nie zauważyłem jeszcze rozglądania się. Spójrz w lewo i w prawo, aby sprawdzić zagrożenia.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_look_left_right.wav"
-    },
-    {
-      "text": "I haven't detected you looking around yet. Please look left and right to check for hazards.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_look_left_right.wav"
-    },
-    {
       "text": "Ist die Umgebung sicher? Bitte antworte mit ja oder nein.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/coach_tell_if_safe.wav"
@@ -378,21 +279,6 @@
       "path": "res://assets/audio/coaching/en/coach_safety_key.wav"
     },
     {
-      "text": "Und wer holt den AED? Sprich jemanden direkt an.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_who_gets_aed.wav"
-    },
-    {
-      "text": "A kto przyniesie AED? Zwróć się do kogoś bezpośrednio.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_who_gets_aed.wav"
-    },
-    {
-      "text": "And who gets the AED? Ask someone directly.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_who_gets_aed.wav"
-    },
-    {
       "text": "Drück weiter, bis der Rettungsdienst übernimmt. Dann übergib kurz, tritt zurück, und wir besprechen das Training.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/handover_alone.wav"
@@ -406,24 +292,6 @@
       "text": "Keep pushing until the ambulance crew takes over. Then hand over briefly, step back, and we will review the training.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/handover_alone.wav"
-    },
-    {
-      "text": "Danke. Wir übernehmen jetzt. Treten Sie bitte zurück.",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_take_over_alone.wav"
-    },
-    {
-      "text": "Dziękuję. Teraz przejmujemy. Proszę się odsunąć.",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_take_over_alone.wav"
-    },
-    {
-      "text": "Thank you. We are taking over now. Please step back.",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_take_over_alone.wav"
     },
     {
       "text": "Drück jetzt weiter. Die nächsten 30 Kompressionen.",
@@ -512,24 +380,6 @@
       "text": "Dotknij elektrody i przenieś ją na złoty kontur na klatce piersiowej. Potem druga elektroda.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/aed_pads_how.wav"
-    },
-    {
-      "text": "Prüf jetzt die Atmung: Kopf nach hinten neigen, Kinn anheben, Ohr an den Mund und auf den Brustkorb schauen – höchstens 10 Sekunden. Atmet die Person normal?",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/dispatcher_breathing.wav",
-      "speaker": "dispatcher"
-    },
-    {
-      "text": "Sprawdź teraz oddech: odchyl głowę do tyłu, unieś brodę, przyłóż ucho do ust i patrz na klatkę piersiową – najwyżej 10 sekund. Czy ta osoba oddycha normalnie?",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/dispatcher_breathing.wav",
-      "speaker": "dispatcher"
-    },
-    {
-      "text": "Now check the breathing: tilt the head back, lift the chin, put your ear to the mouth and watch the chest – no longer than 10 seconds. Is the person breathing normally?",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/dispatcher_breathing.wav",
-      "speaker": "dispatcher"
     },
     {
       "text": "Beginn jetzt mit der Herzdruckmassage: Handballen in die Mitte der Brust, fest und schnell drücken, etwa zweimal pro Sekunde, 5 bis 6 Zentimeter tief.",
@@ -637,21 +487,6 @@
       "speaker": "dispatcher"
     },
     {
-      "text": "Und wer ruft die 112 an? Sprich jemanden direkt an.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_who_calls_112.wav"
-    },
-    {
-      "text": "A kto zadzwoni pod 112? Zwróć się do kogoś bezpośrednio.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_who_calls_112.wav"
-    },
-    {
-      "text": "And who calls 112? Speak to someone directly.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_who_calls_112.wav"
-    },
-    {
       "text": "Überstreck zuerst den Kopf: eine Hand an die Stirn, mit der anderen das Kinn anheben.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/dispatcher_coach_tilt_head.wav",
@@ -706,216 +541,6 @@
       "speaker": "dispatcher"
     },
     {
-      "text": "Reagiert die Person auf Ansprache?",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_ask_no_response.wav"
-    },
-    {
-      "text": "Czy osoba reaguje na głos?",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_ask_no_response.wav"
-    },
-    {
-      "text": "Does the person respond when spoken to?",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_ask_no_response.wav"
-    },
-    {
-      "text": "Atmet die Person normal?",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_ask_not_breathing.wav"
-    },
-    {
-      "text": "Czy osoba oddycha normalnie?",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_ask_not_breathing.wav"
-    },
-    {
-      "text": "Is the person breathing normally?",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_ask_not_breathing.wav"
-    },
-    {
-      "text": "Was haben Sie bisher gemacht?",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_ask_compressions.wav"
-    },
-    {
-      "text": "Co zostało dotąd zrobione?",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_ask_compressions.wav"
-    },
-    {
-      "text": "What have you done so far?",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_ask_compressions.wav"
-    },
-    {
-      "text": "Bitte nehmen Sie jetzt die Hände von der Person und treten Sie zurück.",
-      "language": "de",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/de/ems_step_back.wav"
-    },
-    {
-      "text": "Proszę teraz zabrać ręce od tej osoby i się odsunąć.",
-      "language": "pl",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/pl/ems_step_back.wav"
-    },
-    {
-      "text": "Please take your hands off the person now and step back.",
-      "language": "en",
-      "speaker": "ems",
-      "path": "res://assets/audio/coaching/en/ems_step_back.wav"
-    },
-    {
-      "text": "Sag dem Rettungsdienst, dass die Person nicht reagiert.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_no_response.wav"
-    },
-    {
-      "text": "Powiedz zespołowi ratownictwa, że osoba nie reaguje.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_no_response.wav"
-    },
-    {
-      "text": "Tell the ambulance crew that the person does not respond.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_no_response.wav"
-    },
-    {
-      "text": "Sag dem Rettungsdienst, dass die Person nicht normal atmet.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_not_breathing.wav"
-    },
-    {
-      "text": "Powiedz zespołowi ratownictwa, że osoba nie oddycha normalnie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_not_breathing.wav"
-    },
-    {
-      "text": "Tell the ambulance crew that the person is not breathing normally.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_not_breathing.wav"
-    },
-    {
-      "text": "Sag dem Rettungsdienst, was du gemacht hast, zum Beispiel: Ich habe gedrückt.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_compressions.wav"
-    },
-    {
-      "text": "Powiedz zespołowi ratownictwa, co zostało zrobione, na przykład uciskanie klatki piersiowej.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_compressions.wav"
-    },
-    {
-      "text": "Tell the ambulance crew what you did, for example: I did chest compressions.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_compressions.wav"
-    },
-    {
-      "text": "Wurde ein AED eingesetzt, und hat er einen Schock abgegeben?",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/ems_ask_aed.wav",
-      "speaker": "ems"
-    },
-    {
-      "text": "Czy użyto AED i czy wykonał wyładowanie?",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/ems_ask_aed.wav",
-      "speaker": "ems"
-    },
-    {
-      "text": "Was an AED used, and did it deliver a shock?",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/ems_ask_aed.wav",
-      "speaker": "ems"
-    },
-    {
-      "text": "Sag dem Rettungsdienst, dass der AED einen Schock abgegeben hat.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_aed.wav"
-    },
-    {
-      "text": "Powiedz zespołowi ratownictwa, że AED wykonał wyładowanie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_aed.wav"
-    },
-    {
-      "text": "Tell the ambulance crew that the AED delivered a shock.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_aed.wav"
-    },
-    {
-      "text": "Hast du eine Herzdruckmassage gemacht? Antworte mit ja oder nein.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_confirm_compressions.wav"
-    },
-    {
-      "text": "Czy wykonano uciskanie klatki piersiowej? Odpowiedz tak lub nie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_confirm_compressions.wav"
-    },
-    {
-      "text": "Did you do chest compressions? Say yes or no.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_confirm_compressions.wav"
-    },
-    {
-      "text": "Hat der AED einen Schock abgegeben? Antworte mit ja oder nein.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_confirm_aed.wav"
-    },
-    {
-      "text": "Czy AED wykonał wyładowanie? Odpowiedz tak lub nie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_confirm_aed.wav"
-    },
-    {
-      "text": "Did the AED deliver a shock? Say yes or no.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_confirm_aed.wav"
-    },
-    {
-      "text": "Sag dem Rettungsdienst kurz: ob die Person reagiert, ob sie normal atmet und was du gemacht hast.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_what.wav"
-    },
-    {
-      "text": "Powiedz krótko zespołowi ratownictwa: czy osoba reaguje, czy oddycha normalnie i co zostało zrobione.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_what.wav"
-    },
-    {
-      "text": "Tell the ambulance crew briefly: whether the person responds, whether they are breathing normally, and what you did.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_what.wav"
-    },
-    {
-      "text": "Sag dem Rettungsdienst kurz: ob die Person reagiert, ob sie normal atmet, was du gemacht hast und dass der AED einen Schock abgegeben hat.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_handover_what_aed.wav"
-    },
-    {
-      "text": "Powiedz krótko zespołowi ratownictwa: czy osoba reaguje, czy oddycha normalnie, co zostało zrobione i że AED wykonał wyładowanie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_handover_what_aed.wav"
-    },
-    {
-      "text": "Tell the ambulance crew briefly: whether the person responds, whether they are breathing normally, what you did, and that the AED delivered a shock.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_handover_what_aed.wav"
-    },
-    {
       "text": "Place your hands correctly: the heel of your hand in the centre of the chest, on the green box.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/coach_hands_on_box.wav"
@@ -924,16 +549,6 @@
       "text": "I did not see you check his breathing. Tilt the head back, lift the chin, put your ear to his mouth and look at his chest, then tell me.",
       "language": "en",
       "path": "res://assets/audio/coaching/en/error_breathing_not_seen.wav"
-    },
-    {
-      "text": "Nimm den Beutel vom Boden und leg die Maske über Mund und Nase.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_bvm_place_mask.wav"
-    },
-    {
-      "text": "Weź worek z ziemi i załóż maskę na usta i nos.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_bvm_place_mask.wav"
     },
     {
       "text": "Leg Beutel und Maske zurück auf den Boden.",
@@ -1006,51 +621,6 @@
       "path": "res://assets/audio/coaching/en/welcome_menu.wav"
     },
     {
-      "text": "Tippe auf die grüne 112 am Handy in deiner linken Hand.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_phone_tap_112.wav"
-    },
-    {
-      "text": "Dotknij zielonego 112 na telefonie w lewej ręce.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_phone_tap_112.wav"
-    },
-    {
-      "text": "Tap the green 112 on the phone in your left hand.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_phone_tap_112.wav"
-    },
-    {
-      "text": "Tippe jetzt auf Lautsprecher, damit deine Hände frei bleiben.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_phone_speaker.wav"
-    },
-    {
-      "text": "Teraz dotknij Głośnik, żeby mieć wolne ręce.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_phone_speaker.wav"
-    },
-    {
-      "text": "Now tap Speaker, so your hands stay free.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_phone_speaker.wav"
-    },
-    {
-      "text": "Leg das Handy neben die Person auf den Boden.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_phone_put_down.wav"
-    },
-    {
-      "text": "Połóż telefon na ziemi obok tej osoby.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_phone_put_down.wav"
-    },
-    {
-      "text": "Put the phone on the ground next to the person.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_phone_put_down.wav"
-    },
-    {
       "text": "Ich habe dich nicht verstanden. Was ist passiert, und wo bist du?",
       "language": "de",
       "speaker": "dispatcher",
@@ -1067,111 +637,6 @@
       "language": "en",
       "speaker": "dispatcher",
       "path": "res://assets/audio/coaching/en/dispatcher_again.wav"
-    },
-    {
-      "text": "Sprich die Leute direkt an: Bitte eine Person, die 112 anzurufen, und eine andere, den Defibrillator zu holen.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/call_aed.wav"
-    },
-    {
-      "text": "Zwróć się bezpośrednio do ludzi: poproś jedną osobę o telefon pod 112, a drugą o przyniesienie defibrylatora.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/call_aed.wav"
-    },
-    {
-      "text": "Speak to the people directly: ask one person to call 112 and another to bring the defibrillator.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/call_aed.wav"
-    },
-    {
-      "text": "Eine Elektrode fehlt noch. Klebe sie rechts oben auf die Brust, unter das Schlüsselbein, auf den goldenen Umriss.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_pad_padright.wav"
-    },
-    {
-      "text": "Eine Elektrode fehlt noch. Klebe sie auf seine linke Seite, unter die Achsel, auf den goldenen Umriss.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_pad_padleft.wav"
-    },
-    {
-      "text": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört rechts oben auf die Brust, unter das Schlüsselbein.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_pad_missed_padright.wav"
-    },
-    {
-      "text": "Diese Elektrode liegt noch nicht auf dem Umriss. Sie gehört auf seine linke Seite, unter die Achsel.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/aed_pad_missed_padleft.wav"
-    },
-    {
-      "text": "Brakuje jeszcze jednej elektrody. Przyklej ją po prawej stronie klatki piersiowej, pod obojczykiem, na złoty kontur.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_pad_padright.wav"
-    },
-    {
-      "text": "Brakuje jeszcze jednej elektrody. Przyklej ją na lewym boku, pod pachą, na złoty kontur.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_pad_padleft.wav"
-    },
-    {
-      "text": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest po prawej stronie klatki piersiowej, pod obojczykiem.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_pad_missed_padright.wav"
-    },
-    {
-      "text": "Ta elektroda nie leży jeszcze na konturze. Jej miejsce jest na lewym boku, pod pachą.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/aed_pad_missed_padleft.wav"
-    },
-    {
-      "text": "One pad is still missing. Put it on the right side of his chest, below the collarbone, on the golden outline.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_pad_padright.wav"
-    },
-    {
-      "text": "One pad is still missing. Put it on his left side, below the armpit, on the golden outline.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_pad_padleft.wav"
-    },
-    {
-      "text": "That pad is not on the outline yet. It belongs on the right side of his chest, below the collarbone.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_pad_missed_padright.wav"
-    },
-    {
-      "text": "That pad is not on the outline yet. It belongs on his left side, below the armpit.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/aed_pad_missed_padleft.wav"
-    },
-    {
-      "text": "Ich habe gesehen, dass du auf die Schultern getippt hast. Reagiert die Person? Bitte sag ja oder nein.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_tap_seen_ask.wav"
-    },
-    {
-      "text": "Ich habe gesehen, dass du auf die Schultern getippt hast.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/coach_tap_seen.wav"
-    },
-    {
-      "text": "Widziałem, jak stukasz w ramiona. Czy ta osoba reaguje? Powiedz tak lub nie.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_tap_seen_ask.wav"
-    },
-    {
-      "text": "Widziałem, jak stukasz w ramiona.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/coach_tap_seen.wav"
-    },
-    {
-      "text": "I saw you tap their shoulders. Are they responding? Please say yes or no.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_tap_seen_ask.wav"
-    },
-    {
-      "text": "I saw you tap their shoulders.",
-      "language": "en",
-      "path": "res://assets/audio/coaching/en/coach_tap_seen.wav"
     },
     {
       "text": "Ich habe ihn mir auch angesehen und glaube, er reagiert nicht. Schau bitte noch einmal hin.",

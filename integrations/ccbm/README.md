@@ -16,7 +16,12 @@ headset build until the connection and microphone session pass end-to-end.
 
 Logs: `build/ccbm_linux_setup.log`, `build/ccbm_native_build.log`,
 `build/ccbm_native_tests.log`, `build/ccbm_live.log`. The analyser completed with
-1,034 states after raising its depth limit to 300. The successful analyser output
+1,034 states after raising its depth limit to 300 (October model, before the AED part).
+The AED model with the breath counter (reported-breaths 0..256) had 18,518 states;
+since 27 Nov 2026 the pair of breaths is one predicate (one-breath, actions
+ventilation_first / ventilation_second) and the state space has 158 states.
+build.sh and build_android.py now start from an empty build folder, because stale
+objects from a previous model are not recompiled. The successful analyser output
 was printed during validation; `ccbm_native_build.log` retains the earlier
 depth-limit failure. Re-running `build.sh` now uses the corrected limit.
 Observed native inference time was approximately 20–30 ms per tested prefix;

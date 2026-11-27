@@ -2,8 +2,11 @@
   (:predicates (assessing) (unresponsive) (called) (breathing-checked)
                (compressing) (compression-only) (finished)
                (aed-requested) (aed-attached) (aed-paused) (analysis-cleared)
-               (analyzed) (shock-needed) (no-shock) (shock-cleared))
-  (:functions (reported-breaths) - (number 0 256))
+               (analyzed) (shock-needed) (no-shock) (shock-cleared)
+               ; 27 Nov 2026: one breath of the pair given. Replaces the counter
+               ; (reported-breaths 0..256), which no precondition used and which
+               ; grew the state space from 158 to 18,518 states.
+               (one-breath))
   (:action begin_check
     :precondition (not (assessing)) :effect (assessing)
     :observation (seeBegin 0))
@@ -22,9 +25,15 @@
   (:action compression_only
     :precondition (and (breathing-checked) (not (compression-only)) (not (finished)))
     :effect (compression-only) :observation (seeMode 0))
-  (:action ventilation
-    :precondition (and (compressing) (< (reported-breaths) 256) (not (compression-only)) (not (aed-paused)) (not (finished)))
-    :effect (increase (reported-breaths) 1) :observation (seeVentilation 0))
+  ; The two breaths of a 30:2 cycle: the first sets one-breath, the second
+  ; clears it again for the next cycle. Both are observed as "ventilation";
+  ; the app merges their posteriors (server.py, ccbm_protocol.canonical).
+  (:action ventilation_first
+    :precondition (and (compressing) (not (one-breath)) (not (compression-only)) (not (aed-paused)) (not (finished)))
+    :effect (one-breath) :observation (seeVentilation 0))
+  (:action ventilation_second
+    :precondition (and (compressing) (one-breath) (not (compression-only)) (not (aed-paused)) (not (finished)))
+    :effect (not (one-breath)) :observation (seeVentilation 0))
   (:action handover
     :precondition (and (breathing-checked) (not (finished))) :effect (finished)
     :observation (seeHandover 0))

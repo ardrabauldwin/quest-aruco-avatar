@@ -36,6 +36,9 @@ def main():
         raise SystemExit("Unexpected upstream revision; review before changing the pin")
     args.build.mkdir(parents=True, exist_ok=True)
     generated = args.build / "generated"
+    # Always regenerate from scratch: stale objects from an earlier model (e.g. a
+    # different number of actions) are not recompiled and would be linked in.
+    shutil.rmtree(generated, ignore_errors=True)
     generated.mkdir(exist_ok=True)
     # Generation remains on the build machine. Outputs are compiled for Android.
     run([args.upstream / "rc", "-c", "-W", "-M", "FA", "-n", "1000",

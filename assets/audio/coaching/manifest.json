@@ -566,16 +566,6 @@
       "path": "res://assets/audio/coaching/en/coach_bvm_put_back.wav"
     },
     {
-      "text": "Ich habe nicht gesehen, dass du ihm auf die Schultern getippt hast. Bitte tipp darauf und prüfe, ob er reagiert.",
-      "language": "de",
-      "path": "res://assets/audio/coaching/de/error_shoulders_not_seen.wav"
-    },
-    {
-      "text": "Nie widziałem stuknięcia w jego ramiona. Stuknij w nie i sprawdź, czy reaguje.",
-      "language": "pl",
-      "path": "res://assets/audio/coaching/pl/error_shoulders_not_seen.wav"
-    },
-    {
       "text": "Hallo, willkommen beim NaReT-Simulator! Ich leite dich durch das Szenario. Schau zuerst von vorne auf die Marker an der Puppe.",
       "language": "de",
       "path": "res://assets/audio/coaching/de/welcome.wav"
@@ -667,6 +657,474 @@
       "text": "AED jest na miejscu. Włącz go teraz: dotknij zielonego przycisku zasilania.",
       "language": "pl",
       "path": "res://assets/audio/coaching/pl/aed_arrived.wav"
+    },
+    {
+      "text": "Schau nach links und rechts, ob die Umgebung sicher ist, und melde es mir.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_look_left_right.wav"
+    },
+    {
+      "text": "Rozejrzyj się w lewo i w prawo, czy otoczenie jest bezpieczne, i zgłoś mi to.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_look_left_right.wav"
+    },
+    {
+      "text": "Please look left and right to check whether the environment is safe, and report to me.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_look_left_right.wav"
+    },
+    {
+      "text": "Reagiert die Person? Bitte sag ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "Czy ta osoba reaguje? Powiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "Is the person responding? Please say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_tap_seen_ask.wav"
+    },
+    {
+      "text": "Reagiert er? Bitte sag ja oder nein.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_report_response.wav"
+    },
+    {
+      "text": "Czy ta osoba reaguje? Powiedz tak lub nie.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_report_response.wav"
+    },
+    {
+      "text": "Does he respond? Please say yes or no.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_report_response.wav"
+    },
+    {
+      "text": "Ich habe nicht gesehen, dass du ihm auf die Schultern getippt hast. Bitte tipp darauf und prüfe, ob er reagiert.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/error_shoulders_not_seen.wav"
+    },
+    {
+      "text": "Nie widziałem stuknięcia w jego ramiona. Stuknij w nie i sprawdź, czy reaguje.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/error_shoulders_not_seen.wav"
+    },
+    {
+      "text": "I didn't see you tap him on the shoulders. Please tap him on the shoulders and check whether he responds.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/error_shoulders_not_seen.wav"
+    },
+    {
+      "text": "Tippe auf die 112 am Handy in deiner linken Hand.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_phone_tap_112.wav"
+    },
+    {
+      "text": "Dotknij 112 na telefonie w lewej ręce.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_phone_tap_112.wav"
+    },
+    {
+      "text": "Tap 112 on the phone in your left hand.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_phone_tap_112.wav"
+    },
+    {
+      "text": "Tippe auf Lautsprecher und leg das Handy neben die Person.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_phone_speaker.wav"
+    },
+    {
+      "text": "Dotknij Głośnik i połóż telefon obok tej osoby.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_phone_speaker.wav"
+    },
+    {
+      "text": "Tap Speaker, then put the phone down next to the person.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_phone_speaker.wav"
+    },
+    {
+      "text": "Bitte jetzt jemand anderen, die 112 anzurufen.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/coach_who_calls_112.wav"
+    },
+    {
+      "text": "Teraz poproś kogoś innego o telefon pod 112.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/coach_who_calls_112.wav"
+    },
+    {
+      "text": "Now ask someone else to call 112.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/coach_who_calls_112.wav"
+    },
+    {
+      "text": "Sprich die Leute direkt an: Bitte jemanden, den Defibrillator zu holen.",
+      "language": "de",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/de/call_aed.wav"
+    },
+    {
+      "text": "Zwróć się bezpośrednio do ludzi: poproś kogoś o przyniesienie defibrylatora.",
+      "language": "pl",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/pl/call_aed.wav"
+    },
+    {
+      "text": "Speak to the people directly: ask someone to bring the defibrillator.",
+      "language": "en",
+      "speaker": "instructor",
+      "path": "res://assets/audio/coaching/en/call_aed.wav"
+    },
+    {
+      "text": "Prüf die Atmung: Kopf nach hinten, Kinn hoch, Ohr an den Mund. Atmet die Person normal oder nicht?",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_breathing.wav"
+    },
+    {
+      "text": "Sprawdź oddech: głowa do tyłu, broda w górę, ucho przy ustach. Czy ta osoba oddycha normalnie, czy nie?",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_breathing.wav"
+    },
+    {
+      "text": "Check the breathing: head back, chin up, ear to the mouth. Is the person breathing normally or not?",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_breathing.wav"
+    },
+    {
+      "text": "Wo genau bist du?",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_where.wav"
+    },
+    {
+      "text": "Gdzie dokładnie jesteś?",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_where.wav"
+    },
+    {
+      "text": "Where exactly are you?",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_where.wav"
+    },
+    {
+      "text": "Ich habe das nicht verstanden.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_speech_not_understood.wav"
+    },
+    {
+      "text": "Nie zrozumiałem.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_speech_not_understood.wav"
+    },
+    {
+      "text": "I did not catch that.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_speech_not_understood.wav"
+    },
+    {
+      "text": "Keine Meldung bestätigt. Bitte sagen Sie, was Sie geprüft und festgestellt haben.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_repeat.wav"
+    },
+    {
+      "text": "Nie potwierdzono zgłoszenia. Powiedz, co sprawdzono i jaki był wynik.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_repeat.wav"
+    },
+    {
+      "text": "No report confirmed. Please state the completed check and finding.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_repeat.wav"
+    },
+    {
+      "text": "Nimm die Beatmungsmaske und setz sie auf Mund und Nase.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_coach_bvm_place_mask.wav"
+    },
+    {
+      "text": "Weź maskę do oddychania i załóż ją na usta i nos.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_coach_bvm_place_mask.wav"
+    },
+    {
+      "text": "Take the breathing mask and place it over his mouth and nose.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_coach_bvm_place_mask.wav"
+    },
+    {
+      "text": "Halte die Maske mit einer Hand dicht und drück den Beutel mit der anderen langsam zusammen.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_coach_bvm_squeeze.wav"
+    },
+    {
+      "text": "Jedną ręką trzymaj maskę szczelnie, drugą powoli ściskaj worek.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_coach_bvm_squeeze.wav"
+    },
+    {
+      "text": "Hold the mask sealed with one hand and squeeze the bag slowly with the other.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_coach_bvm_squeeze.wav"
+    },
+    {
+      "text": "Denk daran, zuerst die Atemwege freizumachen: eine Hand an die Stirn, Kopf nach hinten, mit der anderen Hand das Kinn anheben.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_coach_open_airway_hint.wav"
+    },
+    {
+      "text": "Pamiętaj, aby najpierw udrożnić drogi oddechowe: jedna ręka na czole, głowa do tyłu, drugą ręką unieś brodę.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_coach_open_airway_hint.wav"
+    },
+    {
+      "text": "Remember to open the airway first: one hand on the forehead, tilt the head back, lift the chin with the other hand.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_coach_open_airway_hint.wav"
+    },
+    {
+      "text": "Ich habe nicht gesehen, dass du beatmet hast. Nimm den Beutel, leg die Maske über Mund und Nase, halte sie dicht und drück den Beutel langsam, eine Sekunde pro Beatmung.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_error_breaths_not_seen.wav"
+    },
+    {
+      "text": "Nie widziałem, żebyś podał oddechy. Weź worek, załóż maskę na usta i nos, trzymaj ją szczelnie i ściskaj worek powoli, jedna sekunda na oddech.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_error_breaths_not_seen.wav"
+    },
+    {
+      "text": "I did not see you give the breaths. Take the bag, place the mask over his mouth and nose, hold it sealed, and squeeze the bag slowly, one second per breath.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_error_breaths_not_seen.wav"
+    },
+    {
+      "text": "Ich habe nicht gesehen, dass du die Atmung geprüft hast. Kopf überstrecken, Kinn anheben, Ohr an den Mund und Blick auf den Brustkorb, dann sag es mir.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_error_breathing_not_seen.wav"
+    },
+    {
+      "text": "Nie widziałem, żebyś sprawdził oddech. Odchyl głowę, unieś podbródek, przyłóż ucho do ust i patrz na klatkę piersiową, potem mi powiedz.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_error_breathing_not_seen.wav"
+    },
+    {
+      "text": "I did not see you check his breathing. Tilt the head back, lift the chin, put your ear to his mouth and look at his chest, then tell me.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_error_breathing_not_seen.wav"
+    },
+    {
+      "text": "Der AED ist da. Schalte ihn jetzt ein: Berühre den grünen Einschaltknopf.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_arrived.wav"
+    },
+    {
+      "text": "AED jest na miejscu. Włącz go teraz: dotknij zielonego przycisku zasilania.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_arrived.wav"
+    },
+    {
+      "text": "The AED is here. Switch it on now: touch its green power button.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_arrived.wav"
+    },
+    {
+      "text": "Berühre eine Elektrode und führe sie zum goldenen Umriss auf der Brust. Dann die zweite Elektrode.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_pads_how.wav"
+    },
+    {
+      "text": "Dotknij elektrody i przenieś ją na złoty kontur na klatce piersiowej. Potem druga elektroda.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_pads_how.wav"
+    },
+    {
+      "text": "Touch a pad and bring it to the golden outline on his chest. Then the second pad.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_pads_how.wav"
+    },
+    {
+      "text": "Jetzt die zweite Elektrode: linke Seite, unter der Achsel.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_pad_padleft.wav"
+    },
+    {
+      "text": "Teraz druga elektroda: lewy bok, pod pachą.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_pad_padleft.wav"
+    },
+    {
+      "text": "Now the second pad: his left side, below the armpit.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_pad_padleft.wav"
+    },
+    {
+      "text": "Jetzt die zweite Elektrode: rechte Brustseite, unter dem Schlüsselbein.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_pad_padright.wav"
+    },
+    {
+      "text": "Teraz druga elektroda: prawa strona klatki piersiowej, pod obojczykiem.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_pad_padright.wav"
+    },
+    {
+      "text": "Now the second pad: right side of his chest, below the collarbone.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_pad_padright.wav"
+    },
+    {
+      "text": "Noch nicht auf dem Umriss. Versuch es noch einmal.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "Jeszcze nie na konturze. Spróbuj jeszcze raz.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "Not on the outline yet. Try again.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_pad_missed_padleft.wav"
+    },
+    {
+      "text": "Hände weg von der Person, solange der AED analysiert. Drück die blinkende Schocktaste, wenn er dazu auffordert.",
+      "language": "de",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/de/dispatcher_aed_clear.wav"
+    },
+    {
+      "text": "Ręce precz od osoby, gdy AED analizuje. Naciśnij migający przycisk wyładowania, gdy AED o to poprosi.",
+      "language": "pl",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/pl/dispatcher_aed_clear.wav"
+    },
+    {
+      "text": "Hands off the person while the AED analyses. Press the flashing shock button when it tells you to.",
+      "language": "en",
+      "speaker": "dispatcher",
+      "path": "res://assets/audio/coaching/en/dispatcher_aed_clear.wav"
+    },
+    {
+      "text": "Guten Tag, Rettungsdienst. Drücken Sie bitte weiter und sagen Sie uns kurz: Reagiert die Person, atmet sie normal, und was haben Sie gemacht?",
+      "language": "de",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/de/ems_arrive.wav"
+    },
+    {
+      "text": "Dzień dobry, ratownictwo medyczne. Proszę dalej uciskać i krótko powiedzieć: czy osoba reaguje, czy oddycha normalnie i co zostało zrobione?",
+      "language": "pl",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/pl/ems_arrive.wav"
+    },
+    {
+      "text": "Hello, ambulance service. Please keep pushing and tell us briefly: does the person respond, are they breathing normally, and what did you do?",
+      "language": "en",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/en/ems_arrive.wav"
+    },
+    {
+      "text": "Guten Tag, Rettungsdienst. Drücken Sie bitte weiter und sagen Sie uns kurz: Reagiert die Person, atmet sie normal, was haben Sie gemacht, und hat der AED einen Schock abgegeben?",
+      "language": "de",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/de/ems_arrive_aed.wav"
+    },
+    {
+      "text": "Dzień dobry, ratownictwo medyczne. Proszę dalej uciskać i krótko powiedzieć: czy osoba reaguje, czy oddycha normalnie, co zostało zrobione i czy AED wykonał wyładowanie?",
+      "language": "pl",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/pl/ems_arrive_aed.wav"
+    },
+    {
+      "text": "Hello, ambulance service. Please keep pushing and tell us briefly: does the person respond, are they breathing normally, what did you do, and did the AED deliver a shock?",
+      "language": "en",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/en/ems_arrive_aed.wav"
+    },
+    {
+      "text": "Danke. Wir übernehmen jetzt. Nehmen Sie bitte die Hände von der Person und treten Sie zurück.",
+      "language": "de",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/de/ems_take_over.wav"
+    },
+    {
+      "text": "Dziękuję. Teraz przejmujemy. Proszę zabrać ręce od tej osoby i się odsunąć.",
+      "language": "pl",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/pl/ems_take_over.wav"
+    },
+    {
+      "text": "Thank you. We are taking over now. Please take your hands off the person and step back.",
+      "language": "en",
+      "speaker": "ems",
+      "path": "res://assets/audio/coaching/en/ems_take_over.wav"
     }
   ]
 }
